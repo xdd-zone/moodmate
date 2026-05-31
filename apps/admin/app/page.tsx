@@ -5,7 +5,7 @@ export default function Home() {
     <main className={styles.page}>
       <section className={styles.main}>
         <p>moodmate</p>
-        <h1>web 前台站</h1>
+        <h1>admin 管理台</h1>
       </section>
     </main>
   );

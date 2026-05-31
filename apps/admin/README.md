@@ -1,17 +1,17 @@
-# web
+# admin
 
-用户端站点。
+管理后台。
 
 ## 运行
 
 在项目根目录执行：
 
 ```bash
-pnpm dev:web
+pnpm dev:admin
 ```
 
 访问：
 
 ```text
-http://localhost:3000
+http://localhost:3006
 ```
