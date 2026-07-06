@@ -20,7 +20,15 @@ curl http://localhost:8787/health
 
 ```json
 {
-  "ok": true,
-  "service": "api"
+  "data": {
+    "env": "development",
+    "service": "api",
+    "status": "ok"
+  },
+  "meta": {
+    "requestId": "<request-id>",
+    "timestamp": "<iso-time>"
+  },
+  "ok": true
 }
 ```
