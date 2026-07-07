@@ -1,31 +1,76 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-maple-mono), "PingFang SC", "Hiragino Sans GB",
+    "Noto Sans CJK SC", "Microsoft YaHei", monospace;
+
+  --color-background: var(--mood-background);
+  --color-foreground: var(--mood-foreground);
+  --color-muted: var(--mood-muted);
+  --color-soft: var(--mood-soft);
+  --color-surface: var(--mood-surface);
+  --color-surface-muted: var(--mood-surface-muted);
+  --color-border: var(--mood-border);
+  --color-primary: var(--mood-primary);
+  --color-primary-foreground: var(--mood-primary-foreground);
+  --color-warm: var(--mood-warm);
+  --color-calm: var(--mood-calm);
+  --color-rose: var(--mood-rose);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-soft: 0 24px 70px -42px oklch(38% 0.07 68 / 0.45);
+
+  --animate-rise-soft: rise-soft 0.62s cubic-bezier(0.23, 1, 0.32, 1) both;
+
+  @keyframes rise-soft {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --mood-background: oklch(97.7% 0.018 82);
+  --mood-foreground: oklch(24% 0.038 68);
+  --mood-muted: oklch(50% 0.036 72);
+  --mood-soft: oklch(94.5% 0.027 83);
+  --mood-surface: oklch(99% 0.01 87);
+  --mood-surface-muted: oklch(92.7% 0.03 78);
+  --mood-border: oklch(84% 0.033 77);
+  --mood-primary: oklch(55% 0.092 166);
+  --mood-primary-foreground: oklch(98% 0.015 160);
+  --mood-warm: oklch(72% 0.086 58);
+  --mood-calm: oklch(70% 0.075 210);
+  --mood-rose: oklch(68% 0.086 22);
 }
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
+  min-height: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-maple-mono);
+  margin: 0;
+  background:
+    radial-gradient(circle at 18% 12%, oklch(92% 0.06 148 / 0.55), transparent 28rem),
+    radial-gradient(circle at 80% 0%, oklch(91% 0.05 39 / 0.45), transparent 30rem),
+    var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-synthesis: none;
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 a {
@@ -33,8 +78,10 @@ a {
   text-decoration: none;
 }
 
-.imgDark {
-  display: none;
+button,
+input,
+textarea {
+  font: inherit;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -42,10 +89,29 @@ a {
     color-scheme: dark;
   }
 
-  .imgLight {
-    display: none;
+  :root {
+    --mood-background: oklch(17.5% 0.024 74);
+    --mood-foreground: oklch(91% 0.022 78);
+    --mood-muted: oklch(70% 0.028 82);
+    --mood-soft: oklch(23% 0.027 72);
+    --mood-surface: oklch(21% 0.025 74);
+    --mood-surface-muted: oklch(26% 0.028 75);
+    --mood-border: oklch(34% 0.03 76);
+    --mood-primary: oklch(72% 0.088 164);
+    --mood-primary-foreground: oklch(15% 0.02 164);
+    --mood-warm: oklch(77% 0.075 58);
+    --mood-calm: oklch(76% 0.066 210);
+    --mood-rose: oklch(75% 0.073 22);
   }
-  .imgDark {
-    display: unset;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
