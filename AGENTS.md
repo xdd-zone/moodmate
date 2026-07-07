@@ -18,22 +18,22 @@ moodmate/
 
 ## 环境要求
 
-- **Node.js**: >= 18
+- **Node.js**: >= 22
 - **包管理器**: pnpm（版本 11.5.0）
 - 安装依赖：`pnpm install`
 
 ## 常用命令
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 全量启动所有应用 |
-| `pnpm dev:web` | 单独启动用户端（http://localhost:3000） |
-| `pnpm dev:admin` | 单独启动管理后台（http://localhost:3006） |
-| `pnpm dev:api` | 单独启动 API 服务（http://localhost:8787/health） |
-| `pnpm build` | 构建所有包和应用 |
-| `pnpm lint` | 检查代码规范（使用 ESLint flat config） |
-| `pnpm check-types` | 运行 TypeScript 类型检查 |
-| `pnpm format` | 用 Prettier 格式化所有 `.ts/.tsx/.md` 文件 |
+| 命令               | 说明                                              |
+| ------------------ | ------------------------------------------------- |
+| `pnpm dev`         | 全量启动所有应用                                  |
+| `pnpm dev:web`     | 单独启动用户端（http://localhost:3000）           |
+| `pnpm dev:admin`   | 单独启动管理后台（http://localhost:3006）         |
+| `pnpm dev:api`     | 单独启动 API 服务（http://localhost:8787/health） |
+| `pnpm build`       | 构建所有包和应用                                  |
+| `pnpm lint`        | 检查代码规范（使用 ESLint flat config）           |
+| `pnpm check-types` | 运行 TypeScript 类型检查                          |
+| `pnpm format`      | 用 Prettier 格式化所有 `.ts/.tsx/.md` 文件        |
 
 ## 代码规范
 
