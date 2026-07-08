@@ -45,6 +45,15 @@ moodmate/
 - **Prettier**: 统一代码格式，`--max-warnings 0`
 - **React**: 版本 19，配合 Next.js 16.2.6
 
+## Commit Message
+
+- 默认使用 Conventional Commits 短格式：`<type>(<scope>)!: <subject>`。
+- `scope` 可选，只写当前项目 `apps/` 和 `packages/` 下的目录名：`web`、`admin`、`api`、`ui`、`eslint-config`、`typescript-config`。
+- `subject` 用英文短句，首字母小写，不加句号，尽量控制在 50 字符以内。
+- 常用类型：`feat`、`fix`、`docs`、`style`、`refactor`、`perf`、`test`、`build`、`ci`、`chore`、`types`、`release`、`revert`。
+- 破坏旧用法时加 `!`，并在正文写 `BREAKING CHANGE:`。
+- 不添加 `Generated with ...`、`Co-authored-by ...` 等工具署名，除非用户明确要求。
+
 ## 测试
 
 项目暂无集成测试配置。开发阶段建议手动验证，或在各自子应用中补充测试框架。
