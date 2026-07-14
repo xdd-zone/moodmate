@@ -1,3 +1,12 @@
+import { Badge } from "@repo/ui/badge";
+import { Button } from "@repo/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/card";
 import Link from "next/link";
 
 const moodOptions = [
@@ -17,20 +26,20 @@ export default function Home() {
       <div className="mx-auto flex min-h-[calc(100svh-48px)] max-w-7xl flex-col">
         <header className="flex items-center justify-between border-b border-border/70 py-4 text-sm">
           <Link
-            className="rounded-sm font-semibold tracking-[-0.02em] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            className="rounded-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
             href="/"
           >
             moodmate
           </Link>
           <nav className="flex items-center gap-3 text-muted">
             <a
-              className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+              className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
               href={serviceStatusHref}
             >
               服务状态
             </a>
             <Link
-              className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+              className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
               href="/app"
             >
               进入应用
@@ -40,10 +49,10 @@ export default function Home() {
 
         <section className="grid flex-1 items-center gap-12 py-14 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,0.72fr)] lg:py-20">
           <div className="max-w-3xl animate-rise-soft">
-            <p className="mb-5 inline-flex rounded-sm border border-border bg-surface/80 px-3 py-1.5 text-sm text-muted shadow-soft">
+            <Badge className="mb-5 shadow-soft" variant="outline">
               情绪记录工具
-            </p>
-            <h1 className="text-[clamp(2.5rem,7vw,6.3rem)] font-semibold leading-[0.98] tracking-[-0.05em]">
+            </Badge>
+            <h1 className="text-5xl leading-none font-semibold text-balance md:text-7xl lg:text-8xl">
               先把今天
               <span className="block text-primary">放轻一点。</span>
             </h1>
@@ -53,44 +62,41 @@ export default function Home() {
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-soft transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
-                href="/app"
-              >
-                开始记录
-              </Link>
-              <a
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-surface/70 px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
-                href={serviceStatusHref}
-              >
-                查看服务状态
-              </a>
+              <Button asChild className="w-full sm:w-auto">
+                <Link href="/app">开始记录</Link>
+              </Button>
+              <Button asChild className="w-full sm:w-auto" variant="secondary">
+                <a href={serviceStatusHref}>查看服务状态</a>
+              </Button>
             </div>
           </div>
 
-          <aside className="animate-rise-soft rounded-xl border border-border bg-surface/85 p-5 shadow-soft [animation-delay:120ms]">
-            <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
-              <div>
-                <p className="text-sm text-muted">今日记录</p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">
-                  先选一个接近的状态
-                </h2>
+          <Card className="animate-rise-soft overflow-hidden [animation-delay:120ms]">
+            <CardHeader className="border-b border-border">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardDescription>今日记录</CardDescription>
+                  <CardTitle className="mt-1 text-2xl leading-8">
+                    先选一个接近的状态
+                  </CardTitle>
+                </div>
+                <Badge variant="secondary">草稿</Badge>
               </div>
-              <span className="rounded-sm bg-soft px-2.5 py-1 text-xs text-muted">
-                草稿
-              </span>
-            </div>
+            </CardHeader>
 
-            <div className="space-y-6 py-6">
+            <CardContent className="space-y-6 pt-5">
               <section>
                 <p className="mb-3 text-sm text-muted">情绪</p>
                 <div className="flex flex-wrap gap-2">
                   {moodOptions.map((option) => (
                     <span
-                      className="inline-flex items-center gap-2 rounded-md border border-border bg-background/70 px-3 py-2 text-sm"
+                      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm"
                       key={option.label}
                     >
-                      <i className={`size-2 rounded-sm ${option.color}`} />
+                      <i
+                        aria-hidden="true"
+                        className={`size-2 rounded-sm ${option.color}`}
+                      />
                       {option.label}
                     </span>
                   ))}
@@ -99,7 +105,7 @@ export default function Home() {
 
               <section>
                 <p className="mb-3 text-sm text-muted">原因</p>
-                <div className="rounded-lg border border-border bg-background/70 p-4 text-sm leading-6 text-foreground">
+                <div className="rounded-md border border-border bg-background p-4 text-sm leading-6 text-foreground">
                   今天事情不多，但脑子一直停不下来。先把待办拆小，不急着一次做完。
                 </div>
               </section>
@@ -109,10 +115,10 @@ export default function Home() {
                 <div className="grid gap-2">
                   {steps.map((step, index) => (
                     <div
-                      className="flex items-center gap-3 rounded-md bg-soft px-3 py-2 text-sm"
+                      className="flex min-h-10 items-center gap-3 rounded-md bg-surface-muted px-3 py-2 text-sm"
                       key={step}
                     >
-                      <span className="grid size-6 place-items-center rounded-sm bg-surface text-xs text-muted">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-sm bg-surface text-xs text-muted">
                         {index + 1}
                       </span>
                       {step}
@@ -120,8 +126,8 @@ export default function Home() {
                   ))}
                 </div>
               </section>
-            </div>
-          </aside>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </main>

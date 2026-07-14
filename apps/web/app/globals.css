@@ -1,30 +1,13 @@
 @import "tailwindcss";
+@import "@repo/ui/theme.css";
 
-@theme {
-  --font-sans:
-    var(--font-maple-mono), "PingFang SC", "Hiragino Sans GB",
-    "Noto Sans CJK SC", "Microsoft YaHei", monospace;
-
-  --color-background: var(--mood-background);
-  --color-foreground: var(--mood-foreground);
-  --color-muted: var(--mood-muted);
-  --color-soft: var(--mood-soft);
-  --color-surface: var(--mood-surface);
-  --color-surface-muted: var(--mood-surface-muted);
-  --color-border: var(--mood-border);
-  --color-primary: var(--mood-primary);
-  --color-primary-foreground: var(--mood-primary-foreground);
+@theme inline {
   --color-warm: var(--mood-warm);
   --color-calm: var(--mood-calm);
   --color-rose: var(--mood-rose);
+}
 
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-
-  --shadow-soft: 0 24px 70px -42px oklch(38% 0.07 68 / 0.45);
-
+@theme {
   --animate-rise-soft: rise-soft 0.62s cubic-bezier(0.23, 1, 0.32, 1) both;
 
   @keyframes rise-soft {
@@ -40,18 +23,11 @@
 }
 
 :root {
-  --mood-background: oklch(97.7% 0.018 82);
-  --mood-foreground: oklch(24% 0.038 68);
-  --mood-muted: oklch(50% 0.036 72);
-  --mood-soft: oklch(94.5% 0.027 83);
-  --mood-surface: oklch(99% 0.01 87);
-  --mood-surface-muted: oklch(92.7% 0.03 78);
-  --mood-border: oklch(84% 0.033 77);
-  --mood-primary: oklch(55% 0.092 166);
-  --mood-primary-foreground: oklch(98% 0.015 160);
   --mood-warm: oklch(72% 0.086 58);
   --mood-calm: oklch(70% 0.075 210);
   --mood-rose: oklch(68% 0.086 22);
+  --mood-ambient-one: oklch(92% 0.06 148 / 0.55);
+  --mood-ambient-two: oklch(91% 0.05 39 / 0.45);
 }
 
 html,
@@ -64,12 +40,12 @@ body {
   background:
     radial-gradient(
       circle at 18% 12%,
-      oklch(92% 0.06 148 / 0.55),
+      var(--mood-ambient-one),
       transparent 28rem
     ),
     radial-gradient(
       circle at 80% 0%,
-      oklch(91% 0.05 39 / 0.45),
+      var(--mood-ambient-two),
       transparent 30rem
     ),
     var(--color-background);
@@ -99,18 +75,11 @@ textarea {
   }
 
   :root {
-    --mood-background: oklch(17.5% 0.024 74);
-    --mood-foreground: oklch(91% 0.022 78);
-    --mood-muted: oklch(70% 0.028 82);
-    --mood-soft: oklch(23% 0.027 72);
-    --mood-surface: oklch(21% 0.025 74);
-    --mood-surface-muted: oklch(26% 0.028 75);
-    --mood-border: oklch(34% 0.03 76);
-    --mood-primary: oklch(72% 0.088 164);
-    --mood-primary-foreground: oklch(15% 0.02 164);
     --mood-warm: oklch(77% 0.075 58);
     --mood-calm: oklch(76% 0.066 210);
     --mood-rose: oklch(75% 0.073 22);
+    --mood-ambient-one: oklch(28% 0.045 148 / 0.32);
+    --mood-ambient-two: oklch(27% 0.04 39 / 0.28);
   }
 }
 
