@@ -37,3 +37,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: 建立共享 UI 设计体系
+
+**Date**: 2026-07-14
+**Task**: 建立共享 UI 设计体系
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+建立 packages/ui 共享主题与 Button、Card、Badge，接入 Web 和 Admin，完成文档、规范、质量门与浏览器验证。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7261080` | (see git log) |
+| `2c124d4` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
