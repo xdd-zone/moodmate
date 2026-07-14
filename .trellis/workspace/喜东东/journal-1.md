@@ -5,7 +5,6 @@
 
 ---
 
-
 ## Session 1: 初始化 Trellis
 
 **Date**: 2026-07-14
@@ -23,8 +22,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `41e682d` | (see git log) |
 
 ### Testing
