@@ -13,8 +13,8 @@ catalogs:
       specifier: ^4.3.2
       version: 4.3.2
     '@types/node':
-      specifier: ^22.15.3
-      version: 22.19.19
+      specifier: ^24.13.3
+      version: 24.13.3
     '@types/react':
       specifier: 19.2.15
       version: 19.2.15
@@ -83,7 +83,7 @@ importers:
         version: link:../../packages/typescript-config
       '@types/node':
         specifier: 'catalog:'
-        version: 22.19.19
+        version: 24.13.3
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.15
@@ -142,7 +142,7 @@ importers:
         version: 4.3.2
       '@types/node':
         specifier: 'catalog:'
-        version: 22.19.19
+        version: 24.13.3
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.15
@@ -230,7 +230,7 @@ importers:
         version: link:../typescript-config
       '@types/node':
         specifier: 'catalog:'
-        version: 22.19.19
+        version: 24.13.3
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.15
@@ -920,8 +920,8 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node@22.19.19':
-    resolution: {integrity: sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew==}
+  '@types/node@24.13.3':
+    resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -2078,8 +2078,8 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
   undici@7.24.8:
     resolution: {integrity: sha512-6KQ/+QxK49Z/p3HO6E5ZCZWNnCasyZLa5ExaVYyvPxUwKtbCPMKELJOqh7EqOle0t9cH/7d2TaaTRRa6Nhs4YQ==}
@@ -2617,9 +2617,9 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@22.19.19':
+  '@types/node@24.13.3':
     dependencies:
-      undici-types: 6.21.0
+      undici-types: 7.18.2
 
   '@types/react-dom@19.2.3(@types/react@19.2.15)':
     dependencies:
@@ -4023,7 +4023,7 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  undici-types@6.21.0: {}
+  undici-types@7.18.2: {}
 
   undici@7.24.8: {}
 
