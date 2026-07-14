@@ -13,5 +13,5 @@ pnpm dev:admin
 访问：
 
 ```text
-http://localhost:3006
+http://localhost:6154
 ```

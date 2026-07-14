@@ -2,7 +2,7 @@
 
 `apps/web` 是 moodmate 的用户端站点。当前先放公开首页和应用入口。
 
-技术栈是 `Next.js 16 + React 19 + Tailwind CSS 4 + TypeScript`。开发服务默认使用 `3000` 端口。
+技术栈是 `Next.js 16 + React 19 + Tailwind CSS 4 + TypeScript`。开发服务默认使用 `6153` 端口。
 
 ## 当前页面
 
@@ -23,7 +23,7 @@ pnpm dev:web
 访问：
 
 ```text
-http://localhost:3000
+http://localhost:6153
 ```
 
 ## 环境变量
@@ -31,10 +31,10 @@ http://localhost:3000
 浏览器侧请求 API 时使用：
 
 ```text
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
+NEXT_PUBLIC_API_BASE_URL=http://localhost:6155
 ```
 
-当前首页不依赖 API 才能渲染。`NEXT_PUBLIC_API_BASE_URL` 没有配置时，服务状态链接会指向 `http://localhost:8787/health`。
+当前首页不依赖 API 才能渲染。`NEXT_PUBLIC_API_BASE_URL` 没有配置时，服务状态链接会指向 `http://localhost:6155/health`。
 
 ## 常改位置
 

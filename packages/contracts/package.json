@@ -7,13 +7,20 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check": "pnpm check-types && pnpm lint && pnpm format:check",
+    "check-types": "tsc --noEmit",
+    "format": "prettier --write . --ignore-path ../../.prettierignore",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore",
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
     "typescript": "catalog:"
   }
 }

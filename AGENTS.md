@@ -5,9 +5,9 @@
 ```
 moodmate/
 ├── apps/
-│   ├── web/       # 用户端站点，Next.js，默认端口 3000
-│   ├── admin/     # 管理后台，Next.js，默认端口 3006
-│   └── api/       # 独立 API 服务，Hono + Cloudflare Workers，端口 8787
+│   ├── web/       # 用户端站点，Next.js，默认端口 6153
+│   ├── admin/     # 管理后台，Next.js，默认端口 6154
+│   └── api/       # 独立 API 服务，Hono + Cloudflare Workers，端口 6155
 ├── packages/
 │   ├── ui/                 # 前端共享组件
 │   ├── eslint-config/      # 共享 ESLint 配置（flat config 格式）
@@ -24,16 +24,18 @@ moodmate/
 
 ## 常用命令
 
-| 命令               | 说明                                              |
-| ------------------ | ------------------------------------------------- |
-| `pnpm dev`         | 全量启动所有应用                                  |
-| `pnpm dev:web`     | 单独启动用户端（http://localhost:3000）           |
-| `pnpm dev:admin`   | 单独启动管理后台（http://localhost:3006）         |
-| `pnpm dev:api`     | 单独启动 API 服务（http://localhost:8787/health） |
-| `pnpm build`       | 构建所有包和应用                                  |
-| `pnpm lint`        | 检查代码规范（使用 ESLint flat config）           |
-| `pnpm check-types` | 运行 TypeScript 类型检查                          |
-| `pnpm format`      | 用 Prettier 格式化所有 `.ts/.tsx/.md` 文件        |
+| 命令                | 说明                                              |
+| ------------------- | ------------------------------------------------- |
+| `pnpm dev`          | 全量启动所有应用                                  |
+| `pnpm dev:web`      | 单独启动用户端（http://localhost:6153）           |
+| `pnpm dev:admin`    | 单独启动管理后台（http://localhost:6154）         |
+| `pnpm dev:api`      | 单独启动 API 服务（http://localhost:6155/health） |
+| `pnpm build`        | 构建所有包和应用                                  |
+| `pnpm check`        | 依次运行类型、Lint 和 Format 检查                 |
+| `pnpm lint`         | 检查代码规范（使用 ESLint flat config）           |
+| `pnpm check-types`  | 运行 TypeScript 类型检查                          |
+| `pnpm format`       | 用 Prettier 格式化仓库文件                        |
+| `pnpm format:check` | 检查仓库文件是否符合 Prettier 格式                |
 
 ## 代码规范
 

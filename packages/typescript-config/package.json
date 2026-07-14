@@ -3,6 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "check": "pnpm format:check",
+    "format": "prettier --write . --ignore-path ../../.prettierignore",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore"
+  },
+  "devDependencies": {
+    "prettier": "catalog:"
+  },
   "publishConfig": {
     "access": "public"
   }

@@ -71,9 +71,9 @@
 ```text
 moodmate/
 ├── apps/
-│   ├── web/       # 用户端站点，Next.js，默认端口 3000
-│   ├── admin/     # 管理后台，Next.js，默认端口 3006
-│   └── api/       # API 服务，Hono + Cloudflare Workers，默认端口 8787
+│   ├── web/       # 用户端站点，Next.js，默认端口 6153
+│   ├── admin/     # 管理后台，Next.js，默认端口 6154
+│   └── api/       # API 服务，Hono + Cloudflare Workers，默认端口 6155
 ├── packages/
 │   ├── contracts/          # 请求 schema、响应 DTO、错误码和统一响应
 │   ├── ui/                 # web 和 admin 共用的通用 React 组件

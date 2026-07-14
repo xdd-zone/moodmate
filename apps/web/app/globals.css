@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-maple-mono), "PingFang SC", "Hiragino Sans GB",
+  --font-sans:
+    var(--font-maple-mono), "PingFang SC", "Hiragino Sans GB",
     "Noto Sans CJK SC", "Microsoft YaHei", monospace;
 
   --color-background: var(--mood-background);
@@ -61,8 +62,16 @@ body {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 18% 12%, oklch(92% 0.06 148 / 0.55), transparent 28rem),
-    radial-gradient(circle at 80% 0%, oklch(91% 0.05 39 / 0.45), transparent 30rem),
+    radial-gradient(
+      circle at 18% 12%,
+      oklch(92% 0.06 148 / 0.55),
+      transparent 28rem
+    ),
+    radial-gradient(
+      circle at 80% 0%,
+      oklch(91% 0.05 39 / 0.45),
+      transparent 30rem
+    ),
     var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);

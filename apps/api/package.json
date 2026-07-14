@@ -2,10 +2,14 @@
   "name": "api",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "check": "pnpm check-types && pnpm lint && pnpm format:check",
+    "check-types": "tsc --noEmit",
+    "dev": "wrangler dev --port 6155",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "check-types": "tsc --noEmit"
+    "format": "prettier --write . --ignore-path ../../.prettierignore",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore",
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "@hono/zod-validator": "catalog:",
@@ -13,6 +17,9 @@
     "hono": "^4.12.23"
   },
   "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
     "typescript": "catalog:",
     "wrangler": "^4.4.0"
   }

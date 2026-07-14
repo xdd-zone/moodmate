@@ -12,6 +12,7 @@ catalog:
   eslint: ^9.39.1
   "@tailwindcss/postcss": ^4.3.2
   postcss: ^8.5.16
+  prettier: ^3.7.4
   tailwindcss: ^4.3.2
   typescript: 5.9.2
   zod: ^4.1.13

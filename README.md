@@ -4,9 +4,9 @@
 
 ## 目录
 
-- `apps/web`：用户端站点，Next.js，默认端口 `3000`
-- `apps/admin`：管理后台，Next.js，默认端口 `3006`
-- `apps/api`：独立 API 服务，Hono + Cloudflare Workers，默认端口 `8787`
+- `apps/web`：用户端站点，Next.js，默认端口 `6153`
+- `apps/admin`：管理后台，Next.js，默认端口 `6154`
+- `apps/api`：独立 API 服务，Hono + Cloudflare Workers，默认端口 `6155`
 - `packages/ui`：前端共享组件
 - `packages/eslint-config`：共享 ESLint 配置
 - `packages/typescript-config`：共享 TypeScript 配置
@@ -34,16 +34,15 @@ pnpm dev:api
 访问地址：
 
 ```text
-http://localhost:3000
-http://localhost:3006
-http://localhost:8787/health
+http://localhost:6153
+http://localhost:6154
+http://localhost:6155/health
 ```
 
 ## 检查
 
 ```bash
-pnpm check-types
-pnpm lint
+pnpm check
 pnpm build
 ```
 

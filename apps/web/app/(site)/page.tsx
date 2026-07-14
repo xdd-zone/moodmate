@@ -8,7 +8,7 @@ const moodOptions = [
 
 const steps = ["写下情绪", "记下原因", "选一个下一步行动"];
 const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:6155";
 const serviceStatusHref = `${apiBaseUrl.replace(/\/$/, "")}/health`;
 
 export default function Home() {

@@ -13,7 +13,7 @@ pnpm dev:api
 健康检查：
 
 ```bash
-curl http://localhost:8787/health
+curl http://localhost:6155/health
 ```
 
 正常返回：

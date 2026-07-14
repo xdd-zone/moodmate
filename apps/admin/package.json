@@ -4,11 +4,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack --port 3006",
+    "check": "pnpm check-types && pnpm lint && pnpm format:check",
+    "check-types": "next typegen && tsc --noEmit",
+    "dev": "next dev --turbopack --port 6154",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "format": "prettier --write . --ignore-path ../../.prettierignore",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore",
+    "lint": "eslint --max-warnings 0"
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
@@ -23,6 +26,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "eslint": "catalog:",
+    "prettier": "catalog:",
     "typescript": "catalog:"
   }
 }
