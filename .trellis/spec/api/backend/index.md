@@ -1,0 +1,26 @@
+# API Backend Spec
+
+`apps/api` 是 Hono + Cloudflare Workers 服务。修改 API 前按任务范围读取下面的指南。
+
+## 指南
+
+| 文件                                          | 适用内容                          |
+| --------------------------------------------- | --------------------------------- |
+| [目录与职责](./directory-structure.md)        | 入口、模块目录、依赖方向          |
+| [路由与中间件](./routing-and-middleware.md)   | Hono 路由、校验、应用组装         |
+| [错误、环境和请求上下文](./error-handling.md) | `AppError`、统一失败响应、binding |
+| [质量检查](./quality-guidelines.md)           | 类型边界、禁止写法、验证命令      |
+
+## 开发前检查
+
+- [ ] 新接口已先在 `packages/contracts` 定义 schema、请求类型和响应类型。
+- [ ] 已确认改动属于 route、service、repository、presenter 或 shared 中哪一层。
+- [ ] 已读取 `docs/architecture.md` 中对应模块的当前状态，未把下一阶段设计当成已实现能力。
+- [ ] 未新增浏览器可读取的 secret、数据库 record 或 Hono 内部类型。
+
+## 完成检查
+
+- [ ] route 只处理 HTTP 边界，业务计算在 service。
+- [ ] 成功和失败响应使用 `buildSuccess()`、`buildFailure()` 与 `createMeta()`。
+- [ ] 新路由已在 `apps/api/src/routes/index.ts` 挂载。
+- [ ] 已依次通过 `pnpm check-types`、`pnpm lint`、`pnpm format:check`。

@@ -1,0 +1,26 @@
+# Web Frontend Spec
+
+`apps/web` 是用户端 Next.js 应用。修改页面、样式或请求层前读取对应指南。
+
+## 指南
+
+| 文件                                       | 适用内容                        |
+| ------------------------------------------ | ------------------------------- |
+| [目录与数据边界](./directory-structure.md) | 路由组、业务目录、跨包依赖      |
+| [页面与组件](./component-guidelines.md)    | 服务端组件、链接、文案和交互    |
+| [样式](./styling-guidelines.md)            | Tailwind 4、token、响应式和动效 |
+| [质量检查](./quality-guidelines.md)        | 禁止写法、类型、手动验证和命令  |
+
+## 开发前检查
+
+- [ ] 已确认页面属于 `(site)`、`(auth)` 或 `(app)`。
+- [ ] 已判断是否真的需要 `"use client"`。
+- [ ] 新业务数据已在 contracts 和 API 定义，不在页面临时拼协议。
+- [ ] 已读取 `docs/apps/web-design.md` 和相关现有页面。
+
+## 完成检查
+
+- [ ] 移动端和桌面布局没有文字、按钮或卡片重叠。
+- [ ] 浅色、深色和减少动态效果模式可用。
+- [ ] 主要交互可以用键盘聚焦。
+- [ ] 已依次通过 `pnpm check-types`、`pnpm lint`、`pnpm format:check`，页面改动还通过 Web build。
