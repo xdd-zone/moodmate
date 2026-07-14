@@ -12,7 +12,7 @@
 - 不 import `apps/api/src` 或 `apps/web`。
 - 不在浏览器读取 LLM key、R2 key、数据库 ID 或 Workers binding。
 - 不把仅 Admin 使用的业务组件提前移到 `packages/ui`。
-- 不复制当前 `page.module.css` 中未使用的 starter selector。
+- 不恢复已删除的 `page.module.css` 或 Next starter selector。
 - 不提前增加复杂角色系统；当前设计只区分普通用户和管理员。
 
 ## 验证
@@ -26,4 +26,4 @@ pnpm format:check
 pnpm --filter admin build
 ```
 
-页面改动还要手动检查 `http://localhost:6154` 的移动端和桌面布局、键盘焦点、浅色和深色模式。涉及登录或权限时分别验证未登录、普通用户和管理员路径。
+页面改动还要手动检查 `http://localhost:6154` 的移动端和桌面布局、键盘焦点、浅色、深色和减少动态效果模式。涉及登录或权限时分别验证未登录、普通用户和管理员路径。

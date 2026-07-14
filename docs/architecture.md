@@ -252,15 +252,16 @@ packages/contracts/src/<module>/<action>.contract.ts
 
 ### `packages/ui`
 
-`packages/ui` 只放 `web` 和 `admin` 都会用的通用 React 组件。
+`packages/ui` 只放 `web` 和 `admin` 都会用的设计令牌和通用 React 组件。
 
-可以放：
+当前共享内容：
 
-- button。
-- card。
-- dialog。
-- input。
-- sidebar。
+- `src/theme.css`：基础令牌、语义令牌、系统浅深色和 Tailwind 共享组件扫描入口。
+- `src/button.tsx`：通用操作层级、尺寸和交互状态。
+- `src/card.tsx`：独立内容块的容器和组合结构。
+- `src/badge.tsx`：简短分类和轻量状态。
+
+Web 和 Admin 都通过 `@repo/ui/theme.css` 导入主题。应用页面只使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token，不直接读取基础色值。只有 Web 使用的情绪色留在 `apps/web/app/globals.css`。
 
 不要放：
 
@@ -268,8 +269,9 @@ packages/contracts/src/<module>/<action>.contract.ts
 - `AgentInboxPanel`。
 - 会调用接口的组件。
 - 带业务权限判断的组件。
+- 只有一个 app 使用的业务色、页面布局和组件。
 
-只有一个 app 用的组件，先留在这个 app 里。
+新增 dialog、input、sidebar 等组件前，先找到 Web 和 Admin 两个真实使用位置。只有一个 app 用的组件，先留在这个 app 里。
 
 ## 依赖方向
 
@@ -297,6 +299,7 @@ packages/contracts
 packages/ui
   -> 不依赖 apps/*
   -> 不依赖 packages/contracts
+  -> 不依赖 Next.js 或 Hono
 ```
 
 规则：
@@ -306,7 +309,7 @@ packages/ui
 - API 不 import Web 或 Admin 代码。
 - Web 和 Admin 不 import `apps/api/src`。
 - contracts 不 import UI、Hono、数据库或环境变量。
-- UI 不读 session、不拼 URL、不写业务数据。
+- UI 不读 session、不拼 URL、不写业务数据，只接收通用 DOM props、组件变体和内容。
 
 ## API 分层规则
 
@@ -880,11 +883,12 @@ apps/admin/app
 改 UI 包：
 
 ```text
-packages/ui/src
-  -> apps/web 或 apps/admin import
+packages/ui/src/theme.css 或共享组件
+  -> apps/web/app/globals.css 和实际页面
+  -> apps/admin/app/globals.css 和实际页面
 ```
 
-只有两个入口都用的组件才移动到 `packages/ui`。
+只有两个入口都用的组件才移动到 `packages/ui`。修改共享主题或组件后，Web 和 Admin 都要 build 并检查浅色、深色和键盘焦点。
 
 ## 文档冲突和源码差异
 
@@ -896,7 +900,7 @@ packages/ui/src
 
 ## 当前维护风险
 
-- `packages/ui` 已经被 `web` 和 `admin` 声明依赖，但当前 app 里还没有实际 import。后续如果长期只有一个入口使用某个组件，不要放进 `packages/ui`。
+- `packages/ui` 已由 Web 和 Admin 实际使用。新增共享组件时仍要先确认两个入口都有真实调用方。
 - `apps/admin` 还停在 starter 页面，下一阶段做后台时要先建 `(auth)` 和 `(dashboard)` 目录。
 - `apps/web` 现在还没有 `src/api` 和统一 `http`。新增业务页面前先补请求函数目录。
 - D1 和 R2 还没接入。不要提前在前端写数据库字段、文件 key 或上传路径规则。

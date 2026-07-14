@@ -2,9 +2,22 @@
 
 ## Tailwind 与 token
 
-Web 使用 Tailwind CSS 4，入口是 `apps/web/app/globals.css` 的 `@import "tailwindcss"`，PostCSS 配置在 `apps/web/postcss.config.mjs`。不要新增 `tailwind.config`。
+Web 使用 Tailwind CSS 4，入口是 `apps/web/app/globals.css`，PostCSS 配置在 `apps/web/postcss.config.mjs`。不要新增 `tailwind.config`。
 
-颜色、圆角、阴影和动效 token 放在 `@theme`，亮暗色值放在 `:root` 和 `prefers-color-scheme: dark`。页面组件优先使用 `text-foreground`、`bg-surface`、`border-border`、`bg-primary` 等语义 token，不直接写 `#000` 或 `#fff`。
+通用颜色、圆角、阴影和组件状态由 `@repo/ui/theme.css` 提供。Web 的全局样式按这个顺序导入：
+
+```css
+@import "tailwindcss";
+@import "@repo/ui/theme.css";
+```
+
+页面组件使用 `text-foreground`、`bg-surface`、`border-border`、`bg-primary`、`outline-focus` 等语义 token，不直接写色值。只有 Web 使用的情绪色、环境背景和页面动画留在 `apps/web/app/globals.css`。
+
+```css
+@theme inline {
+  --color-warm: var(--mood-warm);
+}
+```
 
 字体继续使用 `app/layout.tsx` 通过 `next/font/local` 注册的 Maple Mono，并保留中文 fallback 和 `display: "swap"`。
 
@@ -23,4 +36,4 @@ Web 使用 Tailwind CSS 4，入口是 `apps/web/app/globals.css` 的 `@import "t
 - `globals.css` 必须保留 `prefers-reduced-motion`，让动画和 transition 接近零时长。
 - 修改颜色后同时检查浅色和深色系统模式的文字、边框和按钮对比度。
 
-事实来源：`apps/web/app/globals.css`、`apps/web/app/(site)/page.tsx`、`docs/apps/web-design.md`。
+事实来源：`packages/ui/src/theme.css`、`apps/web/app/globals.css`、`apps/web/app/(site)/page.tsx`、`docs/apps/web-design.md`。

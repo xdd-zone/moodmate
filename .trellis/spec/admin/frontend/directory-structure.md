@@ -30,4 +30,4 @@ apps/admin/
 
 ## 当前状态
 
-`app/layout.tsx` 已配置 Maple Mono，但 metadata 和 `lang="en"` 仍是 starter 内容；`page.module.css` 也保留大量 starter 选择器。实现第一块后台页面时应在任务范围内替换相关内容，不把 starter 写法当作项目约定继续复制。
+`app/layout.tsx` 已配置 Maple Mono、中文 metadata 和 `lang="zh-CN"`。`app/globals.css` 已接入 Tailwind CSS 4 和 `@repo/ui/theme.css`，`app/page.tsx` 是不包含虚构业务数据的基础入口。首次增加 dashboard 业务时建立 `(dashboard)` 和 `src` 目录，不把所有功能继续堆在入口页。

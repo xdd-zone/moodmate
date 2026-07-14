@@ -24,9 +24,12 @@ moodmate 不是产品官网模板。首页要直接说明能做什么，并给�
 - Tailwind PostCSS 配置在 `apps/web/postcss.config.mjs`。
 - 不新增 `tailwind.config`。
 - 字体继续用 `apps/web/app/layout.tsx` 里的 Maple Mono。
-- 颜色、圆角、阴影和动效 token 写在 `@theme` 里。
-- 不直接写 `#000` 和 `#fff`。需要颜色时先用现有 token。
+- 通用颜色、圆角和阴影从 `@repo/ui/theme.css` 导入。
+- Web 专用的情绪色、环境背景和页面动画留在 `apps/web/app/globals.css`。
+- 页面使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token。
+- 色值只写在 token 定义里，不在页面和组件中直接写颜色。
 - 卡片只用于独立内容块，不要把整页 section 都包成卡片。
+- 通用按钮、卡片和标签分别使用 `@repo/ui/button`、`@repo/ui/card` 和 `@repo/ui/badge`。
 - 按钮和链接必须有 `focus-visible` 样式。
 
 ## 文字规则

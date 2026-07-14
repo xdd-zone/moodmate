@@ -22,4 +22,4 @@
 
 ## 当前参考
 
-当前 `apps/admin/app/page.tsx` 只展示 `moodmate` 和“admin 管理台”，不能作为复杂页面结构的参考。目录和边界以 `docs/architecture.md` 的 Admin 章节为准；首次实现 dashboard 时应同时建立真实页面结构和对应 spec 补充。
+当前 `apps/admin/app/page.tsx` 只提供管理入口和 API 健康检查，不是 dashboard 结构模板。视觉规则看 `docs/apps/admin-design.md`，目录和数据边界看 `docs/architecture.md`；首次实现 dashboard 时应同时建立真实页面结构和对应 spec 补充。
