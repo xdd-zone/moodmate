@@ -172,3 +172,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: 接入 apps/api 本地 D1
+
+**Date**: 2026-07-15
+**Task**: 接入 apps/api 本地 D1
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+为 apps/api 配置仅本地 D1 binding，新增 readiness 接口与 503 错误合同，生成 Worker runtime 类型，更新 API 架构、D1 规范和开发文档，并验证类型、Lint、Format、Wrangler dry-run 与本地 D1 请求。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `60b2153` | (see git log) |
+| `3ec6c9e` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
