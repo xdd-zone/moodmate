@@ -12,7 +12,7 @@
 
 - metadata 使用 Next.js 的 `Metadata` 类型，参考 `app/layout.tsx` 和应用入口页。
 - API 请求和响应类型从 `@repo/contracts` import，不在页面重复定义。
-- 环境变量只在明确的边界读取；当前公开变量只有 `NEXT_PUBLIC_API_BASE_URL`。
+- 环境变量通过 `src/env/server.ts`、`src/env/client.ts` 读取；页面和组件不直接访问 `process.env`。
 - 不用类型断言绕过未校验的接口响应。
 
 ## 手动检查

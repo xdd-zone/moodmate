@@ -8,6 +8,7 @@
 | ------------------------------------------ | ------------------------------- |
 | [目录与数据边界](./directory-structure.md) | 路由组、业务目录、跨包依赖      |
 | [页面与组件](./component-guidelines.md)    | 服务端组件、链接、文案和交互    |
+| [环境变量](./environment-variables.md)     | 服务端、客户端配置边界与校验    |
 | [样式](./styling-guidelines.md)            | Tailwind 4、token、响应式和动效 |
 | [质量检查](./quality-guidelines.md)        | 禁止写法、类型、手动验证和命令  |
 
@@ -16,6 +17,7 @@
 - [ ] 已确认页面属于 `(site)`、`(auth)` 或 `(app)`。
 - [ ] 已判断是否真的需要 `"use client"`。
 - [ ] 新业务数据已在 contracts 和 API 定义，不在页面临时拼协议。
+- [ ] 修改运行配置前已确认变量属于服务端还是浏览器。
 - [ ] 已读取 `docs/apps/web-design.md` 和相关现有页面。
 
 ## 完成检查

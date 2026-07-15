@@ -4,17 +4,45 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": [
+        "APP_ENV",
+        "API_BASE_URL",
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_API_BASE_URL",
+        "CORS_ORIGINS"
+      ],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "env": [
+        "APP_ENV",
+        "API_BASE_URL",
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_API_BASE_URL",
+        "CORS_ORIGINS"
+      ]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types"],
+      "env": [
+        "APP_ENV",
+        "API_BASE_URL",
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_API_BASE_URL",
+        "CORS_ORIGINS"
+      ]
     },
     "dev": {
       "cache": false,
+      "env": [
+        "APP_ENV",
+        "API_BASE_URL",
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_API_BASE_URL",
+        "CORS_ORIGINS"
+      ],
       "persistent": true
     }
   }

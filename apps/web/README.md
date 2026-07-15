@@ -28,13 +28,15 @@ http://localhost:6153
 
 ## 环境变量
 
-浏览器侧请求 API 时使用：
+从示例文件创建本地配置：
 
-```text
-NEXT_PUBLIC_API_BASE_URL=http://localhost:6155
+```bash
+cp apps/web/.env.example apps/web/.env.local
 ```
 
-当前首页不依赖 API 才能渲染。`NEXT_PUBLIC_API_BASE_URL` 没有配置时，服务状态链接会指向 `http://localhost:6155/health`。
+`APP_ENV`、`API_BASE_URL` 只给服务端使用。`NEXT_PUBLIC_APP_ENV`、`NEXT_PUBLIC_API_BASE_URL` 会进入浏览器代码，不能填写密钥。四项变量都会在页面构建时校验，缺失或格式错误会直接报错。
+
+`APP_ENV` 的可选值是 `development`、`test`、`production`。test 和 production 的真实值由部署平台配置，不提交到仓库。
 
 ## 常改位置
 
@@ -54,6 +56,6 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:6155
 ```bash
 pnpm check-types
 pnpm lint
-pnpm format
+pnpm format:check
 pnpm --filter web build
 ```

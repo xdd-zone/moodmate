@@ -8,11 +8,14 @@ import {
   CardTitle,
 } from "@repo/ui/card";
 
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:6155";
-const serviceStatusHref = `${apiBaseUrl.replace(/\/$/, "")}/health`;
+import { getAdminClientEnv } from "../src/env/client";
+import { getAdminServerEnv } from "../src/env/server";
 
 export default function Home() {
+  getAdminServerEnv();
+  const env = getAdminClientEnv();
+  const serviceStatusHref = `${env.NEXT_PUBLIC_API_BASE_URL}/health`;
+
   return (
     <main className="min-h-svh px-5 py-6 text-foreground md:px-8">
       <div className="mx-auto flex min-h-[calc(100svh-48px)] max-w-6xl flex-col">

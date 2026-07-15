@@ -4,18 +4,20 @@
 
 ## 指南
 
-| 文件                                          | 适用内容                          |
-| --------------------------------------------- | --------------------------------- |
-| [目录与职责](./directory-structure.md)        | 入口、模块目录、依赖方向          |
-| [路由与中间件](./routing-and-middleware.md)   | Hono 路由、校验、应用组装         |
-| [错误、环境和请求上下文](./error-handling.md) | `AppError`、统一失败响应、binding |
-| [质量检查](./quality-guidelines.md)           | 类型边界、禁止写法、验证命令      |
+| 文件                                        | 适用内容                       |
+| ------------------------------------------- | ------------------------------ |
+| [目录与职责](./directory-structure.md)      | 入口、模块目录、依赖方向       |
+| [路由与中间件](./routing-and-middleware.md) | Hono 路由、校验、应用组装      |
+| [错误和请求上下文](./error-handling.md)     | `AppError`、统一失败响应、变量 |
+| [环境变量](./environment-variables.md)      | Worker binding、校验、Wrangler |
+| [质量检查](./quality-guidelines.md)         | 类型边界、禁止写法、验证命令   |
 
 ## 开发前检查
 
 - [ ] 新接口已先在 `packages/contracts` 定义 schema、请求类型和响应类型。
 - [ ] 已确认改动属于 route、service、repository、presenter 或 shared 中哪一层。
 - [ ] 已读取 `docs/architecture.md` 中对应模块的当前状态，未把下一阶段设计当成已实现能力。
+- [ ] 新增 binding 时已确认 `ApiBindings`、解析函数、Wrangler 和示例文件同步修改。
 - [ ] 未新增浏览器可读取的 secret、数据库 record 或 Hono 内部类型。
 
 ## 完成检查

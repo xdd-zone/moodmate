@@ -628,16 +628,19 @@ LLM 返回空文本、HTML 页面或协议不匹配时，API 返回明确错误�
 
 ### 配置
 
-保存位置：Cloudflare Workers bindings 和环境变量。
+Next.js 配置保存在 Web、Admin 各自的环境变量中：
 
-读取入口：`apps/api/src/shared/env.ts`。
+- 服务端入口：`apps/web/src/env/server.ts`、`apps/admin/src/env/server.ts`。
+- 客户端入口：`apps/web/src/env/client.ts`、`apps/admin/src/env/client.ts`。
+- 服务端字段：`APP_ENV`、`API_BASE_URL`。
+- 公开字段：`NEXT_PUBLIC_APP_ENV`、`NEXT_PUBLIC_API_BASE_URL`。
 
-当前字段：
+API 配置保存在 Cloudflare Workers bindings 中，读取入口是 `apps/api/src/shared/env.ts`：
 
 - `APP_ENV`
 - `CORS_ORIGINS`
 
-后续新增 LLM、D1、R2 配置时，也从 API 读取。不要让浏览器读取 secret。
+本地真实值分别放在 `.env.local` 和 `.dev.vars`，仓库只提交 example 文件。test 和 production 的真实 URL、CORS 来源由部署平台配置。后续新增 LLM、D1、R2 配置时，也只从 API 读取，不让浏览器读取 secret。
 
 ### 前端 UI 状态
 

@@ -21,14 +21,3 @@ API 的失败响应由 `apps/api/src/bootstrap/create-app.ts` 统一生成。业
 - 把 `x-request-id` 写回响应头。
 
 新增上下文字段时同步修改 `apps/api/src/shared/hono-env.ts` 的 `ApiHonoEnv.Variables`。这些字段只属于单次请求，不写入业务数据。
-
-## 环境变量
-
-Workers binding 的原始字符串只在 `apps/api/src/shared/env.ts` 解析。业务模块调用 `getApiEnv(c.env)`，不要各自读取和拆分 binding。
-
-当前支持：
-
-- `APP_ENV`：只接受 `test`、`production`，其他值按 `development` 处理。
-- `CORS_ORIGINS`：按逗号拆分、去空格并过滤空项。
-
-新增 binding 时同时修改 `ApiBindings`、解析函数和 `wrangler.jsonc`。secret 只能在 API 读取，不能返回给 Web 或 Admin。

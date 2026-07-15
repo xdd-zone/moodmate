@@ -9,6 +9,9 @@ import {
 } from "@repo/ui/card";
 import Link from "next/link";
 
+import { getWebClientEnv } from "../../src/env/client";
+import { getWebServerEnv } from "../../src/env/server";
+
 const moodOptions = [
   { label: "平静", color: "bg-primary" },
   { label: "有点累", color: "bg-warm" },
@@ -16,11 +19,12 @@ const moodOptions = [
 ];
 
 const steps = ["写下情绪", "记下原因", "选一个下一步行动"];
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:6155";
-const serviceStatusHref = `${apiBaseUrl.replace(/\/$/, "")}/health`;
 
 export default function Home() {
+  getWebServerEnv();
+  const env = getWebClientEnv();
+  const serviceStatusHref = `${env.NEXT_PUBLIC_API_BASE_URL}/health`;
+
   return (
     <main className="min-h-svh px-[clamp(20px,6vw,80px)] py-6 text-foreground">
       <div className="mx-auto flex min-h-[calc(100svh-48px)] max-w-7xl flex-col">

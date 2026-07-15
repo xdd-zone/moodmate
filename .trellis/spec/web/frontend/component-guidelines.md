@@ -8,7 +8,7 @@
 
 ## 页面内容
 
-公开首页必须保留产品名、实际用途、开始记录入口和服务状态入口。当前实现位于 `apps/web/app/(site)/page.tsx`，服务状态 URL 从 `NEXT_PUBLIC_API_BASE_URL` 生成，未配置时使用 `http://localhost:6155`。
+公开首页必须保留产品名、实际用途、开始记录入口和服务状态入口。当前实现位于 `apps/web/app/(site)/page.tsx`，服务状态 URL 从 `getWebClientEnv()` 返回的 `NEXT_PUBLIC_API_BASE_URL` 生成；变量缺失或格式错误时停止渲染。
 
 应用入口当前只说明尚未实现的区域。新增真实功能后再替换对应占位说明，不提前渲染无法提交的表单或虚构数据入口。
 

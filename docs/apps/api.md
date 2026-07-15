@@ -17,6 +17,16 @@ apps/api/src/
 
 新增接口时，先在 `packages/contracts/src/<module>` 写请求 schema 和响应类型，再到 `apps/api/src/modules/<module>` 写 route。一级挂载只改 `apps/api/src/routes/index.ts`。
 
+## 环境变量
+
+Worker binding 的原始值只在 `apps/api/src/shared/env.ts` 解析。route、service 和 middleware 调用 `getApiEnv(c.env)`，不直接拆分字符串。
+
+- `APP_ENV` 只接受 `development`、`test`、`production`。
+- `CORS_ORIGINS` 使用英文逗号分隔，解析后只保留合法的 HTTP/HTTPS origin。
+- production 必须配置 `CORS_ORIGINS`。
+
+本地值放在 `apps/api/.dev.vars`，可以从 `.dev.vars.example` 创建。`wrangler.jsonc` 定义 development、test、production 的 `APP_ENV`；远端 CORS 来源由 Cloudflare 环境变量提供。
+
 ## Contracts
 
 `@repo/contracts` 放前后端共用的类型和 schema。

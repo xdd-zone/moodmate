@@ -16,7 +16,7 @@ export function registerCors(app: Hono<ApiHonoEnv>) {
           return origin;
         }
 
-        return allowedOrigins.has(origin) ? origin : env.CORS_ORIGINS[0];
+        return allowedOrigins.has(origin) ? origin : null;
       },
     });
 
