@@ -4,8 +4,8 @@ import type {
   RootResponse,
 } from "@repo/contracts";
 
-import { getApiEnv } from "../../shared/env";
-import type { ApiBindings } from "../../shared/hono-env";
+import { getApiEnv } from "@/shared/env";
+import type { ApiBindings } from "@/shared/hono-env";
 
 export function getRootInfo(bindings: ApiBindings): RootResponse {
   const env = getApiEnv(bindings);

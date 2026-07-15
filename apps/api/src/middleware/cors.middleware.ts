@@ -1,8 +1,8 @@
 import { cors } from "hono/cors";
 import type { Hono } from "hono";
 
-import { getApiEnv } from "../shared/env";
-import type { ApiHonoEnv } from "../shared/hono-env";
+import { getApiEnv } from "@/shared/env";
+import type { ApiHonoEnv } from "@/shared/hono-env";
 
 export function registerCors(app: Hono<ApiHonoEnv>) {
   app.use("*", async (c, next) => {

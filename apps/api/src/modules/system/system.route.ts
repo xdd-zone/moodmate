@@ -2,10 +2,10 @@ import { zValidator } from "@hono/zod-validator";
 import { BizCode, PingRequestSchema, buildSuccess } from "@repo/contracts";
 import { Hono } from "hono";
 
+import { AppError } from "@/shared/app-error";
+import type { ApiHonoEnv } from "@/shared/hono-env";
+import { createMeta } from "@/shared/meta";
 import { getHealthStatus, getPingResult, getRootInfo } from "./system.service";
-import { AppError } from "../../shared/app-error";
-import { createMeta } from "../../shared/meta";
-import type { ApiHonoEnv } from "../../shared/hono-env";
 
 export function createSystemRoute() {
   return new Hono<ApiHonoEnv>()

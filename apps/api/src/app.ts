@@ -1,5 +1,5 @@
-import { createApiApp } from "./bootstrap/create-app";
-import type { ApiRoutesType } from "./routes";
+import { createApiApp } from "@/bootstrap/create-app";
+import type { ApiRoutesType } from "@/routes";
 
 const app = createApiApp();
 

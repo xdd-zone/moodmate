@@ -10,8 +10,8 @@ import {
 import { ThemeToggle } from "@repo/ui/theme-toggle";
 import Link from "next/link";
 
-import { getWebClientEnv } from "../../src/env/client";
-import { getWebServerEnv } from "../../src/env/server";
+import { getWebClientEnv } from "@/src/env/client";
+import { getWebServerEnv } from "@/src/env/server";
 
 const moodOptions = [
   { label: "平静", color: "bg-primary" },

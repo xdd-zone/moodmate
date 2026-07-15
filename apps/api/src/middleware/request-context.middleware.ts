@@ -1,6 +1,6 @@
 import type { Hono } from "hono";
 
-import type { ApiHonoEnv } from "../shared/hono-env";
+import type { ApiHonoEnv } from "@/shared/hono-env";
 
 export function registerRequestContext(app: Hono<ApiHonoEnv>) {
   app.use("*", async (c, next) => {

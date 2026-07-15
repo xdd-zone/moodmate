@@ -2,13 +2,13 @@ import { BizCode, buildFailure } from "@repo/contracts";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 
-import { registerCors } from "../middleware/cors.middleware";
-import { registerRequestContext } from "../middleware/request-context.middleware";
-import { registerSecureHeaders } from "../middleware/secure-headers.middleware";
-import { createRoutes } from "../routes";
-import { AppError } from "../shared/app-error";
-import { createMeta } from "../shared/meta";
-import type { ApiHonoEnv } from "../shared/hono-env";
+import { registerCors } from "@/middleware/cors.middleware";
+import { registerRequestContext } from "@/middleware/request-context.middleware";
+import { registerSecureHeaders } from "@/middleware/secure-headers.middleware";
+import { createRoutes } from "@/routes";
+import { AppError } from "@/shared/app-error";
+import { createMeta } from "@/shared/meta";
+import type { ApiHonoEnv } from "@/shared/hono-env";
 
 export function createApiApp() {
   const app = new Hono<ApiHonoEnv>();

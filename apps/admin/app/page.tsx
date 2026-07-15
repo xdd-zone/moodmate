@@ -9,8 +9,8 @@ import {
 } from "@repo/ui/card";
 import { ThemeToggle } from "@repo/ui/theme-toggle";
 
-import { getAdminClientEnv } from "../src/env/client";
-import { getAdminServerEnv } from "../src/env/server";
+import { getAdminClientEnv } from "@/src/env/client";
+import { getAdminServerEnv } from "@/src/env/server";
 
 export default function Home() {
   getAdminServerEnv();
