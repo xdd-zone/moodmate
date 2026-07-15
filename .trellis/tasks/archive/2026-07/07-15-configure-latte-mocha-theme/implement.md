@@ -80,7 +80,7 @@ pnpm --filter admin build
 ## 9. 任务完成处理
 
 - [x] 使用 `trellis-update-spec` 更新 Web、Admin 与 UI 样式规范，把系统明暗媒体查询改为 Latte / Mocha 显式主题事实。
-- [ ] 按 Trellis 流程记录检查结果、提交代码并归档任务。
+- [x] 按 Trellis 流程记录检查结果、提交代码并归档任务。
 
 ## 回滚点
 
