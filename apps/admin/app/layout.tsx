@@ -1,6 +1,9 @@
 import { ThemeScript } from "@repo/ui/theme-script";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+
+import { QueryProvider } from "@/src/providers/query-provider";
+
 import "./globals.css";
 
 const mapleMono = localFont({
@@ -77,7 +80,9 @@ export default function RootLayout({
       <head>
         <ThemeScript />
       </head>
-      <body>{children}</body>
+      <body>
+        <QueryProvider>{children}</QueryProvider>
+      </body>
     </html>
   );
 }

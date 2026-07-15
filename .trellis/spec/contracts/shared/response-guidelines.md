@@ -12,6 +12,17 @@
 
 前端判断结果时先检查 `ok`，让 TypeScript 缩小到 `ApiSuccess` 或 `ApiFailure`；不要用 `as` 强行转换响应。
 
+浏览器或 Next.js 服务端收到 JSON 后，使用下面的运行时 schema 校验：
+
+```ts
+BizCodeSchema;
+ApiMetaSchema;
+ApiErrorSchema;
+createApiResponseSchema(dataSchema: z.ZodType<TData>);
+```
+
+`createApiResponseSchema()` 返回 `ApiResponse<TData>` 的判别联合 schema。接口调用方传入具体响应 schema，例如 `HealthResponseSchema`，再对 `response.json()` 的 `unknown` 结果调用 `safeParse()`。成功数据、失败错误、`requestId` 和 timestamp 都从解析结果读取，不手写局部 type guard。
+
 ## 业务错误码
 
 错误码集中在 `packages/contracts/src/common/biz-code.ts` 的 `BizCode` 常量中，类型由常量值推导：
