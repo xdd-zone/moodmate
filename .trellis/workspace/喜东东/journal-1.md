@@ -105,3 +105,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: 配置 Latte 与 Mocha 主题
+
+**Date**: 2026-07-15
+**Task**: 配置 Latte 与 Mocha 主题
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+为 Web 与 Admin 配置 Latte/Mocha 显式主题、共享切换器和首屏脚本；修复 Link 按钮文字色被全局 anchor 规则覆盖的问题，并更新主题规范。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f252bbd` | (see git log) |
+| `02b192c` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
