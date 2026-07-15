@@ -72,7 +72,6 @@
 
 - None - task complete
 
-
 ## Session 3: 设计项目环境变量
 
 **Date**: 2026-07-15
@@ -90,8 +89,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `65e2002` | (see git log) |
 | `febe80c` | (see git log) |
 
