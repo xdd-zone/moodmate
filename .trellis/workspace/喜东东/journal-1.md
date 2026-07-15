@@ -71,3 +71,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: 设计项目环境变量
+
+**Date**: 2026-07-15
+**Task**: 设计项目环境变量
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+为 Web、Admin 和 API 增加严格环境变量校验、示例配置、Wrangler 多环境与 Turbo 声明，并同步文档和 Trellis spec。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `65e2002` | (see git log) |
+| `febe80c` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
