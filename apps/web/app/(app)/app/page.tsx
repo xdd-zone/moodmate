@@ -1,6 +1,7 @@
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Card, CardHeader } from "@repo/ui/card";
+import { ThemeToggle } from "@repo/ui/theme-toggle";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -12,9 +13,12 @@ export default function AppEntryPage() {
   return (
     <main className="min-h-svh px-[clamp(20px,6vw,80px)] py-8 text-foreground">
       <div className="mx-auto flex min-h-[calc(100svh-64px)] max-w-4xl flex-col justify-center">
-        <Button asChild className="mb-8 w-fit" variant="ghost">
-          <Link href="/">返回首页</Link>
-        </Button>
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+          <Button asChild className="w-fit" variant="ghost">
+            <Link href="/">返回首页</Link>
+          </Button>
+          <ThemeToggle />
+        </div>
 
         <Card>
           <CardHeader className="gap-3 md:p-8">

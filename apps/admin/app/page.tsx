@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/card";
+import { ThemeToggle } from "@repo/ui/theme-toggle";
 
 import { getAdminClientEnv } from "../src/env/client";
 import { getAdminServerEnv } from "../src/env/server";
@@ -19,9 +20,10 @@ export default function Home() {
   return (
     <main className="min-h-svh px-5 py-6 text-foreground md:px-8">
       <div className="mx-auto flex min-h-[calc(100svh-48px)] max-w-6xl flex-col">
-        <header className="flex items-center gap-3 border-b border-border py-4">
+        <header className="flex flex-wrap items-center gap-3 border-b border-border py-4">
           <span className="text-sm font-semibold">moodmate</span>
           <Badge variant="outline">admin</Badge>
+          <ThemeToggle className="ml-auto" />
         </header>
 
         <section className="grid flex-1 content-center items-start gap-10 py-12 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.62fr)]">

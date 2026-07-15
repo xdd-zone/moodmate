@@ -1,3 +1,4 @@
+import { ThemeScript } from "@repo/ui/theme-script";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -70,7 +71,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={mapleMono.variable}>
+    <html
+      lang="zh-CN"
+      className={mapleMono.variable}
+      data-theme="latte"
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body>{children}</body>
     </html>
   );

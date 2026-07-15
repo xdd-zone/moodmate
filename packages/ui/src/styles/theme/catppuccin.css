@@ -1,0 +1,88 @@
+:root,
+[data-theme="latte"] {
+  color-scheme: light;
+
+  --theme-base: #eff1f5;
+  --theme-base-muted: #e6e9ef;
+  --theme-base-subtle: #dce0e8;
+
+  --theme-surface-0: #ccd0da;
+  --theme-surface-1: #bcc0cc;
+  --theme-surface-2: #acb0be;
+  --theme-overlay-0: #9ca0b0;
+  --theme-overlay-1: #8c8fa1;
+  --theme-overlay-2: #7c7f93;
+  --theme-overlay: var(--theme-surface-1);
+  --theme-overlay-strong: var(--theme-surface-2);
+
+  --theme-text: #4c4f69;
+  --theme-text-subtle: #6c6f85;
+  --theme-text-muted: #8c8fa1;
+
+  --theme-rosewater: #dc8a78;
+  --theme-flamingo: #dd7878;
+  --theme-pink: #ea76cb;
+  --theme-mauve: #8839ef;
+  --theme-red: #d20f39;
+  --theme-maroon: #e64553;
+  --theme-peach: #fe640b;
+  --theme-yellow: #df8e1d;
+  --theme-green: #40a02b;
+  --theme-teal: #179299;
+  --theme-sky: #04a5e5;
+  --theme-sapphire: #209fb5;
+  --theme-blue: #1e66f5;
+  --theme-lavender: #7287fd;
+
+  --theme-primary: var(--theme-blue);
+  --theme-primary-contrast: var(--theme-base);
+  --theme-highlight: var(--theme-lavender);
+  --theme-danger: var(--theme-red);
+  --theme-success: var(--theme-green);
+  --theme-warning: var(--theme-yellow);
+  --theme-info: var(--theme-teal);
+}
+
+[data-theme="mocha"] {
+  color-scheme: dark;
+
+  --theme-base: #1e1e2e;
+  --theme-base-muted: #181825;
+  --theme-base-subtle: #11111b;
+
+  --theme-surface-0: #313244;
+  --theme-surface-1: #45475a;
+  --theme-surface-2: #585b70;
+  --theme-overlay-0: #6c7086;
+  --theme-overlay-1: #7f849c;
+  --theme-overlay-2: #9399b2;
+  --theme-overlay: var(--theme-surface-1);
+  --theme-overlay-strong: var(--theme-surface-2);
+
+  --theme-text: #cdd6f4;
+  --theme-text-subtle: #9399b2;
+  --theme-text-muted: #a6adc8;
+
+  --theme-rosewater: #f5e0dc;
+  --theme-flamingo: #f2cdcd;
+  --theme-pink: #f5c2e7;
+  --theme-mauve: #cba6f7;
+  --theme-red: #f38ba8;
+  --theme-maroon: #eba0ac;
+  --theme-peach: #fab387;
+  --theme-yellow: #f9e2af;
+  --theme-green: #a6e3a1;
+  --theme-teal: #94e2d5;
+  --theme-sky: #89dceb;
+  --theme-sapphire: #74c7ec;
+  --theme-blue: #89b4fa;
+  --theme-lavender: #b4befe;
+
+  --theme-primary: var(--theme-blue);
+  --theme-primary-contrast: var(--theme-base);
+  --theme-highlight: var(--theme-lavender);
+  --theme-danger: var(--theme-red);
+  --theme-success: var(--theme-green);
+  --theme-warning: var(--theme-yellow);
+  --theme-info: var(--theme-teal);
+}

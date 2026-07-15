@@ -1,0 +1,98 @@
+@theme inline {
+  --font-sans:
+    var(--font-maple-mono), "PingFang SC", "Hiragino Sans GB",
+    "Noto Sans CJK SC", "Microsoft YaHei", monospace;
+
+  --color-background: var(--theme-base);
+  --color-surface: color-mix(
+    in srgb,
+    var(--theme-base) 90%,
+    var(--theme-surface-0)
+  );
+  --color-surface-muted: var(--theme-base-muted);
+  --color-overlay: var(--theme-overlay);
+  --color-foreground: var(--theme-text);
+  --color-muted: var(--theme-text-subtle);
+  --color-disabled: var(--theme-text-muted);
+  --color-inverse: var(--theme-base);
+  --color-border: color-mix(
+    in srgb,
+    var(--theme-base-subtle) 72%,
+    var(--theme-overlay-0)
+  );
+  --color-border-strong: color-mix(
+    in srgb,
+    var(--theme-base-subtle) 55%,
+    var(--theme-overlay-strong)
+  );
+  --color-focus: color-mix(in srgb, var(--theme-highlight) 68%, transparent);
+  --color-primary: var(--theme-primary);
+  --color-primary-strong: color-mix(
+    in srgb,
+    var(--theme-primary) 76%,
+    var(--theme-text)
+  );
+  --color-primary-hover: color-mix(
+    in srgb,
+    var(--theme-primary) 86%,
+    var(--theme-text)
+  );
+  --color-primary-active: color-mix(
+    in srgb,
+    var(--theme-primary) 76%,
+    var(--theme-text)
+  );
+  --color-primary-foreground: var(--theme-primary-contrast);
+  --color-primary-subtle: color-mix(
+    in srgb,
+    var(--theme-primary) 14%,
+    var(--theme-base)
+  );
+  --color-success: var(--theme-success);
+  --color-success-subtle: color-mix(
+    in srgb,
+    var(--theme-success) 14%,
+    var(--theme-base)
+  );
+  --color-warning: var(--theme-warning);
+  --color-warning-subtle: color-mix(
+    in srgb,
+    var(--theme-warning) 14%,
+    var(--theme-base)
+  );
+  --color-danger: var(--theme-danger);
+  --color-danger-hover: color-mix(
+    in srgb,
+    var(--theme-danger) 84%,
+    var(--theme-text)
+  );
+  --color-danger-foreground: var(--theme-base);
+  --color-danger-subtle: color-mix(
+    in srgb,
+    var(--theme-danger) 14%,
+    var(--theme-base)
+  );
+  --color-info: var(--theme-info);
+  --color-info-subtle: color-mix(
+    in srgb,
+    var(--theme-info) 14%,
+    var(--theme-base)
+  );
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-control: 0 1px 2px
+    color-mix(in srgb, var(--theme-base-subtle) 28%, transparent);
+  --shadow-card: 0 18px 48px -38px
+    color-mix(in srgb, var(--theme-base-subtle) 64%, transparent);
+  --shadow-soft: 0 24px 70px -42px
+    color-mix(in srgb, var(--theme-highlight) 38%, transparent);
+}
+
+@custom-variant dark (&:where(
+  [data-theme="mocha"],
+  [data-theme="mocha"] *
+));

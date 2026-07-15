@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/card";
+import { ThemeToggle } from "@repo/ui/theme-toggle";
 import Link from "next/link";
 
 import { getWebClientEnv } from "../../src/env/client";
@@ -28,14 +29,15 @@ export default function Home() {
   return (
     <main className="min-h-svh px-[clamp(20px,6vw,80px)] py-6 text-foreground">
       <div className="mx-auto flex min-h-[calc(100svh-48px)] max-w-7xl flex-col">
-        <header className="flex items-center justify-between border-b border-border/70 py-4 text-sm">
+        <header className="flex items-start justify-between gap-4 border-b border-border/70 py-4 text-sm">
           <Link
             className="rounded-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
             href="/"
           >
             moodmate
           </Link>
-          <nav className="flex items-center gap-3 text-muted">
+          <nav className="flex flex-wrap items-center justify-end gap-3 text-muted">
+            <ThemeToggle />
             <a
               className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
               href={serviceStatusHref}

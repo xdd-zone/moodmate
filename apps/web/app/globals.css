@@ -23,11 +23,11 @@
 }
 
 :root {
-  --mood-warm: oklch(72% 0.086 58);
-  --mood-calm: oklch(70% 0.075 210);
-  --mood-rose: oklch(68% 0.086 22);
-  --mood-ambient-one: oklch(92% 0.06 148 / 0.55);
-  --mood-ambient-two: oklch(91% 0.05 39 / 0.45);
+  --mood-warm: var(--theme-peach);
+  --mood-calm: var(--theme-teal);
+  --mood-rose: var(--theme-maroon);
+  --mood-ambient-one: color-mix(in srgb, var(--theme-green) 20%, transparent);
+  --mood-ambient-two: color-mix(in srgb, var(--theme-peach) 18%, transparent);
 }
 
 html,
@@ -59,7 +59,6 @@ body {
 }
 
 a {
-  color: inherit;
   text-decoration: none;
 }
 
@@ -67,20 +66,6 @@ button,
 input,
 textarea {
   font: inherit;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-
-  :root {
-    --mood-warm: oklch(77% 0.075 58);
-    --mood-calm: oklch(76% 0.066 210);
-    --mood-rose: oklch(75% 0.073 22);
-    --mood-ambient-one: oklch(28% 0.045 148 / 0.32);
-    --mood-ambient-two: oklch(27% 0.04 39 / 0.28);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
