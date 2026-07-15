@@ -106,7 +106,6 @@
 
 - None - task complete
 
-
 ## Session 4: 配置 Latte 与 Mocha 主题
 
 **Date**: 2026-07-15
@@ -124,8 +123,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `f252bbd` | (see git log) |
 | `02b192c` | (see git log) |
 
@@ -140,7 +139,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 5: 实现 Web 与 Admin HTTP 层
 
@@ -159,8 +157,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `1d25993` | (see git log) |
 
 ### Testing
