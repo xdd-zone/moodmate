@@ -7,6 +7,7 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
+
 - **Active File**: `journal-1.md`
 - **Total Sessions**: 2
 - **Last Active**: 2026-07-14
@@ -17,9 +18,11 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-| File | Lines | Status |
-|------|-------|--------|
-| `journal-1.md` | ~74 | Active |
+
+| File           | Lines | Status |
+| -------------- | ----- | ------ |
+| `journal-1.md` | ~74   | Active |
+
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -28,10 +31,10 @@
 
 <!-- @@@auto:session-history -->
 
-| # | Date | Title | Commits | Branch |
-|---|------|-------|---------|--------|
-| 2 | 2026-07-14 | 建立共享 UI 设计体系 | `7261080`, `2c124d4` | `main` |
-| 1   | 2026-07-14 | 初始化 Trellis | `41e682d` | `main` |
+| #   | Date       | Title                | Commits              | Branch |
+| --- | ---------- | -------------------- | -------------------- | ------ |
+| 2   | 2026-07-14 | 建立共享 UI 设计体系 | `7261080`, `2c124d4` | `main` |
+| 1   | 2026-07-14 | 初始化 Trellis       | `41e682d`            | `main` |
 
 <!-- @@@/auto:session-history -->
 

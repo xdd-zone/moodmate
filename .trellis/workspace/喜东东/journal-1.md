@@ -38,7 +38,6 @@
 
 - None - task complete
 
-
 ## Session 2: 建立共享 UI 设计体系
 
 **Date**: 2026-07-14
@@ -56,8 +55,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `7261080` | (see git log) |
 | `2c124d4` | (see git log) |
 
