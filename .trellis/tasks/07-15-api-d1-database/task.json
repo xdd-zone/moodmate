@@ -1,0 +1,30 @@
+{
+  "id": "api-d1-database",
+  "name": "api-d1-database",
+  "title": "设计 apps/api D1 数据库接入",
+  "description": "参考两份 D1 课程材料，为 apps/api 设计并接入可验证的 D1 数据库访问，不提前设计业务表。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": "apps/api",
+  "package": "api",
+  "priority": "P2",
+  "creator": "喜东东",
+  "assignee": "喜东东",
+  "createdAt": "2026-07-15",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "创建本地D1数据库.txt",
+    "D1 migration & seed.txt",
+    "apps/api/wrangler.jsonc"
+  ],
+  "notes": "仅接入本地 D1；设计完成后删除两份课程 txt。",
+  "meta": {}
+}

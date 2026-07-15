@@ -13,7 +13,7 @@
 - 不在 repository 中拼 API 响应。
 - 不在浏览器应用里 import `apps/api/src`。
 - 不把数据库 record、Workers binding 或 Hono context 放进 `@repo/contracts`。
-- 当前没有数据库和日志基础设施，不新增空的 database、logging 指南或占位实现。
+- 本地 D1 基础接入只放在 `infra/db/d1.ts`；没有业务表时不新增空 repository、schema、migration、seed 或数据库 client。
 
 ## 修改顺序
 

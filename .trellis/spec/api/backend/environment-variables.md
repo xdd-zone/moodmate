@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-新增或修改 Cloudflare Worker 环境变量、CORS 来源和 Wrangler 环境时使用本约定。原始 binding 只在 `apps/api/src/shared/env.ts` 解析。
+新增或修改 Cloudflare Worker 环境变量、资源 binding、CORS 来源和 Wrangler 环境时使用本约定。字符串 binding 在 `apps/api/src/shared/env.ts` 解析；D1 等资源 binding 通过 `ApiBindings` 提供类型，由 `infra` 访问。
 
 ## 2. 函数签名
 
@@ -11,6 +11,16 @@ getApiEnv(bindings: ApiBindings): ApiEnv;
 ```
 
 route、service 和 middleware 传入 `c.env`，不直接读取或拆分 binding。Hono 通过 `ApiHonoEnv.Bindings` 提供类型。
+
+资源 binding 不放进 `ApiEnv`。当前 D1 合同是：
+
+```ts
+interface ApiBindings {
+  DB?: D1Database;
+}
+```
+
+`DB` 是可选字段，因为只有默认开发环境配置本地 D1，test 和 production 没有 D1 binding。修改 `wrangler.jsonc` 的 binding 或 `compatibility_date` 后运行 `pnpm --filter api cf-typegen`，提交更新后的 `apps/api/worker-configuration.d.ts`，不要手写 Cloudflare runtime 类型。
 
 ## 3. 变量合同
 
@@ -40,6 +50,7 @@ route、service 和 middleware 传入 `c.env`，不直接读取或拆分 binding
 
 - `pnpm check-types`、`pnpm lint`、`pnpm format:check`。
 - Wrangler 对默认、test、production 分别执行 `deploy --dry-run`。
+- `pnpm --filter api exec wrangler types --env-interface CloudflareBindings --check`。
 - `/health` 返回当前 `APP_ENV`；允许来源有 CORS header，未允许来源没有。
 - production 清空 `CORS_ORIGINS` 后请求返回 500，日志指向该变量。
 

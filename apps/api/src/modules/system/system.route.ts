@@ -5,7 +5,12 @@ import { Hono } from "hono";
 import { AppError } from "@/shared/app-error";
 import type { ApiHonoEnv } from "@/shared/hono-env";
 import { createMeta } from "@/shared/meta";
-import { getHealthStatus, getPingResult, getRootInfo } from "./system.service";
+import {
+  getHealthStatus,
+  getPingResult,
+  getReadinessStatus,
+  getRootInfo,
+} from "./system.service";
 
 export function createSystemRoute() {
   return new Hono<ApiHonoEnv>()
@@ -18,6 +23,11 @@ export function createSystemRoute() {
       return c.json(
         buildSuccess(getHealthStatus(c.env), createMeta(c.var.requestId)),
       );
+    })
+    .get("/rpc/system/readiness", async (c) => {
+      const result = await getReadinessStatus(c.env);
+
+      return c.json(buildSuccess(result, createMeta(c.var.requestId)));
     })
     .post(
       "/rpc/system/ping",

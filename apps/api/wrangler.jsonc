@@ -7,6 +7,12 @@
   "vars": {
     "APP_ENV": "development",
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "moodmate-local",
+    },
+  ],
   "env": {
     "test": {
       "vars": {
@@ -32,13 +38,6 @@
   //   {
   //     "binding": "MY_BUCKET",
   //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
   //   }
   // ],
   // "ai": {

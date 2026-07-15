@@ -9,6 +9,7 @@ export type AppErrorStatus =
   | 413
   | 422
   | 500
+  | 503
   | 504;
 
 export class AppError extends Error {

@@ -1,6 +1,6 @@
 # API 写法
 
-`apps/api` 是 moodmate 的 Hono API 服务，运行在 Cloudflare Workers 上。目录按 momo 的方式放，接口契约按老师项目的方式放到 `@repo/contracts`。
+`apps/api` 是 moodmate 的 Hono API 服务，运行在 Cloudflare Workers 上。外部资源接入放在 `infra`，接口契约放在 `@repo/contracts`。
 
 ## 目录
 
@@ -9,6 +9,7 @@ apps/api/src/
 ├── index.ts              # Wrangler 入口，只导出 app
 ├── app.ts                # 创建 app，并导出 AppType
 ├── bootstrap/            # 注册中间件、错误处理和路由
+├── infra/                # D1 等外部资源的访问代码
 ├── middleware/           # 请求 ID、CORS、安全响应头
 ├── modules/<module>/     # 每个业务模块自己的 route 和 service
 ├── routes/index.ts       # 一级路由挂载
@@ -19,13 +20,24 @@ apps/api/src/
 
 ## 环境变量
 
-Worker binding 的原始值只在 `apps/api/src/shared/env.ts` 解析。route、service 和 middleware 调用 `getApiEnv(c.env)`，不直接拆分字符串。
+字符串环境变量只在 `apps/api/src/shared/env.ts` 解析。D1 等资源 binding 在 `apps/api/src/shared/hono-env.ts` 定义类型，由 `infra` 访问。route、service 和 middleware 不直接拆分字符串配置。
 
 - `APP_ENV` 只接受 `development`、`test`、`production`。
 - `CORS_ORIGINS` 使用英文逗号分隔，解析后只保留合法的 HTTP/HTTPS origin。
 - production 必须配置 `CORS_ORIGINS`。
 
-本地值放在 `apps/api/.dev.vars`，可以从 `.dev.vars.example` 创建。`wrangler.jsonc` 定义 development、test、production 的 `APP_ENV`；远端 CORS 来源由 Cloudflare 环境变量提供。
+本地值放在 `apps/api/.dev.vars`，可以从 `.dev.vars.example` 创建。`wrangler.jsonc` 定义 development、test、production 的 `APP_ENV`，并只在默认开发环境配置 `DB`；远端 CORS 来源由 Cloudflare 环境变量提供。
+
+## D1
+
+`apps/api/src/infra/db/d1.ts` 负责不依赖业务表的 D1 基础查询。业务表查询出现后，仍放在对应模块的 repository，不能集中写进 `infra/db/d1.ts`。
+
+- `GET /health` 只检查 Worker 能否响应，不访问 D1。
+- `GET /rpc/system/readiness` 执行 `SELECT 1 AS ok`。
+- D1 正常时返回 HTTP 200 和 `status: "ready"`。
+- binding 缺失或查询失败时返回 HTTP 503 和 `SYSTEM.DATABASE_UNAVAILABLE`。
+
+当前没有业务表和本地联调数据，所以不创建 `apps/api/migrations` 和 `apps/api/dev/seed.sql`。后续 migration 使用 Wrangler 原生命令管理，开发 seed 只执行到带 `--local` 的数据库。
 
 ## Contracts
 
@@ -39,6 +51,7 @@ packages/contracts/src/
 ├── common/response.ts
 ├── system/health.contract.ts
 ├── system/ping.contract.ts
+├── system/readiness.contract.ts
 ├── system/root.contract.ts
 └── index.ts
 ```

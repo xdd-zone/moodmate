@@ -21,10 +21,10 @@
 - 根目录 `package.json` 使用 `pnpm@11.9.0`，Node 要求 `>=22`。
 - `apps/web` 已经有公开首页 `app/(site)/page.tsx` 和应用入口 `app/(app)/app/page.tsx`。
 - `apps/admin` 现在只有基础首页 `app/page.tsx`。
-- `apps/api` 已经实现 `/`、`/health`、`/rpc/system/ping`。
+- `apps/api` 已经实现 `/`、`/health`、`/rpc/system/ping`、`/rpc/system/readiness`。
 - `apps/api` 已经有 requestId、CORS、安全响应头、统一错误返回。
 - `packages/contracts` 已经有 `ApiResponse<T>`、`BizCode`、`buildSuccess()`、`buildFailure()` 和 `system` contracts。
-- `apps/api/wrangler.jsonc` 还没有启用 D1、R2、KV、AI 或队列绑定。
+- `apps/api/wrangler.jsonc` 已在默认开发环境启用本地 D1，R2、KV、AI 和队列 binding 尚未启用。
 
 现在还没有实现这些内容：
 
@@ -112,6 +112,7 @@ apps/api/src/
 ├── index.ts              # Wrangler 入口，只导出 app
 ├── app.ts                # 创建 app，并导出 AppType
 ├── bootstrap/            # 注册中间件、错误处理和路由
+├── infra/                # D1 等外部资源的访问代码
 ├── middleware/           # requestId、CORS、安全响应头
 ├── modules/<module>/     # 业务模块
 ├── routes/index.ts       # 一级路由挂载
@@ -366,15 +367,17 @@ presenter 只做这些事：
 - `/`
 - `/health`
 - `/rpc/system/ping`
+- `/rpc/system/readiness`
 - `RootResponse`
 - `HealthResponse`
 - `PingRequest`
 - `PingResponse`
+- `ReadinessResponse`
 
-后续健康检查分两层：
+健康检查分两层：
 
-- 一期只返回 API 版本、环境和基础状态。
-- 接 D1、R2、LLM 后，Admin 再查看这些外部资源的检查结果。
+- `/health` 只返回环境和基础状态，不访问外部资源。
+- `/rpc/system/readiness` 当前检查本地 D1；以后接入 R2、LLM 后再增加对应检查。
 
 健康检查不能返回 secret、数据库 ID、上游 key 和用户数据。
 
@@ -602,7 +605,7 @@ LLM 返回空文本、HTML 页面或协议不匹配时，API 返回明确错误�
 
 读取入口：service 调 repository，presenter 转 DTO。
 
-说明：目前 D1 未接入。接入时再新增 `apps/api/src/db`、`apps/api/migrations` 和 `apps/api/dev/seed.sql`。
+说明：本地 D1 已通过 `apps/api/src/infra/db/d1.ts` 接入，目前没有业务表。确定首张业务表后再创建 `apps/api/migrations`；出现本地联调数据后再创建 `apps/api/dev/seed.sql`。
 
 ### 文件
 
@@ -641,7 +644,7 @@ API 配置保存在 Cloudflare Workers bindings 中，读取入口是 `apps/api/
 - `APP_ENV`
 - `CORS_ORIGINS`
 
-本地真实值分别放在 `.env.local` 和 `.dev.vars`，仓库只提交 example 文件。test 和 production 的真实 URL、CORS 来源由部署平台配置。后续新增 LLM、D1、R2 配置时，也只从 API 读取，不让浏览器读取 secret。
+本地真实值分别放在 `.env.local` 和 `.dev.vars`，仓库只提交 example 文件。test 和 production 的真实 URL、CORS 来源由部署平台配置。D1 binding 只由 API 访问；后续新增 LLM、R2 配置时也不让浏览器读取 secret。
 
 ### 前端 UI 状态
 
@@ -726,19 +729,14 @@ API 统一返回 `ApiResponse<T>`。
 
 ## 数据和迁移
 
-接 D1 时补这些文件：
+本地 D1 当前使用这个目录：
 
 ```text
-apps/api/
-├── migrations/
-├── dev/
-│   └── seed.sql
-└── src/
-    ├── db/
-    │   ├── client.ts
-    │   └── schema.ts
-    └── modules/
+apps/api/src/infra/db/
+└── d1.ts
 ```
+
+确定首张业务表后，由 Wrangler 在 `apps/api/migrations/` 创建 migration。出现本地联调数据后再创建 `apps/api/dev/seed.sql`。当前不创建空目录、占位 schema 或数据库 client。
 
 规则：
 
@@ -898,16 +896,14 @@ packages/ui/src/theme.css 或共享组件
 
 - `package.json` 写的是 `pnpm@11.9.0`，项目说明里写过 `pnpm 11.5.0`。以 `package.json` 为准。
 - `AGENTS.md` 的目录树漏了 `packages/contracts`，源码里已经存在。以源码为准。
-- `wrangler.jsonc` 目前没有启用 D1、R2、KV、AI 或队列绑定。本文里的 D1、R2、LLM 是下一阶段设计。
-- `docs/apps/api.md` 还写着参考老师项目和 momo 写法。后续改 API 文档时，按本文的目录和分层规则写。
-- `docs/architecture.md` 当前是未跟踪文件，提交前要确认它确实要加入 git。
+- `wrangler.jsonc` 只在默认开发环境启用了本地 D1；test 和 production 还没有 D1 binding，R2、KV、AI 和队列 binding 也未启用。
 
 ## 当前维护风险
 
 - `packages/ui` 已由 Web 和 Admin 实际使用。新增共享组件时仍要先确认两个入口都有真实调用方。
 - `apps/admin` 还停在 starter 页面，下一阶段做后台时要先建 `(auth)` 和 `(dashboard)` 目录。
 - `apps/web` 现在还没有 `src/api` 和统一 `http`。新增业务页面前先补请求函数目录。
-- D1 和 R2 还没接入。不要提前在前端写数据库字段、文件 key 或上传路径规则。
+- 本地 D1 已接入，但还没有业务表；R2 尚未接入。不要提前在前端写数据库字段、文件 key 或上传路径规则。
 
 ## 检查命令
 

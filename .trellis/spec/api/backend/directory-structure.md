@@ -9,6 +9,7 @@ apps/api/src/
 ├── index.ts              # Wrangler 入口，只导出 app
 ├── app.ts                # 创建 app，并导出 AppType
 ├── bootstrap/            # 注册中间件、错误处理和路由
+├── infra/                # D1 等外部资源的访问代码
 ├── middleware/           # 跨路由的请求处理
 ├── modules/<module>/     # 按业务域放 route 和 service
 ├── routes/index.ts       # 挂载一级业务路由
@@ -20,6 +21,7 @@ apps/api/src/
 - `apps/api/src/index.ts` 只默认导出 `app`。
 - `apps/api/src/app.ts` 调用 `createApiApp()`，并导出 `AppType`。
 - `apps/api/src/bootstrap/create-app.ts` 统一注册中间件、错误处理和路由。
+- `apps/api/src/infra/db/d1.ts` 执行不依赖业务表的 D1 基础查询。
 - `apps/api/src/modules/system/` 包含 `system.route.ts` 和 `system.service.ts`。
 
 ## 新业务模块
@@ -35,7 +37,7 @@ modules/mood/
 └── mood.presenter.ts     # 需要转换 DTO 时再建
 ```
 
-同一模块内使用 presenter 或 mapper 其中一个，不同时保留两个同义层。当前项目还没有 D1、R2、KV、AI 或队列绑定，不要提前创建空 repository、数据库目录或占位客户端。
+同一模块内使用 presenter 或 mapper 其中一个，不同时保留两个同义层。本地 D1 已接入，但还没有业务表；业务 SQL 出现后放在所属模块 repository，不放进 `infra/db/d1.ts`。不要提前创建空 repository、schema、数据库 client、migration 或 seed。
 
 ## 依赖方向
 
