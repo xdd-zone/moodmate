@@ -140,3 +140,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: 实现 Web 与 Admin HTTP 层
+
+**Date**: 2026-07-15
+**Task**: 实现 Web 与 Admin HTTP 层
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+为 Web 与 Admin 增加 typed HTTP、运行时响应校验、system API、TanStack Query 配置与 Provider，并补充对应 Trellis 规范。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1d25993` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
