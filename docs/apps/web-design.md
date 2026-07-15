@@ -25,6 +25,7 @@ moodmate 不是产品官网模板。首页要直接说明能做什么，并给�
 - 不新增 `tailwind.config`。
 - 字体继续用 `apps/web/app/layout.tsx` 里的 Maple Mono。
 - 通用颜色、圆角和阴影从 `@repo/ui/theme.css` 导入。
+- 主题只支持 Latte 和 Mocha；`app/layout.tsx` 在首次绘制前读取 `moodmate-theme:v1`，页面使用 `@repo/ui/theme-toggle` 切换。
 - Web 专用的情绪色、环境背景和页面动画留在 `apps/web/app/globals.css`。
 - 页面使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token。
 - 色值只写在 token 定义里，不在页面和组件中直接写颜色。
@@ -60,6 +61,6 @@ moodmate 不是产品官网模板。首页要直接说明能做什么，并给�
 
 - `/` 在手机宽度能读完。
 - `/app` 能打开。
-- 浅色和深色系统模式都能看清文字和按钮。
+- Latte 和 Mocha 都能看清文字和按钮，刷新后保留当前主题。
 - 键盘能聚焦主要按钮。
 - 页面没有 Next starter 的文案、图片和样式。

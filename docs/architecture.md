@@ -256,12 +256,13 @@ packages/contracts/src/<module>/<action>.contract.ts
 
 当前共享内容：
 
-- `src/theme.css`：基础令牌、语义令牌、系统浅深色和 Tailwind 共享组件扫描入口。
+- `src/theme.css`：Latte/Mocha 主题、语义令牌和 Tailwind 共享组件扫描入口。
+- `src/theme.ts`、`src/theme-script.tsx`、`src/theme-toggle.tsx`：主题校验、首次绘制脚本和 Web/Admin 共用切换器。
 - `src/button.tsx`：通用操作层级、尺寸和交互状态。
 - `src/card.tsx`：独立内容块的容器和组合结构。
 - `src/badge.tsx`：简短分类和轻量状态。
 
-Web 和 Admin 都通过 `@repo/ui/theme.css` 导入主题。应用页面只使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token，不直接读取基础色值。只有 Web 使用的情绪色留在 `apps/web/app/globals.css`。
+Web 和 Admin 都通过 `@repo/ui/theme.css` 导入主题，并使用根节点 `data-theme` 在 Latte 与 Mocha 之间切换。应用页面只使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token，不直接读取基础色值。只有 Web 使用的情绪色留在 `apps/web/app/globals.css`。
 
 不要放：
 
@@ -891,7 +892,7 @@ packages/ui/src/theme.css 或共享组件
   -> apps/admin/app/globals.css 和实际页面
 ```
 
-只有两个入口都用的组件才移动到 `packages/ui`。修改共享主题或组件后，Web 和 Admin 都要 build 并检查浅色、深色和键盘焦点。
+只有两个入口都用的组件才移动到 `packages/ui`。修改共享主题或组件后，Web 和 Admin 都要 build 并检查 Latte、Mocha、刷新保留和键盘焦点。
 
 ## 文档冲突和源码差异
 

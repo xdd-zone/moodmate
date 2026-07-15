@@ -8,6 +8,7 @@
 | -------------------------------------- | ------------------------------ |
 | [目录与导出](./directory-structure.md) | 文件命名、子路径导出、共享条件 |
 | [组件写法](./component-guidelines.md)  | Props、客户端边界、样式归属    |
+| [主题](./theme-guidelines.md)          | Latte/Mocha、存储、首屏和切换  |
 | [类型和依赖](./type-safety.md)         | TypeScript 与禁止依赖          |
 | [质量检查](./quality-guidelines.md)    | 复用判断、starter 风险和命令   |
 
@@ -16,6 +17,7 @@
 - [ ] 已找到 Web 和 Admin 两个真实使用位置。
 - [ ] 已确认组件不含 API、session、权限或业务字段。
 - [ ] 已检查现有组件是否仍有 create-turbo starter 行为。
+- [ ] 修改主题时已读取 `theme-guidelines.md`。
 
 ## 完成检查
 

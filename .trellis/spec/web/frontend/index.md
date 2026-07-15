@@ -23,6 +23,6 @@
 ## 完成检查
 
 - [ ] 移动端和桌面布局没有文字、按钮或卡片重叠。
-- [ ] 浅色、深色和减少动态效果模式可用。
+- [ ] Latte、Mocha 和减少动态效果模式可用。
 - [ ] 主要交互可以用键盘聚焦。
 - [ ] 已依次通过 `pnpm check-types`、`pnpm lint`、`pnpm format:check`，页面改动还通过 Web build。

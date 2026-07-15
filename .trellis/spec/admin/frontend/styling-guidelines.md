@@ -13,6 +13,8 @@ Admin 使用 Tailwind CSS 4，入口是 `apps/admin/app/globals.css`，PostCSS �
 
 页面使用 `text-foreground`、`bg-surface`、`border-border`、`bg-primary`、`outline-focus` 等语义 token，不直接写色值。共享 Button、Card 和 Badge 分别从 `@repo/ui/button`、`@repo/ui/card`、`@repo/ui/badge` 导入。
 
+Admin 只支持 Latte 亮色与 Mocha 暗色。`app/layout.tsx` 在 `<head>` 渲染 `@repo/ui/theme-script`，页面通过 `@repo/ui/theme-toggle` 切换；不要增加 `prefers-color-scheme` 主题分支。
+
 ## 布局与密度
 
 - 管理端保持中性、紧凑，背景使用纯 surface，不复制 Web 的环境渐变。
@@ -24,6 +26,6 @@ Admin 使用 Tailwind CSS 4，入口是 `apps/admin/app/globals.css`，PostCSS �
 
 - 交互元素使用共享 `focus` token，不能移除 `focus-visible` 而不提供替代样式。
 - `globals.css` 保留 `prefers-reduced-motion`，让动画和 transition 接近零时长。
-- 修改主题值后同时检查浅色和深色的文字、边框、按钮和 Badge。
+- 修改主题值后同时检查 Latte 和 Mocha 的文字、边框、按钮、Badge 和切换器。
 
 事实来源：`apps/admin/app/globals.css`、`apps/admin/app/page.tsx`、`docs/apps/admin-design.md`。

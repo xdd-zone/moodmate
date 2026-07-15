@@ -20,6 +20,7 @@
 - Tailwind CSS 4 从 `apps/admin/app/globals.css` 进入。
 - PostCSS 配置在 `apps/admin/postcss.config.mjs`。
 - 通用颜色、圆角和阴影从 `@repo/ui/theme.css` 导入。
+- 主题只支持 Latte 和 Mocha；`app/layout.tsx` 在首次绘制前读取 `moodmate-theme:v1`，页面使用 `@repo/ui/theme-toggle` 切换。
 - 页面使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token。
 - 色值只写在 token 定义里，不在页面和组件中直接写颜色。
 - 字体使用 `apps/admin/app/layout.tsx` 注册的 Maple Mono。
@@ -46,7 +47,7 @@
 改 Admin 页面或样式后检查：
 
 - `http://localhost:6154` 在移动端和桌面没有文字、按钮或卡片重叠。
-- 浅色和深色系统模式都能看清文字、描边和操作。
+- Latte 和 Mocha 都能看清文字、描边和操作，刷新后保留当前主题。
 - 键盘可以依次聚焦主要操作。
 - 减少动态效果模式没有多余动画。
 - 页面没有 Next starter 文案、图片和样式。

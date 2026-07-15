@@ -7,6 +7,7 @@
 - Props 能表达必填、可选和 children，没有 `any` 或无依据的断言。
 - 组件不发请求、不读 session、不判断业务权限。
 - 导入路径使用 `@repo/ui/<file>`，与 `package.json` 的 exports 匹配。
+- `Button asChild` 渲染为 Link 或 anchor 时，`text-primary-foreground` 没有被应用的未分层 `a` 选择器覆盖。
 
 ## 共享样式检查
 
@@ -32,4 +33,4 @@ pnpm --filter @repo/ui lint
 pnpm --filter @repo/ui format:check
 ```
 
-然后运行 `pnpm --filter web build` 和 `pnpm --filter admin build`，并在两个应用中手动检查键盘、浅色、深色和减少动态效果模式。
+然后运行 `pnpm --filter web build` 和 `pnpm --filter admin build`，并在两个应用中手动检查键盘、Latte、Mocha 和减少动态效果模式。主题改动还要按 `theme-guidelines.md` 检查刷新保留、无效 storage 和首次绘制。
