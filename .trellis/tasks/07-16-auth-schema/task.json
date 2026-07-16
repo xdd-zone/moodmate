@@ -1,0 +1,30 @@
+{
+  "id": "auth-schema",
+  "name": "auth-schema",
+  "title": "设计并实现数据表与认证",
+  "description": "规划 Admin 自研认证的数据模型、Hono API、Next.js BFF 和子任务依赖",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": "admin",
+  "priority": "P2",
+  "creator": "喜东东",
+  "assignee": "喜东东",
+  "createdAt": "2026-07-16",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-16-auth-d1-schema",
+    "07-16-admin-auth-api",
+    "07-16-admin-auth-bff"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
