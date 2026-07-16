@@ -1,7 +1,6 @@
 import { createApiResponseSchema } from "@repo/contracts";
 import type { z } from "zod";
 
-import { getAdminClientEnv } from "@/src/env/client";
 import { getAdminServerEnv } from "@/src/env/server";
 
 import { HttpRequestError } from "./error";
@@ -25,7 +24,7 @@ function resolveBaseURL() {
     return getAdminServerEnv().API_BASE_URL;
   }
 
-  return getAdminClientEnv().NEXT_PUBLIC_API_BASE_URL;
+  return window.location.origin;
 }
 
 function isQueryValueList(
