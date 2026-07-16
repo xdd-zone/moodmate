@@ -1,5 +1,9 @@
+import type { AdminSession } from "@repo/contracts";
+
 export interface ApiBindings {
   APP_ENV?: string;
+  AUTH_ACCESS_SECRET?: string;
+  AUTH_REFRESH_SECRET?: string;
   CORS_ORIGINS?: string;
   DB?: D1Database;
 }
@@ -7,6 +11,7 @@ export interface ApiBindings {
 export interface ApiHonoEnv {
   Bindings: ApiBindings;
   Variables: {
+    adminSession: AdminSession;
     requestId: string;
     startedAt: number;
   };

@@ -119,6 +119,33 @@ export async function findSessionById(
   return rows[0] ?? null;
 }
 
+export async function findAdminSessionContext(
+  database: D1Database | undefined,
+  sessionId: string,
+) {
+  const db = createD1Client(database);
+  const rows = await db
+    .select({
+      applicationCode: applications.code,
+      applicationStatus: applications.status,
+      displayName: users.displayName,
+      email: userEmails.email,
+      session: authSessions,
+      userStatus: users.status,
+    })
+    .from(authSessions)
+    .innerJoin(users, eq(users.id, authSessions.userId))
+    .innerJoin(
+      userEmails,
+      and(eq(userEmails.userId, users.id), eq(userEmails.isPrimary, true)),
+    )
+    .innerJoin(applications, eq(applications.id, authSessions.applicationId))
+    .where(eq(authSessions.id, sessionId))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
 export async function findRefreshTokenContext(
   database: D1Database | undefined,
   jtiHash: string,
@@ -198,6 +225,58 @@ export async function createSessionWithRefreshToken(
         token.revokedAtMs ?? null,
         token.replacedByTokenId ?? null,
       ),
+  ]);
+}
+
+export async function recordFailedPasswordAttempt(
+  database: D1Database | undefined,
+  credentialId: string,
+  failedAtMs: number,
+  lockThreshold: number,
+  lockDurationMs: number,
+): Promise<void> {
+  const db = requireD1Database(database);
+
+  await db
+    .prepare(
+      `UPDATE password_credentials
+       SET failed_attempts = failed_attempts + 1,
+           locked_until_ms = CASE
+             WHEN failed_attempts + 1 >= ? THEN ?
+             ELSE locked_until_ms
+           END,
+           updated_at_ms = ?
+       WHERE id = ?`,
+    )
+    .bind(lockThreshold, failedAtMs + lockDurationMs, failedAtMs, credentialId)
+    .run();
+}
+
+export async function recordSuccessfulPasswordLogin(
+  database: D1Database | undefined,
+  credentialId: string,
+  userId: string,
+  loggedInAtMs: number,
+): Promise<void> {
+  const db = requireD1Database(database);
+
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE password_credentials
+         SET failed_attempts = 0,
+             locked_until_ms = NULL,
+             updated_at_ms = ?
+         WHERE id = ?`,
+      )
+      .bind(loggedInAtMs, credentialId),
+    db
+      .prepare(
+        `UPDATE users
+         SET last_login_at_ms = ?, updated_at_ms = ?
+         WHERE id = ?`,
+      )
+      .bind(loggedInAtMs, loggedInAtMs, userId),
   ]);
 }
 

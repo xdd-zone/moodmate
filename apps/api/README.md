@@ -11,9 +11,13 @@ cp apps/api/.dev.vars.example apps/api/.dev.vars
 ```
 
 - `APP_ENV`：`development`、`test`、`production` 之一。
+- `AUTH_ACCESS_SECRET`：签发 access token 的 secret，至少 32 个 UTF-8 字节。
+- `AUTH_REFRESH_SECRET`：签发 refresh token 的 secret，至少 32 个 UTF-8 字节，不能与 access secret 共用。
 - `CORS_ORIGINS`：允许访问 API 的 origin，多个值用英文逗号分隔。
 
 本地真实值放在 `.dev.vars`，不会提交。`wrangler.jsonc` 保存三个环境的 `APP_ENV`，并在默认开发环境配置本地 D1；test 和 production 的 `CORS_ORIGINS` 在 Cloudflare 中配置，`keep_vars` 会在部署时保留这些远端变量。production 缺少 `CORS_ORIGINS` 时，API 会直接报错。
+
+test 和 production 的两个 auth secret 通过 Cloudflare Worker secret 配置，不写入 `wrangler.jsonc`。
 
 `pnpm --filter api deploy` 明确部署到 Wrangler 的 production 环境。部署 test 环境时直接使用 Wrangler 的 `--env test` 参数。
 

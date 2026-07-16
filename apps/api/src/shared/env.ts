@@ -4,6 +4,8 @@ import type { ApiBindings } from "./hono-env";
 
 export interface ApiEnv {
   APP_ENV: ApiEnvValue;
+  AUTH_ACCESS_SECRET: string;
+  AUTH_REFRESH_SECRET: string;
   CORS_ORIGINS: string[];
   SERVICE_NAME: "api";
 }
@@ -13,9 +15,25 @@ export function getApiEnv(bindings: ApiBindings): ApiEnv {
 
   return {
     APP_ENV: appEnv,
+    AUTH_ACCESS_SECRET: parseSecret(
+      bindings.AUTH_ACCESS_SECRET,
+      "AUTH_ACCESS_SECRET",
+    ),
+    AUTH_REFRESH_SECRET: parseSecret(
+      bindings.AUTH_REFRESH_SECRET,
+      "AUTH_REFRESH_SECRET",
+    ),
     CORS_ORIGINS: parseCorsOrigins(bindings.CORS_ORIGINS, appEnv),
     SERVICE_NAME: "api",
   };
+}
+
+function parseSecret(value: string | undefined, name: string): string {
+  if (!value || new TextEncoder().encode(value).byteLength < 32) {
+    throw new Error(`${name} 必须至少包含 32 个 UTF-8 字节。`);
+  }
+
+  return value;
 }
 
 function parseAppEnv(value: string | undefined): ApiEnvValue {

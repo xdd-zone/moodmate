@@ -1,2 +1,4 @@
 APP_ENV=development
+AUTH_ACCESS_SECRET=local-access-secret-change-before-use-2026
+AUTH_REFRESH_SECRET=local-refresh-secret-change-before-use-2026
 CORS_ORIGINS=http://localhost:6153,http://localhost:6154
