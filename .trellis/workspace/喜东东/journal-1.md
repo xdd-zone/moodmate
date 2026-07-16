@@ -241,3 +241,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: 完成 Admin 认证 API
+
+**Date**: 2026-07-16
+**Task**: 完成 Admin 认证 API
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+实现 Admin 密码登录、JWT access 鉴权、session 查询、refresh rotation、严格 replay 和 logout；补齐共享 contracts、auth secret、workerd benchmark、真实 D1 验证记录与 code-spec。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `63b1451` | (see git log) |
+| `a6153ef` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
