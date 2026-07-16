@@ -3,7 +3,7 @@
   "name": "admin-auth-bff",
   "title": "实现 Admin BFF 与登录态",
   "description": "实现 Admin 同源 BFF、HttpOnly cookie、登录态恢复、静默 refresh 和 logout",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "admin",

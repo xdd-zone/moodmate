@@ -25,17 +25,17 @@
 
 ## Acceptance Criteria
 
-- [ ] 浏览器 Network 中认证和受保护请求只访问 Admin 同源地址。
-- [ ] access 和 refresh cookie 是 HttpOnly，浏览器 JavaScript 无法读取。
-- [ ] BFF JSON、页面 props、React Query cache、URL 和 console 不出现 token。
-- [ ] 登录成功进入受保护页面，刷新浏览器后能通过 session 接口恢复安全的用户信息。
-- [ ] access 到期时同一标签页的并发请求只发起一次 refresh，各原请求最多重试一次。
-- [ ] refresh 失败、session 撤销和非续期 401 不会形成请求循环。
-- [ ] logout 无论 Hono 响应成功还是凭证已失效，都清除两个 cookie 并回到登录页。
-- [ ] `proxy.ts` 没有 `fetch()`、JWT 验签、数据库访问或 refresh 逻辑。
-- [ ] Route Handler 自己执行认证和授权，不依赖 `proxy.ts` 提供安全保证。
-- [ ] 本地 6154/6155 完成登录、刷新页面、静默 refresh 和 logout 联调。
-- [ ] `pnpm check-types`、`pnpm lint`、`pnpm format:check` 依次通过。
+- [x] 浏览器 Network 中认证和受保护请求只访问 Admin 同源地址。
+- [x] access 和 refresh cookie 是 HttpOnly，浏览器 JavaScript 无法读取。
+- [x] BFF JSON、页面 props、React Query cache、URL 和 console 不出现 token。
+- [x] 登录成功进入受保护页面，刷新浏览器后能通过 session 接口恢复安全的用户信息。
+- [x] access 到期时同一标签页的并发请求只发起一次 refresh，各原请求最多重试一次。
+- [x] refresh 失败、session 撤销和非续期 401 不会形成请求循环。
+- [x] logout 无论 Hono 响应成功还是凭证已失效，都清除两个 cookie 并回到登录页。
+- [x] `proxy.ts` 没有 `fetch()`、JWT 验签、数据库访问或 refresh 逻辑。
+- [x] Route Handler 自己执行认证和授权，不依赖 `proxy.ts` 提供安全保证。
+- [x] 本地 6154/6155 完成登录、刷新页面、静默 refresh 和 logout 联调。
+- [x] `pnpm check-types`、`pnpm lint`、`pnpm format:check` 依次通过。
 
 ## Out Of Scope
 
