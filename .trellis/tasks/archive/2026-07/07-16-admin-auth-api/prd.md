@@ -25,16 +25,16 @@
 
 ## Acceptance Criteria
 
-- [ ] 登录、refresh、session 和 logout contracts 可以被 API 与 Admin server-only 代码共同解析。
-- [ ] 错误密码、不存在邮箱、非 active 用户、凭证锁定和无角色不会泄漏账号状态。
-- [ ] access 与 refresh token 不能互换，错误算法、issuer、audience、app、type 和篡改 token 都被拒绝。
-- [ ] access 最长 15 分钟；refresh 和 session 共用 30 天绝对截止时间。
-- [ ] refresh 后 session 截止时间不变，roles 来自当前 D1 状态。
-- [ ] 同一 refresh token 第一次 rotation 后不可再次使用；再次使用会撤销 session。
-- [ ] logout 后旧 access 的 D1 session 检查失败，旧 refresh 不能续签。
-- [ ] 密码 hash 和 verify 在本地 workerd 可运行并记录耗时，不把本地结果描述成生产性能。
-- [ ] 所有端点返回统一 `ApiResponse`，业务错误码和 HTTP 状态一致。
-- [ ] `pnpm check-types`、`pnpm lint`、`pnpm format:check` 依次通过。
+- [x] 登录、refresh、session 和 logout contracts 可以被 API 与 Admin server-only 代码共同解析。
+- [x] 错误密码、不存在邮箱、非 active 用户、凭证锁定和无角色不会泄漏账号状态。
+- [x] access 与 refresh token 不能互换，错误算法、issuer、audience、app、type 和篡改 token 都被拒绝。
+- [x] access 最长 15 分钟；refresh 和 session 共用 30 天绝对截止时间。
+- [x] refresh 后 session 截止时间不变，roles 来自当前 D1 状态。
+- [x] 同一 refresh token 第一次 rotation 后不可再次使用；再次使用会撤销 session。
+- [x] logout 后旧 access 的 D1 session 检查失败，旧 refresh 不能续签。
+- [x] 密码 hash 和 verify 在本地 workerd 可运行并记录耗时，不把本地结果描述成生产性能。
+- [x] 所有端点返回统一 `ApiResponse`，业务错误码和 HTTP 状态一致。
+- [x] `pnpm check-types`、`pnpm lint`、`pnpm format:check` 依次通过。
 
 ## Out Of Scope
 

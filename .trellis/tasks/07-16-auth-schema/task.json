@@ -3,7 +3,7 @@
   "name": "auth-schema",
   "title": "设计并实现数据表与认证",
   "description": "规划 Admin 自研认证的数据模型、Hono API、Next.js BFF 和子任务依赖",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "admin",

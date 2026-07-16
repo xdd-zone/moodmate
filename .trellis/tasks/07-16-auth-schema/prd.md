@@ -58,24 +58,24 @@
 
 ## Acceptance Criteria
 
-- [ ] 课程材料中的可复用做法、不适用部分、冲突和安全风险有任务内研究记录。
-- [ ] Wrangler migration 在空本地 D1 创建确认的 9 张表、全部约束和索引；不创建 OAuth、Web 或占位业务表。
-- [ ] migration 由 Wrangler 单独管理，D1 中不存在另一套 Drizzle migration 历史。
-- [ ] 本地 seed 连续执行两次都成功，只产生一个 Admin 应用、一个 password 方式、一个 `admin_owner` 角色和一个开发管理员。
-- [ ] 本地 seed 不含明文密码，不会通过不带 `--local` 的项目脚本写入远程 D1。
-- [ ] 登录对不存在邮箱、错误密码、非 active 用户和无 Admin 角色返回不会泄漏账号状态的错误。
-- [ ] 登录成功后 access token 不超过 15 分钟，refresh token 和 session 不超过同一个 30 天绝对截止时间。
-- [ ] access、refresh 和受保护接口拒绝错误算法、错误 token 类型、错误 `iss`、错误 `aud`、错误 `app`、过期和篡改 token。
-- [ ] refresh 成功后旧 token 失效；同一个旧 token 再次提交会撤销整个 session。
-- [ ] 两个并发 refresh 最多一个完成 rotation，另一个触发 replay 处理；数据库不会出现两个有效后继 token或只有半条 rotation 记录。
-- [ ] refresh 不延长 session。接近 session 截止时间时，新 access、refresh 和 cookie 的过期时间都被限制在该截止时间内。
-- [ ] logout 后 session 和 refresh token 在 D1 中失效，Admin cookie 被清除，后续受保护请求失败。
-- [ ] 浏览器请求只访问 Admin 同源地址，token 不出现在浏览器 JavaScript 可读状态、URL、日志或 BFF JSON 响应中。
-- [ ] `proxy.ts` 只做快速跳转；每个受保护 Route Handler 和 Hono 端点仍执行自己的认证与授权检查。
-- [ ] 同一标签页的并发 access 过期请求只发起一次 refresh，并且每个原请求最多重试一次。
-- [ ] 持久化认证对象和 JWT `jti` 使用 UUIDv7，requestId 的 UUIDv4 行为不变。
-- [ ] 三个子任务按数据库、API、Admin BFF 的顺序完成，并通过父任务最终联调。
-- [ ] 规划经用户确认后才启动第一个子任务。
+- [x] 课程材料中的可复用做法、不适用部分、冲突和安全风险有任务内研究记录。
+- [x] Wrangler migration 在空本地 D1 创建确认的 9 张表、全部约束和索引；不创建 OAuth、Web 或占位业务表。
+- [x] migration 由 Wrangler 单独管理，D1 中不存在另一套 Drizzle migration 历史。
+- [x] 本地 seed 连续执行两次都成功，只产生一个 Admin 应用、一个 password 方式、一个 `admin_owner` 角色和一个开发管理员。
+- [x] 本地 seed 不含明文密码，不会通过不带 `--local` 的项目脚本写入远程 D1。
+- [x] 登录对不存在邮箱、错误密码、非 active 用户和无 Admin 角色返回不会泄漏账号状态的错误。
+- [x] 登录成功后 access token 不超过 15 分钟，refresh token 和 session 不超过同一个 30 天绝对截止时间。
+- [x] access、refresh 和受保护接口拒绝错误算法、错误 token 类型、错误 `iss`、错误 `aud`、错误 `app`、过期和篡改 token。
+- [x] refresh 成功后旧 token 失效；同一个旧 token 再次提交会撤销整个 session。
+- [x] 两个并发 refresh 最多一个完成 rotation，另一个触发 replay 处理；数据库不会出现两个有效后继 token或只有半条 rotation 记录。
+- [x] refresh 不延长 session。接近 session 截止时间时，新 access、refresh 和 cookie 的过期时间都被限制在该截止时间内。
+- [x] logout 后 session 和 refresh token 在 D1 中失效，Admin cookie 被清除，后续受保护请求失败。
+- [x] 浏览器请求只访问 Admin 同源地址，token 不出现在浏览器 JavaScript 可读状态、URL、日志或 BFF JSON 响应中。
+- [x] `proxy.ts` 只做快速跳转；每个受保护 Route Handler 和 Hono 端点仍执行自己的认证与授权检查。
+- [x] 同一标签页的并发 access 过期请求只发起一次 refresh，并且每个原请求最多重试一次。
+- [x] 持久化认证对象和 JWT `jti` 使用 UUIDv7，requestId 的 UUIDv4 行为不变。
+- [x] 三个子任务按数据库、API、Admin BFF 的顺序完成，并通过父任务最终联调。
+- [x] 规划经用户确认后才启动第一个子任务。
 
 ## Out Of Scope
 

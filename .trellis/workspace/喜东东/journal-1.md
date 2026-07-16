@@ -276,7 +276,6 @@
 
 - None - task complete
 
-
 ## Session 9: 完成 Admin BFF 与登录态
 
 **Date**: 2026-07-16
@@ -294,8 +293,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `5374407` | (see git log) |
 | `5141d58` | (see git log) |
 | `9b0630d` | (see git log) |
