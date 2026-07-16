@@ -275,3 +275,40 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: 完成 Admin BFF 与登录态
+
+**Date**: 2026-07-16
+**Task**: 完成 Admin BFF 与登录态
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+实现 Admin 同源认证 BFF、HttpOnly cookie、登录态恢复、single-flight refresh、logout 和页面保护；完成浏览器联调、规范更新与质量检查。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5374407` | (see git log) |
+| `5141d58` | (see git log) |
+| `9b0630d` | (see git log) |
+| `8f2162c` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
