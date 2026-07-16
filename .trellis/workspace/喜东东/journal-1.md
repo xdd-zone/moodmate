@@ -242,7 +242,6 @@
 
 - None - task complete
 
-
 ## Session 8: 完成 Admin 认证 API
 
 **Date**: 2026-07-16
@@ -260,8 +259,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `63b1451` | (see git log) |
 | `a6153ef` | (see git log) |
 

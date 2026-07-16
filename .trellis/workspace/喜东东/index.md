@@ -7,6 +7,7 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
+
 - **Active File**: `journal-1.md`
 - **Total Sessions**: 8
 - **Last Active**: 2026-07-16
@@ -17,9 +18,11 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-| File | Lines | Status |
-|------|-------|--------|
-| `journal-1.md` | ~278 | Active |
+
+| File           | Lines | Status |
+| -------------- | ----- | ------ |
+| `journal-1.md` | ~278  | Active |
+
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -28,9 +31,9 @@
 
 <!-- @@@auto:session-history -->
 
-| # | Date | Title | Commits | Branch |
-|---|------|-------|---------|--------|
-| 8 | 2026-07-16 | 完成 Admin 认证 API | `63b1451`, `a6153ef` | `main` |
+| #   | Date       | Title                     | Commits                         | Branch |
+| --- | ---------- | ------------------------- | ------------------------------- | ------ |
+| 8   | 2026-07-16 | 完成 Admin 认证 API       | `63b1451`, `a6153ef`            | `main` |
 | 7   | 2026-07-16 | 完成 Admin 认证 D1 数据层 | `fd6c7d5`, `9feea14`, `73714d5` | `main` |
 | 6   | 2026-07-15 | 接入 apps/api 本地 D1     | `60b2153`, `3ec6c9e`            | `main` |
 | 5   | 2026-07-15 | 实现 Web 与 Admin HTTP 层 | `1d25993`                       | `main` |
