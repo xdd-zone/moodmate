@@ -207,7 +207,6 @@
 
 - None - task complete
 
-
 ## Session 7: 完成 Admin 认证 D1 数据层
 
 **Date**: 2026-07-16
@@ -225,8 +224,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `fd6c7d5` | (see git log) |
 | `9feea14` | (see git log) |
 | `73714d5` | (see git log) |
