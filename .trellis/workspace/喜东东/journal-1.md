@@ -173,7 +173,6 @@
 
 - None - task complete
 
-
 ## Session 6: 接入 apps/api 本地 D1
 
 **Date**: 2026-07-15
@@ -191,8 +190,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `60b2153` | (see git log) |
 | `3ec6c9e` | (see git log) |
 
