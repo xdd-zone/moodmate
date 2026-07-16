@@ -60,14 +60,13 @@ curl --fail http://localhost:6155/rpc/system/readiness
 
 D1 可用时返回 HTTP 200，`data.status` 为 `ready`。binding 缺失或查询失败时返回 HTTP 503 和 `SYSTEM.DATABASE_UNAVAILABLE`。
 
-当前没有业务表，因此仓库还没有 `migrations/` 或 `dev/seed.sql`。确定首张业务表后，在项目根目录运行：
+认证表 migration 位于 `apps/api/migrations/`。在项目根目录把待执行 migration 应用到本地 D1：
 
 ```bash
-pnpm --filter api exec wrangler d1 migrations create moodmate-local create_mood_entries
 pnpm --filter api exec wrangler d1 migrations apply moodmate-local --local
 ```
 
-出现本地联调数据后再创建 `apps/api/dev/seed.sql`，并只写入本地 D1：
+本地认证 seed 位于 `apps/api/dev/seed.sql`，登录信息见 `apps/api/dev/README.md`。只把 seed 写入本地 D1：
 
 ```bash
 pnpm --filter api exec wrangler d1 execute moodmate-local --local --file=./dev/seed.sql

@@ -605,7 +605,7 @@ LLM 返回空文本、HTML 页面或协议不匹配时，API 返回明确错误�
 
 读取入口：service 调 repository，presenter 转 DTO。
 
-说明：本地 D1 已通过 `apps/api/src/infra/db/d1.ts` 接入，目前没有业务表。确定首张业务表后再创建 `apps/api/migrations`；出现本地联调数据后再创建 `apps/api/dev/seed.sql`。
+说明：本地 D1 通过 `apps/api/src/infra/db/d1.ts` 接入。认证表 migration 位于 `apps/api/migrations`，认证模块的 Drizzle schema 和 repository 位于 `apps/api/src/modules/auth`，本地联调数据位于 `apps/api/dev/seed.sql`。
 
 ### 文件
 
@@ -736,7 +736,7 @@ apps/api/src/infra/db/
 └── d1.ts
 ```
 
-确定首张业务表后，由 Wrangler 在 `apps/api/migrations/` 创建 migration。出现本地联调数据后再创建 `apps/api/dev/seed.sql`。当前不创建空目录、占位 schema 或数据库 client。
+Wrangler 管理 `apps/api/migrations/` 中的 migration。Drizzle 只负责运行期 schema 和查询，不创建第二套 migration 历史。本地联调数据放在 `apps/api/dev/seed.sql`，执行命令必须带 `--local`。
 
 规则：
 

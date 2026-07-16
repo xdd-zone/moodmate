@@ -14,6 +14,9 @@
   "dependencies": {
     "@hono/zod-validator": "catalog:",
     "@repo/contracts": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "jose": "catalog:",
+    "uuidv7": "catalog:",
     "hono": "^4.12.23"
   },
   "devDependencies": {

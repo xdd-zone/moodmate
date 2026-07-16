@@ -1,3 +1,13 @@
+import { drizzle } from "drizzle-orm/d1";
+
+export function createD1Client(database: D1Database | undefined) {
+  if (!database) {
+    throw new Error("D1 binding DB 未配置");
+  }
+
+  return drizzle(database);
+}
+
 export async function checkD1Readiness(
   database: D1Database | undefined,
 ): Promise<void> {

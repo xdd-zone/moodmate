@@ -30,14 +30,14 @@ apps/api/src/
 
 ## D1
 
-`apps/api/src/infra/db/d1.ts` 负责不依赖业务表的 D1 基础查询。业务表查询出现后，仍放在对应模块的 repository，不能集中写进 `infra/db/d1.ts`。
+`apps/api/src/infra/db/d1.ts` 负责 D1 连通性检查和 Drizzle client 创建。认证表查询放在 `apps/api/src/modules/auth/auth.repository.ts`，不集中写进 `infra/db/d1.ts`。
 
 - `GET /health` 只检查 Worker 能否响应，不访问 D1。
 - `GET /rpc/system/readiness` 执行 `SELECT 1 AS ok`。
 - D1 正常时返回 HTTP 200 和 `status: "ready"`。
 - binding 缺失或查询失败时返回 HTTP 503 和 `SYSTEM.DATABASE_UNAVAILABLE`。
 
-当前没有业务表和本地联调数据，所以不创建 `apps/api/migrations` 和 `apps/api/dev/seed.sql`。后续 migration 使用 Wrangler 原生命令管理，开发 seed 只执行到带 `--local` 的数据库。
+认证表 migration 位于 `apps/api/migrations`，本地认证数据位于 `apps/api/dev/seed.sql`。migration 继续由 Wrangler 管理；Drizzle 只负责运行期 schema 和查询。开发 seed 只执行到带 `--local` 的数据库。
 
 ## Contracts
 

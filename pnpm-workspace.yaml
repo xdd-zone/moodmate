@@ -20,6 +20,9 @@ catalog:
   "@hono/zod-validator": ^0.8.0
   "@radix-ui/react-slot": ^1.3.0
   class-variance-authority: ^0.7.1
+  drizzle-orm: 0.45.2
+  jose: 6.2.3
+  uuidv7: 1.2.1
 
 allowBuilds:
   esbuild: true
