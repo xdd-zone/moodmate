@@ -24,7 +24,7 @@ http://localhost:6154
 cp apps/admin/.env.example apps/admin/.env.local
 ```
 
-`APP_ENV`、`API_BASE_URL` 只给服务端使用。`NEXT_PUBLIC_APP_ENV`、`NEXT_PUBLIC_API_BASE_URL` 会进入浏览器代码，不能填写密钥。四项变量都会在页面构建时校验，缺失或格式错误会直接报错。
+`APP_ENV`、`API_BASE_URL` 只给 Next.js 服务端使用。浏览器通过 Admin 同源 BFF 请求 API，不需要配置公开 API 地址。`NEXT_PUBLIC_APP_ENV` 会进入浏览器代码，不能填写密钥。三项变量都会在读取时校验，缺失或格式错误会直接报错。
 
 `APP_ENV` 的可选值是 `development`、`test`、`production`。test 和 production 的真实值由部署平台配置，不提交到仓库。
 

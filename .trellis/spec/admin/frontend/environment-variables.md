@@ -15,12 +15,11 @@ getAdminClientEnv(): AdminClientEnv;
 
 ## 3. 变量合同
 
-| 变量                       | 范围   | 约束                                       |
-| -------------------------- | ------ | ------------------------------------------ |
-| `APP_ENV`                  | 服务端 | `development`、`test`、`production`        |
-| `API_BASE_URL`             | 服务端 | 合法 URL，返回值不带末尾 `/`               |
-| `NEXT_PUBLIC_APP_ENV`      | 浏览器 | 与 `APP_ENV` 使用相同枚举                  |
-| `NEXT_PUBLIC_API_BASE_URL` | 浏览器 | 浏览器可访问的合法 URL，返回值不带末尾 `/` |
+| 变量                  | 范围   | 约束                                |
+| --------------------- | ------ | ----------------------------------- |
+| `APP_ENV`             | 服务端 | `development`、`test`、`production` |
+| `API_BASE_URL`        | 服务端 | 合法 URL，返回值不带末尾 `/`        |
+| `NEXT_PUBLIC_APP_ENV` | 浏览器 | 与 `APP_ENV` 使用相同枚举           |
 
 本地真实值放在 `apps/admin/.env.local`，仓库只提交 `.env.example`。`NEXT_PUBLIC_*` 不能填写密钥。
 
@@ -34,24 +33,23 @@ getAdminClientEnv(): AdminClientEnv;
 
 ## 5. 正常、基础、错误案例
 
-- 正常：四项变量完整，管理入口的服务状态链接使用 `NEXT_PUBLIC_API_BASE_URL`。
-- 基础：`APP_ENV=development`，两个 API URL 都指向本地 6155 端口。
+- 正常：三项变量完整，Next.js BFF 使用 `API_BASE_URL` 请求 Hono。
+- 基础：`APP_ENV=development`，`API_BASE_URL` 指向本地 6155 端口。
 - 错误：页面使用 `process.env.KEY ?? "http://localhost:6155"` 绕过校验。
 
 ## 6. 必做检查
 
 - `pnpm check-types`：helper 类型和页面 import 通过。
 - `pnpm --filter admin build`：合法 `.env.local` 可以完成静态页面生成。
-- 使用非法 `NEXT_PUBLIC_API_BASE_URL` 再 build：构建失败，错误 path 是该变量。
+- 浏览器 Network：认证和业务请求只访问 Admin origin。
+- 客户端静态产物：不包含 `API_BASE_URL` 的值。
 
 ## 7. 错误与正确写法
 
 ```ts
-// 错误：页面自己提供默认地址
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:6155";
+// 错误：客户端组件直接读取外部 API 地址
+fetch("http://localhost:6155/auth/admin/session");
 
-// 正确：固定入口完成读取、校验和 URL 规范化
-const env = getAdminClientEnv();
-const healthUrl = `${env.NEXT_PUBLIC_API_BASE_URL}/health`;
+// 正确：浏览器只请求 Admin 同源 BFF
+http.get("/api/auth/session", AdminSessionSchema);
 ```

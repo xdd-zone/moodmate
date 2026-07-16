@@ -18,7 +18,7 @@ http.post(path, payload, responseSchema, options?);
 ## 3. 请求与响应约定
 
 - 服务端 base URL：`getAdminServerEnv().API_BASE_URL`。
-- 浏览器 base URL：`getAdminClientEnv().NEXT_PUBLIC_API_BASE_URL`。
+- 浏览器 base URL：`window.location.origin`，业务请求只访问 Admin 同源 BFF。
 - path 必须以单个 `/` 开头，业务接口不能传完整外部 URL。
 - query 支持 string、number、boolean 和同名数组；`null`、`undefined` 不写入 URL。
 - POST body 由 HTTP 层执行 `JSON.stringify()`，调用方不能通过 `RequestInit` 改 method 或 body。
@@ -52,7 +52,7 @@ http.post(path, payload, responseSchema, options?);
 - `pnpm lint`：没有类型断言、Web import 或未使用变量。
 - `pnpm format:check`：本次文件符合 Prettier。
 - `pnpm --filter admin build`：服务端和客户端依赖图都能构建。
-- 客户端调用检查：静态产物包含 `NEXT_PUBLIC_API_BASE_URL`，不包含私有 `API_BASE_URL` 的值。
+- 客户端调用检查：Network 中业务请求只访问 Admin origin，静态产物不包含私有 `API_BASE_URL` 的值。
 - 错误检查：至少覆盖 API failure、非 JSON、schema 不匹配、状态冲突、网络失败和取消。
 
 ## 7. 错误与正确写法

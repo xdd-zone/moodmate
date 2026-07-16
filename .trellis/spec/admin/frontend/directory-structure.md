@@ -1,6 +1,6 @@
 # Admin 目录与边界
 
-`apps/admin` 是管理后台 Next.js App Router 应用，默认端口 `6154`。当前只有 `app/page.tsx` 基础首页，尚未建立鉴权、dashboard 和请求层。
+`apps/admin` 是管理后台 Next.js App Router 应用，默认端口 `6154`。当前已经建立认证 BFF、登录页、受保护根页面和统一请求层。
 
 ## 目标目录
 
@@ -10,7 +10,9 @@
 apps/admin/
 ├── app/
 │   ├── (auth)/
-│   └── (dashboard)/
+│   ├── (dashboard)/
+│   └── api/auth/
+├── proxy.ts
 └── src/
     ├── api/
     ├── auth/
@@ -30,4 +32,4 @@ apps/admin/
 
 ## 当前状态
 
-`app/layout.tsx` 已配置 Maple Mono、中文 metadata 和 `lang="zh-CN"`。`app/globals.css` 已接入 Tailwind CSS 4 和 `@repo/ui/theme.css`，`app/page.tsx` 是不包含虚构业务数据的基础入口。首次增加 dashboard 业务时建立 `(dashboard)` 和 `src` 目录，不把所有功能继续堆在入口页。
+`app/layout.tsx` 已配置 Maple Mono、中文 metadata 和 `lang="zh-CN"`。`app/globals.css` 已接入 Tailwind CSS 4 和 `@repo/ui/theme.css`。登录入口位于 `app/(auth)/login`，受保护根页面位于 `app/(dashboard)`；新增后台业务继续按领域放进 `(dashboard)`，不要堆在根页面。

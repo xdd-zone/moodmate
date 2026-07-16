@@ -637,7 +637,8 @@ Next.js 配置保存在 Web、Admin 各自的环境变量中：
 - 服务端入口：`apps/web/src/env/server.ts`、`apps/admin/src/env/server.ts`。
 - 客户端入口：`apps/web/src/env/client.ts`、`apps/admin/src/env/client.ts`。
 - 服务端字段：`APP_ENV`、`API_BASE_URL`。
-- 公开字段：`NEXT_PUBLIC_APP_ENV`、`NEXT_PUBLIC_API_BASE_URL`。
+- Web 公开字段：`NEXT_PUBLIC_APP_ENV`、`NEXT_PUBLIC_API_BASE_URL`。
+- Admin 公开字段：`NEXT_PUBLIC_APP_ENV`；浏览器通过同源 BFF 请求 API。
 
 API 配置保存在 Cloudflare Workers bindings 中，读取入口是 `apps/api/src/shared/env.ts`：
 
