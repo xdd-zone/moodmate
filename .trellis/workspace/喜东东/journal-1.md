@@ -312,7 +312,6 @@
 
 - None - task complete
 
-
 ## Session 10: 完成 Admin 认证父任务验收
 
 **Date**: 2026-07-16
@@ -330,8 +329,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `a5a2193` | (see git log) |
 
 ### Testing
