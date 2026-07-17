@@ -411,3 +411,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 13: Admin UI 套件与管理页面改造
+
+**Date**: 2026-07-18
+**Task**: Admin UI 套件与管理页面改造
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+沿用极简路线新增 @repo/ui 10 个组件（label/input/field/table/alert/spinner/skeleton/separator/pagination/app-shell），建 admin (dashboard) 统一 AppShell+Sidebar 布局，改造 login/dashboard/roles 三页为组件化（交互零变更）。同步放宽 ui 共享 spec。全量 check/build 通过，浏览器回归待人工。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `17887f3` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
