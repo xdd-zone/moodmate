@@ -345,7 +345,6 @@
 
 - None - task complete
 
-
 ## Session 11: 实现默认头像对象存储
 
 **Date**: 2026-07-17
@@ -363,8 +362,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `897a864` | (see git log) |
 | `5828b33` | (see git log) |
 
@@ -379,7 +378,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 12: 完成角色管理章节
 
@@ -398,8 +396,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `e21eb17` | (see git log) |
 
 ### Testing
