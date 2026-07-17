@@ -15,6 +15,15 @@ export type {
   ApiSuccess,
 } from "./common/response";
 export {
+  AdminDefaultAvatarUploadResponseSchema,
+  DefaultAvatarKeySchema,
+  DefaultAvatarReadQuerySchema,
+} from "./assets/default-avatar.contract";
+export type {
+  AdminDefaultAvatarUploadResponse,
+  DefaultAvatarReadQuery,
+} from "./assets/default-avatar.contract";
+export {
   AdminAuthTokenResponseSchema,
   AdminRoleSchema,
   AdminSessionSchema,

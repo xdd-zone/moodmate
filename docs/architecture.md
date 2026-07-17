@@ -24,13 +24,13 @@
 - `apps/api` 已经实现 `/`、`/health`、`/rpc/system/ping`、`/rpc/system/readiness`。
 - `apps/api` 已经有 requestId、CORS、安全响应头、统一错误返回。
 - `packages/contracts` 已经有 `ApiResponse<T>`、`BizCode`、`buildSuccess()`、`buildFailure()` 和 `system` contracts。
-- `apps/api/wrangler.jsonc` 已在默认开发环境启用本地 D1，R2、KV、AI 和队列 binding 尚未启用。
+- `apps/api/wrangler.jsonc` 已在默认开发环境启用本地 D1 和头像 R2；KV、AI 和队列 binding 尚未启用。
 
 现在还没有实现这些内容：
 
 - 登录、session、token refresh。
 - D1 表、migration、seed。
-- R2 文件上传。
+- 用户头像和 Agent 头像上传。
 - Agent、聊天、记忆、主动关怀。
 - LLM provider 配置和调用。
 - 订阅、账单、内容审核。
@@ -103,7 +103,7 @@ moodmate/
 
 - 渲染 Web 页面。
 - 保存前端表单临时状态。
-- 把 LLM key、R2 key 拼接规则或数据库字段直接返回给浏览器。
+- 把 LLM key、R2 key 拼接规则、bucket 地址或数据库 record 直接返回给浏览器。
 
 `apps/api/src` 固定这样放：
 
@@ -377,7 +377,7 @@ presenter 只做这些事：
 健康检查分两层：
 
 - `/health` 只返回环境和基础状态，不访问外部资源。
-- `/rpc/system/readiness` 当前检查本地 D1；以后接入 R2、LLM 后再增加对应检查。
+- `/rpc/system/readiness` 当前只检查本地 D1；R2 和 LLM 需要纳入部署就绪条件时再增加对应检查。
 
 健康检查不能返回 secret、数据库 ID、上游 key 和用户数据。
 
@@ -613,9 +613,9 @@ LLM 返回空文本、HTML 页面或协议不匹配时，API 返回明确错误�
 
 写入入口：`assets` 模块。
 
-读取入口：API 返回可访问 URL 或签名 URL，前端不拼 key。
+读取入口：`GET /rpc/assets/avatar?key=<key>`，前端不生成 key。
 
-说明：目前 R2 未接入。接入前不要在 Web 或 Admin 写文件 key 规则。
+说明：默认头像使用 `AVATAR_BUCKET`，Admin 上传入口是 `POST /rpc/admin/default-avatars`。用户头像和 Agent 头像尚未接入。
 
 ### 请求上下文
 
@@ -645,7 +645,7 @@ API 配置保存在 Cloudflare Workers bindings 中，读取入口是 `apps/api/
 - `APP_ENV`
 - `CORS_ORIGINS`
 
-本地真实值分别放在 `.env.local` 和 `.dev.vars`，仓库只提交 example 文件。test 和 production 的真实 URL、CORS 来源由部署平台配置。D1 binding 只由 API 访问；后续新增 LLM、R2 配置时也不让浏览器读取 secret。
+本地真实值分别放在 `.env.local` 和 `.dev.vars`，仓库只提交 example 文件。test 和 production 的真实 URL、CORS 来源由部署平台配置。D1 与 R2 binding 只由 API 访问；后续新增 LLM 配置时也不让浏览器读取 secret。
 
 ### 前端 UI 状态
 
@@ -699,6 +699,7 @@ API 统一返回 `ApiResponse<T>`。
 /auth/web/logout
 
 /rpc/user/profile
+/rpc/assets/avatar
 /rpc/mood/entries
 /rpc/agent/my
 /rpc/chat/conversations
@@ -897,14 +898,14 @@ packages/ui/src/theme.css 或共享组件
 
 - `package.json` 写的是 `pnpm@11.9.0`，项目说明里写过 `pnpm 11.5.0`。以 `package.json` 为准。
 - `AGENTS.md` 的目录树漏了 `packages/contracts`，源码里已经存在。以源码为准。
-- `wrangler.jsonc` 只在默认开发环境启用了本地 D1；test 和 production 还没有 D1 binding，R2、KV、AI 和队列 binding 也未启用。
+- `wrangler.jsonc` 只在默认开发环境启用了本地 D1 和头像 R2；test 和 production 还没有 D1/R2 binding，KV、AI 和队列 binding 也未启用。
 
 ## 当前维护风险
 
 - `packages/ui` 已由 Web 和 Admin 实际使用。新增共享组件时仍要先确认两个入口都有真实调用方。
 - `apps/admin` 还停在 starter 页面，下一阶段做后台时要先建 `(auth)` 和 `(dashboard)` 目录。
 - `apps/web` 现在还没有 `src/api` 和统一 `http`。新增业务页面前先补请求函数目录。
-- 本地 D1 已接入，但还没有业务表；R2 尚未接入。不要提前在前端写数据库字段、文件 key 或上传路径规则。
+- 本地 D1 已有认证表和默认头像版本表，默认头像 R2 已接入。用户头像和 Agent 头像尚未实现，前端不能生成文件 key 或上传路径。
 
 ## 检查命令
 

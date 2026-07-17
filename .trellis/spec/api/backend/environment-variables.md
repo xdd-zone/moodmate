@@ -12,15 +12,16 @@ getApiEnv(bindings: ApiBindings): ApiEnv;
 
 route、service 和 middleware 传入 `c.env`，不直接读取或拆分 binding。Hono 通过 `ApiHonoEnv.Bindings` 提供类型。
 
-资源 binding 不放进 `ApiEnv`。当前 D1 合同是：
+资源 binding 不放进 `ApiEnv`。当前 D1 和 R2 合同是：
 
 ```ts
 interface ApiBindings {
+  AVATAR_BUCKET?: R2Bucket;
   DB?: D1Database;
 }
 ```
 
-`DB` 是可选字段，因为只有默认开发环境配置本地 D1，test 和 production 没有 D1 binding。修改 `wrangler.jsonc` 的 binding 或 `compatibility_date` 后运行 `pnpm --filter api cf-typegen`，提交更新后的 `apps/api/worker-configuration.d.ts`，不要手写 Cloudflare runtime 类型。
+两个字段都是可选的，因为只有默认开发环境配置本地 D1 和 R2，test 与 production 没有对应 binding。修改 `wrangler.jsonc` 的 binding 或 `compatibility_date` 后运行 `pnpm --filter api cf-typegen`，提交更新后的 `apps/api/worker-configuration.d.ts`，不要手写 Cloudflare runtime 类型。
 
 ## 3. 变量合同
 

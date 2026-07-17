@@ -11,6 +11,7 @@
 | [错误和请求上下文](./error-handling.md)     | `AppError`、统一失败响应、变量 |
 | [环境变量](./environment-variables.md)      | Worker binding、校验、Wrangler |
 | [D1](./d1.md)                               | 本地 binding、readiness、迁移  |
+| [头像存储](./assets.md)                     | R2、头像校验、元数据和接口     |
 | [Admin 认证](./auth.md)                     | 密码、JWT、session、refresh    |
 | [质量检查](./quality-guidelines.md)         | 类型边界、禁止写法、验证命令   |
 
@@ -22,6 +23,7 @@
 - [ ] 新增字符串变量时已同步 `ApiBindings`、解析函数、Wrangler 和示例文件；新增资源 binding 时已同步 `ApiBindings`、Wrangler 和生成类型。
 - [ ] 未新增浏览器可读取的 secret、数据库 record 或 Hono 内部类型。
 - [ ] 修改 Admin 认证时已读取 `auth.md`，并确认 token 类型、D1 状态和角色都会重新校验。
+- [ ] 修改头像上传、读取、R2 key 或元数据时已读取 `assets.md`。
 
 ## 完成检查
 

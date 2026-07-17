@@ -4,6 +4,7 @@ export interface ApiBindings {
   APP_ENV?: string;
   AUTH_ACCESS_SECRET?: string;
   AUTH_REFRESH_SECRET?: string;
+  AVATAR_BUCKET?: R2Bucket;
   CORS_ORIGINS?: string;
   DB?: D1Database;
 }
