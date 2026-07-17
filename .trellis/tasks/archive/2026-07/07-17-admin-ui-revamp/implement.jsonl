@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/ui/frontend/index.md", "reason": "UI 包改动入口:质量检查命令、层边界、exports 暴露要求"}
+{"file": ".trellis/spec/ui/frontend/component-guidelines.md", "reason": "新增组件必须遵守:ComponentProps 扩展、data-slot、CVA 静态变体、className 完整出现不拼接、客户端边界最小化"}
+{"file": ".trellis/spec/ui/frontend/theme-guidelines.md", "reason": "组件只用语义 token、focus-visible 写法(outline-none 陷阱)、dark variant 只匹配 mocha"}
+{"file": ".trellis/spec/ui/frontend/directory-structure.md", "reason": "一组件一文件、命名导出、exports 子路径;本次要同步放宽'两个应用才进 @repo/ui'的约束"}
+{"file": ".trellis/spec/admin/frontend/index.md", "reason": "admin 改造入口:开发前/完成检查清单、token 不落地、use client 最小化"}
+{"file": ".trellis/spec/admin/frontend/styling-guidelines.md", "reason": "admin 布局密度规则:纯 surface 背景、不嵌套卡片、44px 触控高度、移动端单列优先、语义 token"}
+{"file": ".trellis/spec/admin/frontend/component-guidelines.md", "reason": "admin 组件职责划分:route page/src/api/src/components/src/auth 各自边界,不复用 web 业务组件"}
+{"file": ".trellis/spec/admin/frontend/directory-structure.md", "reason": "(dashboard) 按业务域放页面、admin 专用组件留在 src/components、依赖边界"}

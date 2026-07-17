@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/ui/frontend/index.md", "reason": "UI 包质量检查:pnpm --filter @repo/ui check 覆盖类型/lint/format,调用方回归"}
+{"file": ".trellis/spec/ui/frontend/component-guidelines.md", "reason": "核对新组件是否符合 ComponentProps 扩展、data-slot、CVA 静态变体、无 bg-${x} 拼接"}
+{"file": ".trellis/spec/ui/frontend/theme-guidelines.md", "reason": "核对 focus-visible 写法、只用语义 token、无硬编码色值、无 prefers-color-scheme 分支"}
+{"file": ".trellis/spec/ui/frontend/quality-guidelines.md", "reason": "UI 包完成检查项与禁止写法"}
+{"file": ".trellis/spec/admin/frontend/index.md", "reason": "admin 完成检查:token 不落地、无 import apps/api/src、use client 最小、依次过 check-types/lint/format:check + admin build"}
+{"file": ".trellis/spec/admin/frontend/styling-guidelines.md", "reason": "核对 admin 布局密度、可访问性 focus token、Latte/Mocha 双主题检查"}
+{"file": ".trellis/spec/admin/frontend/quality-guidelines.md", "reason": "admin 类型/数据/禁止写法与验证命令"}
