@@ -379,3 +379,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: 完成角色管理章节
+
+**Date**: 2026-07-17
+**Task**: 完成角色管理章节
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+新增角色生命周期、Admin 角色管理 API 与页面；角色状态回接认证；补充迁移、seed、contracts 和 Trellis 规范。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e21eb17` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
