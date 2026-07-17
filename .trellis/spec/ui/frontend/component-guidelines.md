@@ -29,6 +29,20 @@ const variants = cva("...", {
 });
 ```
 
+## 布局组件的 asChild
+
+`app-shell.tsx` 的 `SidebarNavItem` 等导航组件不 import `next/link`，通过 `asChild`（Slot）把样式套到调用方传入的 `<Link>` 上。共享包只出样式和 `active` 状态，路由和菜单数据由应用侧传入。
+
+```tsx
+<SidebarNavItem active={pathname === "/roles"} asChild>
+  <Link href="/roles">角色管理</Link>
+</SidebarNavItem>
+```
+
+## 受控组件
+
+`Pagination` 等带交互状态的组件保持受控：状态（当前页）由调用方持有，组件通过 `page`/`pageCount` 接收，通过 `onPageChange` 回调上报，不内置 state。这类带事件回调的组件才加 `"use client"`。
+
 ## 样式归属
 
 UI 组件只使用 `packages/ui/src/theme.css` 提供的语义 token。基础色值只在主题文件定义；Web 的情绪色、环境背景和 Admin 页面布局不能写入共享组件。

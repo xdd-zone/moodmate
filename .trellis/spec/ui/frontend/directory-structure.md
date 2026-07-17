@@ -1,6 +1,6 @@
 # UI 包目录与导出
 
-`@repo/ui` 只放 Web 和 Admin 都会使用、且不包含业务规则的设计令牌和 React 组件。当前源码在 `packages/ui/src/`，已有主题入口与运行时、`button.tsx`、`card.tsx`、`badge.tsx` 和 `code.tsx`。
+`@repo/ui` 放不包含业务规则的设计令牌、结构与通用展示 React 组件。当前源码在 `packages/ui/src/`，已有主题入口与运行时、`button.tsx`、`card.tsx`、`badge.tsx`、`code.tsx`，以及表单类 `label.tsx`、`input.tsx`、`field.tsx`，表格类 `table.tsx`、`pagination.tsx`，反馈类 `alert.tsx`、`spinner.tsx`、`skeleton.tsx`，布局类 `separator.tsx`、`app-shell.tsx`。
 
 ## 文件和导出
 
@@ -14,7 +14,7 @@
 
 ## 进入共享包的条件
 
-只有 Web 和 Admin 都会用的通用组件才放这里。当前确认共享的是 button、card、badge 和 theme-toggle；dialog、input、sidebar 等组件要等两个应用都出现真实调用方后再增加。只有一个应用使用的组件先留在该应用。
+结构与通用展示组件在有真实调用方时即可进入 `@repo/ui`，不必等 Web 和 Admin 同时使用。Admin 已经是 `input`、`field`、`table`、`alert`、`app-shell` 等结构类组件的真实调用方，这类无业务、无请求、无权限判断的组件优先共享，避免各应用重复手写布局和输入框样式。仍禁止把业务组件、发请求或判断权限的组件放进来；判断不清时按下面的黑名单和依赖边界执行。
 
 以下内容不能进入 UI 包：
 
