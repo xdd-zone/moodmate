@@ -72,13 +72,13 @@
 
 ## Acceptance Criteria
 
-- [ ] AC1：`@repo/ui` 新增 9 个组件文件，均可通过 `@repo/ui/<name>` 子路径引入，命名导出，无 default export。
-- [ ] AC2：新组件全部只用语义 token，无硬编码色值；带交互的才有 `"use client"`；focus 环符合现有写法约束。
-- [ ] AC3：Admin `(dashboard)` 下页面套用统一 AppShell + Sidebar 布局，Sidebar 展示现有页面导航项（纯文字），顶栏含 ThemeToggle + 退出登录。
-- [ ] AC4：`/login`、`/`、`/roles` 三页完成组件化改造，手写 `inputClassName` 常量与手写 `<table>` 被新组件取代；三页交互行为与改造前一致（登录、退出、角色 create/disable/delete、刷新）。
-- [ ] AC5：`.trellis/spec/ui/frontend/directory-structure.md` 已更新，放行新增组件的归属判定。
-- [ ] AC6：依次通过 `pnpm --filter @repo/ui check`、`pnpm --filter admin check-types`、`pnpm --filter admin lint`、`pnpm format:check`，并通过 `pnpm --filter admin build`。
-- [ ] AC7：Latte / Mocha 两主题下三页视觉正常，390x844 与 1440x900 无溢出/裁切/重叠，无 hydration warning（按 theme spec 的浏览器检查项自查）。
+- [x] AC1：`@repo/ui` 新增 10 个组件文件（label/input/field/table/alert/spinner/skeleton/separator/pagination/app-shell，较初稿多一个 app-shell），均可通过 `@repo/ui/<name>` 子路径引入，命名导出，`grep "export default"` 结果为空。
+- [x] AC2：新组件全部只用语义 token，无硬编码色值；仅 pagination 带 `"use client"`（app-shell 等纯展示无 client）；focus 环沿用 `focus-visible:ring-*` 现有写法。
+- [x] AC3：Admin `(dashboard)/layout.tsx` 套 AdminShell（AppShell + Sidebar），Sidebar 展示 NAV_ITEMS 纯文字导航，顶栏含 ThemeToggle + 退出登录。
+- [x] AC4：`/login`、`/`、`/roles` 三页完成组件化改造，手写 `inputClassName` 常量与手写 `<table>` 已被 Field/Input/Table 取代；三页 mutation/query 逻辑经 check 逐行核对与改造前一致。
+- [x] AC5：`.trellis/spec/ui/frontend/directory-structure.md` 已更新（含「有真实调用方即可进」表述），放行新增组件归属判定。
+- [x] AC6：`pnpm --filter @repo/ui check`、`pnpm --filter admin check-types`、`pnpm --filter admin lint`、`pnpm --filter admin build` 全部 exit=0；`pnpm format:check` 仅 3 个 Trellis 元数据文件告警（非本次代码，历史单独处理），代码文件格式通过。
+- [ ] AC7：Latte / Mocha 两主题下三页视觉、390x844 与 1440x900 溢出、hydration warning ——**浏览器手动回归未执行**，需人工自查（build 不能替代）。
 
 ## Out of Scope
 

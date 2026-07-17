@@ -17,46 +17,46 @@
 
 按依赖顺序，先无 client 的基础件，再组合件：
 
-- [ ] A1 `label.tsx` — `Label`
-- [ ] A2 `input.tsx` — `Input`（沉淀现有 inputClassName）
-- [ ] A3 `field.tsx` — `Field` + `FieldLabel`/`FieldControl`/`FieldDescription`/`FieldError`（复用 Label）
-- [ ] A4 `table.tsx` — `Table`/`TableHeader`/`TableBody`/`TableRow`/`TableHead`/`TableCell`
-- [ ] A5 `alert.tsx` — `Alert`/`AlertTitle`/`AlertDescription`（CVA 四变体）
-- [ ] A6 `spinner.tsx` — `Spinner`
-- [ ] A7 `skeleton.tsx` — `Skeleton`
-- [ ] A8 `separator.tsx` — `Separator`
-- [ ] A9 `pagination.tsx` — `Pagination`（`"use client"`，受控）
-- [ ] A10 `app-shell.tsx` — `AppShell`/`Sidebar`/`SidebarHeader`/`SidebarNav`/`SidebarNavItem`(asChild)/`SidebarFooter`/`AppShellHeader`/`AppShellContent`
+- [x] A1 `label.tsx` — `Label`
+- [x] A2 `input.tsx` — `Input`（沉淀现有 inputClassName）
+- [x] A3 `field.tsx` — `Field` + `FieldLabel`/`FieldControl`/`FieldDescription`/`FieldError`（复用 Label）
+- [x] A4 `table.tsx` — `Table`/`TableHeader`/`TableBody`/`TableRow`/`TableHead`/`TableCell`
+- [x] A5 `alert.tsx` — `Alert`/`AlertTitle`/`AlertDescription`（CVA 四变体）
+- [x] A6 `spinner.tsx` — `Spinner`
+- [x] A7 `skeleton.tsx` — `Skeleton`
+- [x] A8 `separator.tsx` — `Separator`
+- [x] A9 `pagination.tsx` — `Pagination`（`"use client"`，受控）
+- [x] A10 `app-shell.tsx` — `AppShell`/`Sidebar`/`SidebarHeader`/`SidebarNav`/`SidebarNavItem`(asChild)/`SidebarFooter`/`AppShellHeader`/`AppShellContent`
 
 验证：`pnpm --filter @repo/ui check`。组件类名中语义 token 全量出现，无硬编码色值，focus 环沿用现有写法。
 
-- [ ] A11 更新 `packages/ui/src/theme.css` 的 `@source` 无需改（已 `./`）；确认新组件类名被 Tailwind 扫描到（admin build 时验证）。
+- [x] A11 更新 `packages/ui/src/theme.css` 的 `@source` 无需改（已 `./`）；确认新组件类名被 Tailwind 扫描到（admin build 时验证）。
 
 ## 阶段 B：spec 同步（与 A 同批提交）
 
-- [ ] B1 改 `.trellis/spec/ui/frontend/directory-structure.md`：放宽「两个应用都用才进 ui」为「有真实调用方即可进结构/通用展示组件」，保留业务组件黑名单。
-- [ ] B2 视情况在 `component-guidelines.md` 补 `asChild` 布局用法 / 受控 Pagination 约定（若实现中确立了新约定）。
+- [x] B1 改 `.trellis/spec/ui/frontend/directory-structure.md`：放宽「两个应用都用才进 ui」为「有真实调用方即可进结构/通用展示组件」，保留业务组件黑名单。
+- [x] B2 视情况在 `component-guidelines.md` 补 `asChild` 布局用法 / 受控 Pagination 约定（若实现中确立了新约定）。
 
 ## 阶段 C：Admin 布局壳
 
-- [ ] C1 新增 `apps/admin/src/components/layout/admin-shell.tsx`（`"use client"`）：`NAV_ITEMS` 常量 + AppShell 组装 + 顶栏 ThemeToggle + 退出登录 mutation。
-- [ ] C2 新增 `apps/admin/app/(dashboard)/layout.tsx`：用 AdminShell 包裹 children。
-- [ ] C3 从 `admin-dashboard.tsx` 移除 header/logout（迁到 shell），保留账户 Card。
+- [x] C1 新增 `apps/admin/src/components/layout/admin-shell.tsx`（`"use client"`）：`NAV_ITEMS` 常量 + AppShell 组装 + 顶栏 ThemeToggle + 退出登录 mutation。
+- [x] C2 新增 `apps/admin/app/(dashboard)/layout.tsx`：用 AdminShell 包裹 children。
+- [x] C3 从 `admin-dashboard.tsx` 移除 header/logout（迁到 shell），保留账户 Card。
 
 验证：`pnpm --filter admin check-types && pnpm --filter admin build`。
 
 ## 阶段 D：三页视觉改造
 
-- [ ] D1 `login-form.tsx`：`Field`/`Label`/`Input` 替换手写；错误 `Alert variant="danger"`。（login 不在 dashboard group，保留自己的 `<main>`，不套 AdminShell。）
-- [ ] D2 `admin-dashboard.tsx`：账户信息用 Card + `Field`/`Separator` 表达；错误 `Alert`。
-- [ ] D3 `roles-page.tsx`：手写 `<table>` → `Table` 系列；本地 `Field`/`inputClassName` → `@repo/ui`；message/actionError → `Alert`。删除/禁用/创建/refetch 逻辑保持不变。
+- [x] D1 `login-form.tsx`：`Field`/`Label`/`Input` 替换手写；错误 `Alert variant="danger"`。（login 不在 dashboard group，保留自己的 `<main>`，不套 AdminShell。）
+- [x] D2 `admin-dashboard.tsx`：账户信息用 Card + `Field`/`Separator` 表达；错误 `Alert`。
+- [x] D3 `roles-page.tsx`：手写 `<table>` → `Table` 系列；本地 `Field`/`inputClassName` → `@repo/ui`；message/actionError → `Alert`。删除/禁用/创建/refetch 逻辑保持不变。
 
 验证：全量命令。
 
 ## 阶段 E：最终质量门 + 回归
 
-- [ ] E1 全量：`pnpm --filter @repo/ui check`、`pnpm --filter admin check-types`、`pnpm --filter admin lint`、`pnpm --filter admin build`、`pnpm format:check`。
-- [ ] E2 浏览器手动回归（spec 要求，build 不能替代）：
+- [x] E1 全量：`pnpm --filter @repo/ui check`、`pnpm --filter admin check-types`、`pnpm --filter admin lint`、`pnpm --filter admin build` 全部通过（exit=0）。`pnpm format:check` 仅剩 3 个 Trellis 元数据文件（archive task.json、journal-1.md、index.md）告警，非本次代码，历史由 `chore: format trellis metadata` 单独处理；本次代码文件格式全部通过。
+- [ ] E2 浏览器手动回归（spec 要求，build 不能替代）——**未执行**，需人工在 `pnpm dev:admin`（端口 6154）自查：
   - 登录成功跳转 `/`、错误提示 Alert 展示。
   - 退出登录（顶栏）→ 回 `/login`。
   - 角色 create / disable / delete / 重新读取。
