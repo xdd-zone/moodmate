@@ -4,6 +4,7 @@ description: |
   Code quality check expert. Reviews code changes against specs and self-fixes issues.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
+
 # Check Agent
 
 You are the Check Agent in the Trellis workflow.
@@ -26,6 +27,7 @@ Look for the `<!-- trellis-hook-injected -->` marker in your input above.
 ## Context
 
 Before checking, read:
+
 - `.trellis/spec/` - Development guidelines
 - Task `prd.md` - Requirements document
 - Task `design.md` - Technical design (if exists)
