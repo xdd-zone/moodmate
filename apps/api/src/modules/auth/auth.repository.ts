@@ -72,6 +72,7 @@ export async function findAdminLoginContext(
       and(
         eq(userEmails.normalizedEmail, normalizedEmail),
         eq(userRoleBindings.status, "active"),
+        eq(roles.status, "active"),
         eq(roles.code, "admin_owner"),
         eq(applications.code, "admin"),
         eq(applications.status, "active"),
@@ -99,6 +100,7 @@ export async function findActiveAdminRoles(
       and(
         eq(userRoleBindings.userId, userId),
         eq(userRoleBindings.status, "active"),
+        eq(roles.status, "active"),
         eq(applications.code, "admin"),
         eq(applications.status, "active"),
       ),

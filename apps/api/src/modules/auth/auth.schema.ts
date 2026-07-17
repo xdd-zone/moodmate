@@ -189,14 +189,26 @@ export const roles = sqliteTable(
       .references(() => applications.id, { onDelete: "cascade" }),
     code: text("code").notNull(),
     name: text("name").notNull(),
+    status: text("status", {
+      enum: ["active", "disabled", "deleted"],
+    })
+      .notNull()
+      .default("active"),
     createdAtMs: integer("created_at_ms").notNull(),
     updatedAtMs: integer("updated_at_ms").notNull(),
+    disabledAtMs: integer("disabled_at_ms"),
+    deletedAtMs: integer("deleted_at_ms"),
   },
   (table) => [
     unique("roles_application_code_unique").on(table.applicationId, table.code),
+    index("roles_application_status_idx").on(table.applicationId, table.status),
     check(
       "roles_timestamps_check",
       sql`${table.updatedAtMs} >= ${table.createdAtMs}`,
+    ),
+    check(
+      "roles_status_check",
+      sql`${table.status} IN ('active', 'disabled', 'deleted')`,
     ),
   ],
 );

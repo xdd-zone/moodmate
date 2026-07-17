@@ -26,7 +26,7 @@ route 只校验 HTTP 输入和构造统一响应。service 组织认证动作，
 
 - access 和 refresh 固定使用 `HS256`，但分别读取 `AUTH_ACCESS_SECRET` 和 `AUTH_REFRESH_SECRET`。两个值都至少包含 32 个 UTF-8 字节。
 - JWT 固定 `typ=JWT`、`iss=moodmate-api`、`aud=moodmate-admin`、`app=admin`，并要求 UUIDv7 格式的 `sub`、`sid`、`jti`。
-- access 的 `token_use=access`，携带 `roles: ["admin_owner"]`，最长 15 分钟。
+- access 的 `token_use=access`，携带当前数据库中 active 的 Admin 角色集合，最长 15 分钟；集合必须包含 `admin_owner`。
 - refresh 的 `token_use=refresh`，不携带 roles，过期时间等于 session 的 30 天绝对截止时间。
 - 密码格式是 `$pbkdf2-sha256$v=1$i=<iterations>,l=<bytes>$<salt>$<hash>`。新 hash 使用 600,000 次迭代、16 字节 salt 和 32 字节结果。
 - 登录查不到可用账号时仍验证 `DUMMY_PASSWORD_HASH`。连续 5 次错误锁定 15 分钟；成功登录清零。
@@ -51,7 +51,7 @@ route 只校验 HTTP 输入和构造统一响应。service 组织认证动作，
 ## 5. 正常、基础、错误案例
 
 - 正常：登录创建 session 和首个 refresh；refresh 生成一个后继 token，session 截止时间保持不变。
-- 基础：每次 access 和 refresh 都读取 D1 session；refresh 还重新读取用户状态和 `admin_owner`。
+- 基础：每次 access 和 refresh 都读取 D1 session 和 active 角色；refresh 还重新读取用户状态和 `admin_owner`。角色状态不是 `active` 时不能继续授权。
 - 错误：只验 JWT 签名后直接信任 roles，或者把 access 和 refresh 交给同一个 secret 和同一套 claims schema。
 
 ## 6. 必做检查

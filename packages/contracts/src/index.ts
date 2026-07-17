@@ -33,6 +33,19 @@ export type {
   AdminSession,
 } from "./auth/admin-auth.contract";
 export {
+  RoleCreateRequestSchema,
+  RoleListResponseSchema,
+  RoleMutationResponseSchema,
+  RoleSchema,
+  RoleStatusSchema,
+} from "./auth/role-management.contract";
+export type {
+  Role,
+  RoleCreateRequest,
+  RoleListResponse,
+  RoleMutationResponse,
+} from "./auth/role-management.contract";
+export {
   AdminLogoutRequestSchema,
   AdminLogoutResponseSchema,
 } from "./auth/admin-logout.contract";

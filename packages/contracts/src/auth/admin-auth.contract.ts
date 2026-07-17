@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const AdminRoleSchema = z.literal("admin_owner");
+export const AdminRoleSchema = z.string().trim().min(1);
 
 export const AdminSessionSchema = z.object({
   displayName: z.string().min(1),

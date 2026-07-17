@@ -4,6 +4,7 @@ export function presentAdminSession(input: {
   displayName: string;
   email: string;
   expiresAtMs: number;
+  roles: string[];
   sessionId: string;
   userId: string;
 }): AdminSession {
@@ -11,7 +12,7 @@ export function presentAdminSession(input: {
     displayName: input.displayName,
     email: input.email,
     expiresAtMs: input.expiresAtMs,
-    roles: ["admin_owner"],
+    roles: input.roles,
     sessionId: input.sessionId,
     userId: input.userId,
   };

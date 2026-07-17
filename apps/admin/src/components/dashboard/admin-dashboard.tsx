@@ -12,6 +12,7 @@ import {
 import { ThemeToggle } from "@repo/ui/theme-toggle";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { logoutAdmin } from "@/src/auth/api";
 import {
@@ -47,6 +48,9 @@ export function AdminDashboard() {
           <span className="text-sm font-semibold">moodmate</span>
           <Badge variant="outline">admin</Badge>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/roles">角色管理</Link>
+            </Button>
             <ThemeToggle />
             <Button
               disabled={logoutMutation.isPending}

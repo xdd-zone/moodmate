@@ -11,6 +11,17 @@ VALUES (
 )
 ON CONFLICT (`code`) DO NOTHING;
 
+INSERT INTO `applications` (`id`, `code`, `name`, `status`, `created_at_ms`, `updated_at_ms`)
+VALUES (
+  '019f6973-0137-749a-bfdd-d1b48c6d93dd',
+  'web',
+  'Moodmate Web',
+  'active',
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000
+)
+ON CONFLICT (`code`) DO NOTHING;
+
 INSERT INTO `application_auth_methods` (`id`, `application_id`, `provider`, `enabled`, `created_at_ms`, `updated_at_ms`)
 SELECT
   '019f6973-0137-749a-bfdd-d1b48c6d93dc',
@@ -23,16 +34,30 @@ FROM `applications`
 WHERE `code` = 'admin'
 ON CONFLICT (`application_id`, `provider`) DO NOTHING;
 
-INSERT INTO `roles` (`id`, `application_id`, `code`, `name`, `created_at_ms`, `updated_at_ms`)
+INSERT INTO `roles` (`id`, `application_id`, `code`, `name`, `status`, `created_at_ms`, `updated_at_ms`)
 SELECT
   '019f6973-0137-749a-bfdd-d1b519b18016',
   `id`,
   'admin_owner',
   'Admin Owner',
+  'active',
   CAST(strftime('%s', 'now') AS INTEGER) * 1000,
   CAST(strftime('%s', 'now') AS INTEGER) * 1000
 FROM `applications`
 WHERE `code` = 'admin'
+ON CONFLICT (`application_id`, `code`) DO NOTHING;
+
+INSERT INTO `roles` (`id`, `application_id`, `code`, `name`, `status`, `created_at_ms`, `updated_at_ms`)
+SELECT
+  '019f6973-0137-749a-bfdd-d1b519b18017',
+  `id`,
+  'web_user',
+  'Web User',
+  'active',
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000
+FROM `applications`
+WHERE `code` = 'web'
 ON CONFLICT (`application_id`, `code`) DO NOTHING;
 
 INSERT INTO `users` (`id`, `status`, `display_name`, `created_at_ms`, `updated_at_ms`)

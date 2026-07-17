@@ -9,6 +9,7 @@
 | [Contract 写法](./contract-guidelines.md)    | 模块目录、Zod schema、类型推导和导出 |
 | [统一响应与错误码](./response-guidelines.md) | `ApiResponse`、`BizCode`、构造函数   |
 | [Admin 认证合同](./auth-contracts.md)        | 登录、token、safe session、logout    |
+| [角色管理合同](./role-management.md)         | 角色 DTO、状态和错误码               |
 | [边界与检查](./quality-guidelines.md)        | 包职责、禁止依赖、验证命令           |
 
 ## 开发前检查

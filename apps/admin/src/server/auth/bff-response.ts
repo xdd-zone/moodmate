@@ -50,11 +50,12 @@ export function invalidOriginResponse() {
   );
 }
 
-export function upstreamFailureResponse(error: unknown) {
+export function upstreamFailureResponse(
+  error: unknown,
+  fallbackMessage = "认证服务暂时不可用，请稍后重试",
+) {
   const message =
-    error instanceof Error && error.message
-      ? error.message
-      : "认证服务暂时不可用，请稍后重试";
+    error instanceof Error && error.message ? error.message : fallbackMessage;
 
   return failureResponse(BizCode.SYSTEM_INTERNAL_ERROR, message, 502);
 }

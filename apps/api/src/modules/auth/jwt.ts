@@ -23,7 +23,7 @@ const BaseTokenClaimsSchema = z
   })
   .strict();
 const AccessTokenClaimsSchema = BaseTokenClaimsSchema.extend({
-  roles: z.tuple([z.literal("admin_owner")]),
+  roles: z.array(z.string().min(1)).min(1),
   token_use: z.literal("access"),
 }).strict();
 const RefreshTokenClaimsSchema = BaseTokenClaimsSchema.extend({

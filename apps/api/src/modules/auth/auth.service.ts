@@ -75,10 +75,12 @@ export async function loginAdminWithPassword(input: {
 
   const sessionId = uuidv7();
   const sessionExpiresAtMs = nowMs + SESSION_TTL_MS;
+  const roleRows = await findActiveAdminRoles(bindings.DB, loginContext.userId);
+  const roles = roleRows.map((role) => role.code);
   const [accessToken, refreshToken] = await Promise.all([
     issueAccessToken(
       {
-        roles: ["admin_owner"],
+        roles,
         sessionExpiresAtMs,
         sessionId,
         userId: loginContext.userId,
@@ -134,6 +136,7 @@ export async function loginAdminWithPassword(input: {
       displayName: loginContext.displayName,
       email: loginContext.email,
       expiresAtMs: sessionExpiresAtMs,
+      roles,
       sessionId,
       userId: loginContext.userId,
     }),
@@ -333,6 +336,7 @@ async function loadActiveAdminSession(
     findActiveAdminRoles(bindings.DB, expectedUserId),
   ]);
   const roles = roleRows.map((role) => role.code);
+  const hasExpectedRoles = expectedRoles.every((role) => roles.includes(role));
 
   if (
     !context ||
@@ -344,8 +348,7 @@ async function loadActiveAdminSession(
     context.applicationCode !== "admin" ||
     context.applicationStatus !== "active" ||
     !roles.includes("admin_owner") ||
-    expectedRoles.length !== 1 ||
-    expectedRoles[0] !== "admin_owner"
+    !hasExpectedRoles
   ) {
     throw sessionRevokedError();
   }
@@ -354,6 +357,7 @@ async function loadActiveAdminSession(
     displayName: context.displayName,
     email: context.email,
     expiresAtMs: context.session.expiresAtMs,
+    roles,
     sessionId: context.session.id,
     userId: context.session.userId,
   });

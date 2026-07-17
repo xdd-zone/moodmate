@@ -23,7 +23,7 @@ AdminLogoutResponseSchema;
 - `AdminRefreshRequest`、`AdminLogoutRequest`：只包含长度 1 至 4096 的 `refreshToken`。
 - `AdminAuthTokenResponse`：包含 `accessToken`、`accessTokenExpiresAtMs`、`refreshToken`、`refreshTokenExpiresAtMs` 和 `session`。
 - `AdminSession`：只包含 `sessionId`、`userId`、`email`、`displayName`、`roles` 和 `expiresAtMs`。
-- `roles` 首期只允许 `admin_owner`。
+- `roles` 是当前数据库中 active 的 Admin 角色 code 数组，必须包含 `admin_owner`；角色被禁用或逻辑删除后不能继续出现在有效 session 中。
 - `AdminLogoutResponse` 固定为 `{ success: true }`。
 
 ## 4. 校验与错误矩阵
