@@ -23,6 +23,7 @@ catalog:
   drizzle-orm: 0.45.2
   jose: 6.2.3
   uuidv7: 1.2.1
+  lucide-react: ^1.25.0
 
 allowBuilds:
   esbuild: true
