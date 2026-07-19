@@ -50,15 +50,15 @@ const NAV_GROUPS: ReadonlyArray<{ label: string; items: readonly NavItem[] }> =
       label: "运营",
       items: [
         { count: "2.4k", href: "/moods", icon: Smile, label: "情绪记录" },
-        { count: "861", icon: Users, label: "用户管理" },
+        { count: "861", href: "/users", icon: Users, label: "用户管理" },
         { icon: BookOpenText, label: "内容管理" },
       ],
     },
     {
       label: "系统",
       items: [
-        { href: "/roles", icon: ShieldCheck, label: "角色管理" },
-        { icon: Settings, label: "系统设置" },
+        { href: "/roles", icon: ShieldCheck, label: "角色权限" },
+        { href: "/settings", icon: Settings, label: "系统设置" },
       ],
     },
   ] as const;
@@ -70,7 +70,9 @@ const MOBILE_NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items).filter(
 const PAGE_META = {
   "/": { group: "概览", page: "数据概览" },
   "/moods": { group: "运营", page: "情绪记录" },
-  "/roles": { group: "系统", page: "角色管理" },
+  "/users": { group: "系统", page: "用户管理" },
+  "/roles": { group: "系统", page: "角色权限" },
+  "/settings": { group: "系统", page: "系统设置" },
 } as const;
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -289,7 +291,9 @@ function DesktopNavItem({
 
 function getPageMeta(pathname: string) {
   if (pathname.startsWith("/moods")) return PAGE_META["/moods"];
+  if (pathname.startsWith("/users")) return PAGE_META["/users"];
   if (pathname.startsWith("/roles")) return PAGE_META["/roles"];
+  if (pathname.startsWith("/settings")) return PAGE_META["/settings"];
   return PAGE_META["/"];
 }
 
