@@ -479,3 +479,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: admin 按设计稿全量重构：新增用户/系统设置页，重构角色权限页
+
+**Date**: 2026-07-19
+**Task**: admin 按设计稿全量重构：新增用户/系统设置页，重构角色权限页
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+在 apps/admin（Next.js + @repo/ui + Tailwind）按 Open Design 四页设计稿补齐：新增 /users 用户管理与 /settings 系统设置，按 mockup 将 /roles 重构为纯前端演示（角色卡片+权限矩阵+新建抽屉），侧栏接入两入口并统一角色权限命名。三页 Playwright 验证通过，含 latte/mocha 双主题；check-types/lint/format 三门禁零错误。roles 原后端文件保留未引用便于回滚。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9fb902d` | (see git log) |
+| `5d2125f` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
