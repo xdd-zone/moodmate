@@ -5,7 +5,6 @@ import {
   AppShellContent,
   AppShellHeader,
   Sidebar,
-  SidebarFooter,
   SidebarHeader,
   SidebarNav,
   SidebarNavItem,
@@ -13,7 +12,7 @@ import {
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
-import { ThemeToggle } from "@repo/ui/theme-toggle";
+import { ThemeMenu } from "@repo/ui/theme-menu";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
@@ -142,10 +141,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </SidebarNav>
           </div>
         ))}
-
-        <SidebarFooter className="border-t border-border pt-3">
-          <ThemeToggle className="w-full" />
-        </SidebarFooter>
       </Sidebar>
 
       <div className="flex min-h-svh min-w-0 flex-col">
@@ -162,7 +157,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               admin
             </Badge>
             <div className="ml-auto flex items-center gap-1">
-              <ThemeToggle />
+              <ThemeMenu />
               {logoutButton}
             </div>
           </div>
@@ -223,6 +218,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Bell className="size-4" />
               <span className="absolute top-2 right-2 size-1.5 rounded-full bg-danger" />
             </Button>
+            <ThemeMenu />
             <div className="flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-1.5 pr-3">
               <span className="grid size-7 place-items-center rounded-full bg-[var(--theme-mauve)] text-xs font-semibold text-[var(--theme-base)]">
                 喜
