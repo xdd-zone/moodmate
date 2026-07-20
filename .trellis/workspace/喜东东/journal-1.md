@@ -412,7 +412,6 @@
 
 - None - task complete
 
-
 ## Session 13: Admin UI 套件与管理页面改造
 
 **Date**: 2026-07-18
@@ -430,8 +429,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `17887f3` | (see git log) |
 
 ### Testing
@@ -445,7 +444,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 14: 实现 MoodMate 情绪记录后台设计
 
@@ -464,8 +462,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `cbb5c6d` | (see git log) |
 
 ### Testing
@@ -479,7 +477,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 15: admin 按设计稿全量重构：新增用户/系统设置页，重构角色权限页
 
@@ -498,8 +495,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `9fb902d` | (see git log) |
 | `5d2125f` | (see git log) |
 
