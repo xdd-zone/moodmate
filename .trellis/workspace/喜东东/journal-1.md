@@ -512,7 +512,6 @@
 
 - None - task complete
 
-
 ## Session 16: 完成 MoodMate 后台登录页改造
 
 **Date**: 2026-07-20
@@ -530,8 +529,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `b6f87d8` | (see git log) |
 | `4ee28b7` | (see git log) |
 | `458775d` | (see git log) |
