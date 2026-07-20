@@ -13,6 +13,27 @@
 
 不要在页面组件里同时处理鉴权、请求拼装、表格状态和响应字段转换。
 
+## React 表单事件
+
+不要在函数式状态更新器中直接读取 `event.currentTarget`。React 退出事件回调后会把 `currentTarget` 置空，延后执行的更新器可能因此抛出运行时错误。进入更新器前先保存元素或字段值。
+
+```tsx
+// 错误：更新器执行时 event.currentTarget 可能已经是 null
+setErrors((current) => ({
+  ...current,
+  email: validateEmail(event.currentTarget),
+}));
+
+// 正确：先保存需要读取的元素
+const input = event.currentTarget;
+setErrors((current) => ({
+  ...current,
+  email: validateEmail(input),
+}));
+```
+
+提交按钮触发校验后，浏览器可能把同步设置的焦点留在按钮上。需要聚焦首个错误字段时，在错误状态写入后用 `requestAnimationFrame()` 聚焦对应输入框，并检查 `document.activeElement`。
+
 ## 管理端与用户端分离
 
 - Admin 登录和 Web 登录使用不同入口与 session。
