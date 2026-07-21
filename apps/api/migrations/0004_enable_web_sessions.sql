@@ -33,9 +33,9 @@ SELECT
   `expires_at_ms`, `used_at_ms`, `revoked_at_ms`, `replaced_by_token_id`
 FROM `refresh_tokens`;
 
-DROP TRIGGER `refresh_tokens_validate_session_insert`;
-DROP TRIGGER `refresh_tokens_validate_rotation_insert`;
-DROP TRIGGER `refresh_tokens_validate_replacement_update`;
+DROP TRIGGER IF EXISTS `refresh_tokens_validate_session_insert`;
+DROP TRIGGER IF EXISTS `refresh_tokens_validate_rotation_insert`;
+DROP TRIGGER IF EXISTS `refresh_tokens_validate_replacement_update`;
 DROP TABLE `refresh_tokens`;
 DROP TABLE `auth_sessions`;
 
