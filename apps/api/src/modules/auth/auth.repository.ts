@@ -14,9 +14,12 @@ import {
   users,
 } from "./auth.schema";
 import type {
+  AuthSessionRecord,
   NewAuthSessionRecord,
   NewRefreshTokenRecord,
 } from "./auth.schema";
+
+type AuthApplication = AuthSessionRecord["sessionType"];
 
 export interface CreateSessionInput {
   refreshToken: NewRefreshTokenRecord;
@@ -34,9 +37,11 @@ export type RotateRefreshTokenResult =
   | { status: "rejected" }
   | { status: "rotated" };
 
-export async function findAdminLoginContext(
+export async function findPasswordLoginContext(
   database: D1Database | undefined,
   normalizedEmail: string,
+  application: AuthApplication,
+  requiredRole: string,
 ) {
   const db = createD1Client(database);
   const rows = await db
@@ -73,8 +78,8 @@ export async function findAdminLoginContext(
         eq(userEmails.normalizedEmail, normalizedEmail),
         eq(userRoleBindings.status, "active"),
         eq(roles.status, "active"),
-        eq(roles.code, "admin_owner"),
-        eq(applications.code, "admin"),
+        eq(roles.code, requiredRole),
+        eq(applications.code, application),
         eq(applications.status, "active"),
         eq(applicationAuthMethods.provider, "password"),
         eq(applicationAuthMethods.enabled, true),
@@ -85,9 +90,10 @@ export async function findAdminLoginContext(
   return rows[0] ?? null;
 }
 
-export async function findActiveAdminRoles(
+export async function findActiveRoles(
   database: D1Database | undefined,
   userId: string,
+  application: AuthApplication,
 ) {
   const db = createD1Client(database);
 
@@ -101,7 +107,7 @@ export async function findActiveAdminRoles(
         eq(userRoleBindings.userId, userId),
         eq(userRoleBindings.status, "active"),
         eq(roles.status, "active"),
-        eq(applications.code, "admin"),
+        eq(applications.code, application),
         eq(applications.status, "active"),
       ),
     );
@@ -121,7 +127,7 @@ export async function findSessionById(
   return rows[0] ?? null;
 }
 
-export async function findAdminSessionContext(
+export async function findSessionContext(
   database: D1Database | undefined,
   sessionId: string,
 ) {

@@ -1,14 +1,30 @@
-import type { AdminSession } from "@repo/contracts";
+import type { AdminSession, WebSession } from "@repo/contracts";
 
-export function presentAdminSession(input: {
+interface SessionPresentationInput {
   displayName: string;
   email: string;
   expiresAtMs: number;
   roles: string[];
   sessionId: string;
   userId: string;
-}): AdminSession {
+}
+
+export function presentAdminSession(
+  input: SessionPresentationInput,
+): AdminSession {
   return {
+    displayName: input.displayName,
+    email: input.email,
+    expiresAtMs: input.expiresAtMs,
+    roles: input.roles,
+    sessionId: input.sessionId,
+    userId: input.userId,
+  };
+}
+
+export function presentWebSession(input: SessionPresentationInput): WebSession {
+  return {
+    app: "web",
     displayName: input.displayName,
     email: input.email,
     expiresAtMs: input.expiresAtMs,

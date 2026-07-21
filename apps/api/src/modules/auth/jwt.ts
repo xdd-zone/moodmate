@@ -1,19 +1,22 @@
-import type { AdminSession } from "@repo/contracts";
 import { errors, jwtVerify, SignJWT } from "jose";
 import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 
 const JWT_ALGORITHM = "HS256";
-const JWT_AUDIENCE = "moodmate-admin";
 const JWT_ISSUER = "moodmate-api";
 const ACCESS_TTL_MS = 15 * 60 * 1000;
+const JWT_AUDIENCES = {
+  admin: "moodmate-admin",
+  web: "moodmate-web",
+} as const;
 const UUID_V7_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const UuidV7Schema = z.string().regex(UUID_V7_PATTERN);
+const AuthApplicationSchema = z.enum(["admin", "web"]);
 const BaseTokenClaimsSchema = z
   .object({
-    app: z.literal("admin"),
-    aud: z.literal(JWT_AUDIENCE),
+    app: AuthApplicationSchema,
+    aud: z.enum([JWT_AUDIENCES.admin, JWT_AUDIENCES.web]),
     exp: z.number().int(),
     iat: z.number().int(),
     iss: z.literal(JWT_ISSUER),
@@ -32,6 +35,7 @@ const RefreshTokenClaimsSchema = BaseTokenClaimsSchema.extend({
 
 export type AccessTokenClaims = z.infer<typeof AccessTokenClaimsSchema>;
 export type RefreshTokenClaims = z.infer<typeof RefreshTokenClaimsSchema>;
+export type AuthApplication = z.infer<typeof AuthApplicationSchema>;
 
 export interface IssuedToken {
   expiresAtMs: number;
@@ -47,7 +51,8 @@ export class TokenVerificationError extends Error {
 
 export async function issueAccessToken(
   input: {
-    roles: AdminSession["roles"];
+    application?: AuthApplication;
+    roles: string[];
     sessionExpiresAtMs: number;
     sessionId: string;
     userId: string;
@@ -55,13 +60,14 @@ export async function issueAccessToken(
   secret: string,
   nowMs: number,
 ): Promise<IssuedToken> {
+  const application = input.application ?? "admin";
   const expiresAtMs = toJwtExpiresAtMs(
     Math.min(nowMs + ACCESS_TTL_MS, input.sessionExpiresAtMs),
   );
   const jti = uuidv7();
   const token = await signToken(
     {
-      app: "admin",
+      app: application,
       roles: input.roles,
       sid: input.sessionId,
       token_use: "access",
@@ -69,6 +75,7 @@ export async function issueAccessToken(
     input.userId,
     jti,
     expiresAtMs,
+    application,
     secret,
     nowMs,
   );
@@ -78,6 +85,7 @@ export async function issueAccessToken(
 
 export async function issueRefreshToken(
   input: {
+    application?: AuthApplication;
     sessionExpiresAtMs: number;
     sessionId: string;
     userId: string;
@@ -85,17 +93,19 @@ export async function issueRefreshToken(
   secret: string,
   nowMs: number,
 ): Promise<IssuedToken> {
+  const application = input.application ?? "admin";
   const expiresAtMs = toJwtExpiresAtMs(input.sessionExpiresAtMs);
   const jti = uuidv7();
   const token = await signToken(
     {
-      app: "admin",
+      app: application,
       sid: input.sessionId,
       token_use: "refresh",
     },
     input.userId,
     jti,
     expiresAtMs,
+    application,
     secret,
     nowMs,
   );
@@ -106,15 +116,27 @@ export async function issueRefreshToken(
 export async function verifyAccessToken(
   token: string,
   secret: string,
+  expectedApplication: AuthApplication = "admin",
 ): Promise<AccessTokenClaims> {
-  return verifyToken(token, secret, AccessTokenClaimsSchema);
+  return verifyToken(
+    token,
+    secret,
+    AccessTokenClaimsSchema,
+    expectedApplication,
+  );
 }
 
 export async function verifyRefreshToken(
   token: string,
   secret: string,
+  expectedApplication: AuthApplication = "admin",
 ): Promise<RefreshTokenClaims> {
-  return verifyToken(token, secret, RefreshTokenClaimsSchema);
+  return verifyToken(
+    token,
+    secret,
+    RefreshTokenClaimsSchema,
+    expectedApplication,
+  );
 }
 
 async function signToken(
@@ -122,6 +144,7 @@ async function signToken(
   subject: string,
   jti: string,
   expiresAtMs: number,
+  application: AuthApplication,
   secret: string,
   nowMs: number,
 ): Promise<string> {
@@ -135,7 +158,7 @@ async function signToken(
   return new SignJWT(payload)
     .setProtectedHeader({ alg: JWT_ALGORITHM, typ: "JWT" })
     .setIssuer(JWT_ISSUER)
-    .setAudience(JWT_AUDIENCE)
+    .setAudience(JWT_AUDIENCES[application])
     .setSubject(subject)
     .setJti(jti)
     .setIssuedAt(issuedAtSeconds)
@@ -143,10 +166,13 @@ async function signToken(
     .sign(toSecretKey(secret));
 }
 
-async function verifyToken<TClaims extends { exp: number; iat: number }>(
+async function verifyToken<
+  TClaims extends { app: AuthApplication; exp: number; iat: number },
+>(
   token: string,
   secret: string,
   schema: z.ZodType<TClaims>,
+  expectedApplication: AuthApplication,
 ): Promise<TClaims> {
   try {
     const { payload, protectedHeader } = await jwtVerify(
@@ -154,7 +180,7 @@ async function verifyToken<TClaims extends { exp: number; iat: number }>(
       toSecretKey(secret),
       {
         algorithms: [JWT_ALGORITHM],
-        audience: JWT_AUDIENCE,
+        audience: JWT_AUDIENCES[expectedApplication],
         issuer: JWT_ISSUER,
         requiredClaims: ["sub", "sid", "app", "jti", "token_use", "iat", "exp"],
       },
@@ -168,6 +194,7 @@ async function verifyToken<TClaims extends { exp: number; iat: number }>(
 
     if (
       !result.success ||
+      result.data.app !== expectedApplication ||
       result.data.exp <= result.data.iat ||
       result.data.iat > Math.floor(Date.now() / 1000) + 5
     ) {

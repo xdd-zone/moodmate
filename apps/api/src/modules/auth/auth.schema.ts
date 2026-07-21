@@ -258,7 +258,7 @@ export const authSessions = sqliteTable(
     applicationId: text("application_id")
       .notNull()
       .references(() => applications.id, { onDelete: "cascade" }),
-    sessionType: text("session_type", { enum: ["admin"] }).notNull(),
+    sessionType: text("session_type", { enum: ["admin", "web"] }).notNull(),
     userAgent: text("user_agent"),
     ip: text("ip"),
     lastSeenAtMs: integer("last_seen_at_ms").notNull(),
@@ -274,7 +274,10 @@ export const authSessions = sqliteTable(
       table.revokedAtMs,
       table.expiresAtMs,
     ),
-    check("auth_sessions_type_check", sql`${table.sessionType} = 'admin'`),
+    check(
+      "auth_sessions_type_check",
+      sql`${table.sessionType} IN ('admin', 'web')`,
+    ),
     check(
       "auth_sessions_expiry_check",
       sql`${table.expiresAtMs} > ${table.createdAtMs}`,

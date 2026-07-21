@@ -57,6 +57,33 @@ export { AdminPasswordLoginRequestSchema } from "./auth/admin-login.contract";
 export type { AdminPasswordLoginRequest } from "./auth/admin-login.contract";
 export { AdminRefreshRequestSchema } from "./auth/admin-refresh.contract";
 export type { AdminRefreshRequest } from "./auth/admin-refresh.contract";
+export {
+  WebAuthTokenResponseSchema,
+  WebRoleSchema,
+  WebSessionSchema,
+  WebUserProfileSchema,
+} from "./auth/web-auth.contract";
+export type {
+  WebAuthTokenResponse,
+  WebSession,
+  WebUserProfile,
+} from "./auth/web-auth.contract";
+export {
+  WebPasswordLoginRequestSchema,
+  WebPasswordLoginResponseSchema,
+} from "./auth/web-login.contract";
+export type {
+  WebPasswordLoginRequest,
+  WebPasswordLoginResponse,
+} from "./auth/web-login.contract";
+export {
+  WebRefreshRequestSchema,
+  WebTokenRefreshResponseSchema,
+} from "./auth/web-refresh.contract";
+export type {
+  WebRefreshRequest,
+  WebTokenRefreshResponse,
+} from "./auth/web-refresh.contract";
 export { HealthResponseSchema, ApiEnvSchema } from "./system/health.contract";
 export type { ApiEnvValue, HealthResponse } from "./system/health.contract";
 export { PingRequestSchema, PingResponseSchema } from "./system/ping.contract";

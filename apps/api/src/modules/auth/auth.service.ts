@@ -4,19 +4,23 @@ import {
   type AdminLogoutResponse,
   type AdminPasswordLoginRequest,
   type AdminSession,
+  type WebAuthTokenResponse,
+  type WebPasswordLoginRequest,
+  type WebSession,
+  type WebUserProfile,
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
 
 import { AppError } from "@/shared/app-error";
 import { getApiEnv } from "@/shared/env";
 import type { ApiBindings } from "@/shared/hono-env";
-import { presentAdminSession } from "./auth.presenter";
+import { presentAdminSession, presentWebSession } from "./auth.presenter";
 import {
   createSessionWithRefreshToken,
-  findActiveAdminRoles,
-  findAdminLoginContext,
-  findAdminSessionContext,
+  findActiveRoles,
+  findPasswordLoginContext,
   findRefreshTokenContext,
+  findSessionContext,
   recordFailedPasswordAttempt,
   recordSuccessfulPasswordLogin,
   revokeSession,
@@ -29,6 +33,7 @@ import {
   verifyAccessToken,
   verifyRefreshToken,
 } from "./jwt";
+import type { AuthApplication } from "./jwt";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import { hashTokenId } from "./token-hash";
 
@@ -37,19 +42,192 @@ const PASSWORD_LOCK_THRESHOLD = 5;
 const PASSWORD_LOCK_DURATION_MS = 15 * 60 * 1000;
 const INVALID_CREDENTIALS_MESSAGE = "邮箱或密码错误";
 
-export async function loginAdminWithPassword(input: {
+type SessionPresentationInput = Parameters<typeof presentAdminSession>[0];
+type SessionByApplication = {
+  admin: AdminSession;
+  web: WebSession;
+};
+
+interface AuthTokenResponse<TSession> {
+  accessToken: string;
+  accessTokenExpiresAtMs: number;
+  refreshToken: string;
+  refreshTokenExpiresAtMs: number;
+  session: TSession;
+}
+
+interface AuthApplicationConfig<TApplication extends AuthApplication> {
+  application: TApplication;
+  presentSession: (
+    input: SessionPresentationInput,
+  ) => SessionByApplication[TApplication];
+  requiredRole: string;
+}
+
+const ADMIN_AUTH_CONFIG: AuthApplicationConfig<"admin"> = {
+  application: "admin",
+  presentSession: presentAdminSession,
+  requiredRole: "admin_owner",
+};
+
+const WEB_AUTH_CONFIG: AuthApplicationConfig<"web"> = {
+  application: "web",
+  presentSession: presentWebSession,
+  requiredRole: "web_user",
+};
+
+interface PasswordLoginServiceInput {
+  bindings: ApiBindings;
+  clientIp?: string;
+  payload: { email: string; password: string };
+  userAgent?: string;
+}
+
+export function loginAdminWithPassword(input: {
   bindings: ApiBindings;
   clientIp?: string;
   payload: AdminPasswordLoginRequest;
   userAgent?: string;
 }): Promise<AdminAuthTokenResponse> {
+  return loginWithPassword(ADMIN_AUTH_CONFIG, input);
+}
+
+export function loginWebWithPassword(input: {
+  bindings: ApiBindings;
+  clientIp?: string;
+  payload: WebPasswordLoginRequest;
+  userAgent?: string;
+}): Promise<WebAuthTokenResponse> {
+  return loginWithPassword(WEB_AUTH_CONFIG, input);
+}
+
+export async function getAdminSessionFromAccess(
+  bindings: ApiBindings,
+  authorization: string | undefined,
+): Promise<AdminSession> {
+  const claims = await readAccessClaims(
+    bindings,
+    authorization,
+    ADMIN_AUTH_CONFIG.application,
+  );
+
+  return loadActiveSession(
+    ADMIN_AUTH_CONFIG,
+    bindings,
+    claims.sid,
+    claims.sub,
+    claims.roles,
+  );
+}
+
+export async function getWebSessionFromAccess(
+  bindings: ApiBindings,
+  authorization: string | undefined,
+): Promise<WebSession> {
+  const claims = await readAccessClaims(
+    bindings,
+    authorization,
+    WEB_AUTH_CONFIG.application,
+  );
+
+  return loadActiveSession(
+    WEB_AUTH_CONFIG,
+    bindings,
+    claims.sid,
+    claims.sub,
+    claims.roles,
+  );
+}
+
+export function getWebUserProfile(session: WebSession): WebUserProfile {
+  return {
+    displayName: session.displayName,
+    email: session.email,
+    roles: session.roles,
+    userId: session.userId,
+  };
+}
+
+export function refreshAdminSession(
+  bindings: ApiBindings,
+  refreshTokenValue: string,
+): Promise<AdminAuthTokenResponse> {
+  return refreshSession(ADMIN_AUTH_CONFIG, bindings, refreshTokenValue);
+}
+
+export function refreshWebSession(
+  bindings: ApiBindings,
+  refreshTokenValue: string,
+): Promise<WebAuthTokenResponse> {
+  return refreshSession(WEB_AUTH_CONFIG, bindings, refreshTokenValue);
+}
+
+export async function logoutAdmin(input: {
+  authorization?: string;
+  bindings: ApiBindings;
+  refreshToken: string;
+}): Promise<AdminLogoutResponse> {
+  const env = getApiEnv(input.bindings);
+  let sessionId: string | null = null;
+
+  try {
+    const claims = await verifyRefreshToken(
+      input.refreshToken,
+      env.AUTH_REFRESH_SECRET,
+    );
+    const context = await findRefreshTokenContext(
+      input.bindings.DB,
+      await hashTokenId(claims.jti),
+    );
+
+    if (
+      context?.session.id === claims.sid &&
+      context.applicationCode === "admin" &&
+      context.session.sessionType === "admin"
+    ) {
+      sessionId = claims.sid;
+    }
+  } catch {
+    sessionId = null;
+  }
+
+  if (!sessionId && input.authorization) {
+    try {
+      sessionId = (
+        await verifyAccessToken(
+          readBearerToken(input.authorization),
+          env.AUTH_ACCESS_SECRET,
+        )
+      ).sid;
+    } catch {
+      sessionId = null;
+    }
+  }
+
+  if (!sessionId) {
+    throw refreshInvalidError();
+  }
+
+  await revokeSession(input.bindings.DB, sessionId, Date.now(), "logout");
+
+  return { success: true };
+}
+
+async function loginWithPassword<TApplication extends AuthApplication>(
+  config: AuthApplicationConfig<TApplication>,
+  input: PasswordLoginServiceInput,
+): Promise<AuthTokenResponse<SessionByApplication[TApplication]>> {
   const { bindings, payload } = input;
   const env = getApiEnv(bindings);
   const nowMs = Date.now();
-  const loginContext = await findAdminLoginContext(bindings.DB, payload.email);
+  const loginContext = await findPasswordLoginContext(
+    bindings.DB,
+    payload.email,
+    config.application,
+    config.requiredRole,
+  );
   const passwordHash = loginContext?.passwordHash ?? DUMMY_PASSWORD_HASH;
   const passwordMatches = await verifyPassword(payload.password, passwordHash);
-
   const isLocked =
     loginContext?.lockedUntilMs != null && loginContext.lockedUntilMs > nowMs;
   const canLogin =
@@ -75,11 +253,16 @@ export async function loginAdminWithPassword(input: {
 
   const sessionId = uuidv7();
   const sessionExpiresAtMs = nowMs + SESSION_TTL_MS;
-  const roleRows = await findActiveAdminRoles(bindings.DB, loginContext.userId);
+  const roleRows = await findActiveRoles(
+    bindings.DB,
+    loginContext.userId,
+    config.application,
+  );
   const roles = roleRows.map((role) => role.code);
   const [accessToken, refreshToken] = await Promise.all([
     issueAccessToken(
       {
+        application: config.application,
         roles,
         sessionExpiresAtMs,
         sessionId,
@@ -90,6 +273,7 @@ export async function loginAdminWithPassword(input: {
     ),
     issueRefreshToken(
       {
+        application: config.application,
         sessionExpiresAtMs,
         sessionId,
         userId: loginContext.userId,
@@ -115,7 +299,7 @@ export async function loginAdminWithPassword(input: {
       id: sessionId,
       ip: truncate(input.clientIp, 64),
       lastSeenAtMs: nowMs,
-      sessionType: "admin",
+      sessionType: config.application,
       userAgent: truncate(input.userAgent, 512),
       userId: loginContext.userId,
     },
@@ -132,7 +316,7 @@ export async function loginAdminWithPassword(input: {
     accessTokenExpiresAtMs: accessToken.expiresAtMs,
     refreshToken: refreshToken.token,
     refreshTokenExpiresAtMs: refreshToken.expiresAtMs,
-    session: presentAdminSession({
+    session: config.presentSession({
       displayName: loginContext.displayName,
       email: loginContext.email,
       expiresAtMs: sessionExpiresAtMs,
@@ -143,25 +327,16 @@ export async function loginAdminWithPassword(input: {
   };
 }
 
-export async function getAdminSessionFromAccess(
-  bindings: ApiBindings,
-  authorization: string | undefined,
-): Promise<AdminSession> {
-  const token = readBearerToken(authorization);
-  const env = getApiEnv(bindings);
-  const claims = await verifyAccessForRequest(token, env.AUTH_ACCESS_SECRET);
-
-  return loadActiveAdminSession(bindings, claims.sid, claims.sub, claims.roles);
-}
-
-export async function refreshAdminSession(
+async function refreshSession<TApplication extends AuthApplication>(
+  config: AuthApplicationConfig<TApplication>,
   bindings: ApiBindings,
   refreshTokenValue: string,
-): Promise<AdminAuthTokenResponse> {
+): Promise<AuthTokenResponse<SessionByApplication[TApplication]>> {
   const env = getApiEnv(bindings);
   const claims = await verifyRefreshForRequest(
     refreshTokenValue,
     env.AUTH_REFRESH_SECRET,
+    config.application,
   );
   const nowMs = Date.now();
   const tokenContext = await findRefreshTokenContext(
@@ -190,7 +365,8 @@ export async function refreshAdminSession(
   if (
     tokenContext.refreshToken.sessionId !== claims.sid ||
     tokenContext.session.userId !== claims.sub ||
-    tokenContext.applicationCode !== "admin" ||
+    tokenContext.session.sessionType !== config.application ||
+    tokenContext.applicationCode !== config.application ||
     tokenContext.applicationStatus !== "active" ||
     tokenContext.userStatus !== "active" ||
     tokenContext.session.revokedAtMs != null ||
@@ -207,12 +383,16 @@ export async function refreshAdminSession(
     throw sessionRevokedError();
   }
 
-  let session: AdminSession;
+  let session: SessionByApplication[TApplication];
 
   try {
-    session = await loadActiveAdminSession(bindings, claims.sid, claims.sub, [
-      "admin_owner",
-    ]);
+    session = await loadActiveSession(
+      config,
+      bindings,
+      claims.sid,
+      claims.sub,
+      [config.requiredRole],
+    );
   } catch (error) {
     await revokeSession(
       bindings.DB,
@@ -226,6 +406,7 @@ export async function refreshAdminSession(
   const [accessToken, refreshToken] = await Promise.all([
     issueAccessToken(
       {
+        application: config.application,
         roles: session.roles,
         sessionExpiresAtMs: tokenContext.session.expiresAtMs,
         sessionId: claims.sid,
@@ -236,6 +417,7 @@ export async function refreshAdminSession(
     ),
     issueRefreshToken(
       {
+        application: config.application,
         sessionExpiresAtMs: tokenContext.session.expiresAtMs,
         sessionId: claims.sid,
         userId: claims.sub,
@@ -277,63 +459,17 @@ export async function refreshAdminSession(
   };
 }
 
-export async function logoutAdmin(input: {
-  authorization?: string;
-  bindings: ApiBindings;
-  refreshToken: string;
-}): Promise<AdminLogoutResponse> {
-  const env = getApiEnv(input.bindings);
-  let sessionId: string | null = null;
-
-  try {
-    const claims = await verifyRefreshToken(
-      input.refreshToken,
-      env.AUTH_REFRESH_SECRET,
-    );
-    const context = await findRefreshTokenContext(
-      input.bindings.DB,
-      await hashTokenId(claims.jti),
-    );
-
-    if (context?.session.id === claims.sid) {
-      sessionId = claims.sid;
-    }
-  } catch {
-    sessionId = null;
-  }
-
-  if (!sessionId && input.authorization) {
-    try {
-      sessionId = (
-        await verifyAccessToken(
-          readBearerToken(input.authorization),
-          env.AUTH_ACCESS_SECRET,
-        )
-      ).sid;
-    } catch {
-      sessionId = null;
-    }
-  }
-
-  if (!sessionId) {
-    throw refreshInvalidError();
-  }
-
-  await revokeSession(input.bindings.DB, sessionId, Date.now(), "logout");
-
-  return { success: true };
-}
-
-async function loadActiveAdminSession(
+async function loadActiveSession<TApplication extends AuthApplication>(
+  config: AuthApplicationConfig<TApplication>,
   bindings: ApiBindings,
   sessionId: string,
   expectedUserId: string,
   expectedRoles: readonly string[],
-): Promise<AdminSession> {
+): Promise<SessionByApplication[TApplication]> {
   const nowMs = Date.now();
   const [context, roleRows] = await Promise.all([
-    findAdminSessionContext(bindings.DB, sessionId),
-    findActiveAdminRoles(bindings.DB, expectedUserId),
+    findSessionContext(bindings.DB, sessionId),
+    findActiveRoles(bindings.DB, expectedUserId, config.application),
   ]);
   const roles = roleRows.map((role) => role.code);
   const hasExpectedRoles = expectedRoles.every((role) => roles.includes(role));
@@ -341,19 +477,19 @@ async function loadActiveAdminSession(
   if (
     !context ||
     context.session.userId !== expectedUserId ||
-    context.session.sessionType !== "admin" ||
+    context.session.sessionType !== config.application ||
     context.session.revokedAtMs != null ||
     context.session.expiresAtMs <= nowMs ||
     context.userStatus !== "active" ||
-    context.applicationCode !== "admin" ||
+    context.applicationCode !== config.application ||
     context.applicationStatus !== "active" ||
-    !roles.includes("admin_owner") ||
+    !roles.includes(config.requiredRole) ||
     !hasExpectedRoles
   ) {
     throw sessionRevokedError();
   }
 
-  return presentAdminSession({
+  return config.presentSession({
     displayName: context.displayName,
     email: context.email,
     expiresAtMs: context.session.expiresAtMs,
@@ -361,6 +497,17 @@ async function loadActiveAdminSession(
     sessionId: context.session.id,
     userId: context.session.userId,
   });
+}
+
+async function readAccessClaims(
+  bindings: ApiBindings,
+  authorization: string | undefined,
+  application: AuthApplication,
+) {
+  const token = readBearerToken(authorization);
+  const env = getApiEnv(bindings);
+
+  return verifyAccessForRequest(token, env.AUTH_ACCESS_SECRET, application);
 }
 
 function readBearerToken(authorization: string | undefined): string {
@@ -377,9 +524,13 @@ function readBearerToken(authorization: string | undefined): string {
   return match[1];
 }
 
-async function verifyAccessForRequest(token: string, secret: string) {
+async function verifyAccessForRequest(
+  token: string,
+  secret: string,
+  application: AuthApplication,
+) {
   try {
-    return await verifyAccessToken(token, secret);
+    return await verifyAccessToken(token, secret, application);
   } catch (error) {
     if (error instanceof TokenVerificationError && error.reason === "expired") {
       throw new AppError(
@@ -393,9 +544,13 @@ async function verifyAccessForRequest(token: string, secret: string) {
   }
 }
 
-async function verifyRefreshForRequest(token: string, secret: string) {
+async function verifyRefreshForRequest(
+  token: string,
+  secret: string,
+  application: AuthApplication,
+) {
   try {
-    return await verifyRefreshToken(token, secret);
+    return await verifyRefreshToken(token, secret, application);
   } catch {
     throw refreshInvalidError();
   }

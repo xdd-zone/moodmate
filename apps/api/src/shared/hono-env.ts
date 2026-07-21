@@ -1,4 +1,4 @@
-import type { AdminSession } from "@repo/contracts";
+import type { AdminSession, WebSession } from "@repo/contracts";
 
 export interface ApiBindings {
   APP_ENV?: string;
@@ -15,5 +15,6 @@ export interface ApiHonoEnv {
     adminSession: AdminSession;
     requestId: string;
     startedAt: number;
+    webSession: WebSession;
   };
 }

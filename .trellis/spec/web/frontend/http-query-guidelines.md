@@ -67,3 +67,69 @@ export function getHealth(options?: SystemRequestOptions) {
 ```
 
 QueryClient 只在 `src/providers/query-provider.tsx` 内通过 lazy `useState` 创建。不要创建模块级 QueryClient，也不要为了 Query 把整个页面改成客户端组件。
+
+## 8. Web Token 静默刷新
+
+### 8.1 适用范围
+
+修改 `apps/web/src/auth/client-session.ts`、浏览器 Authorization、Web refresh 或受保护页面 profile 请求时使用。
+
+### 8.2 签名
+
+```ts
+readClientSession(): StoredWebSession | null;
+saveClientSession(input: WebAuthTokenResponse): void;
+clearClientSession(): void;
+
+POST /auth/web/password/login;
+POST /auth/web/token/refresh;
+GET /rpc/user/profile;
+```
+
+### 8.3 合同
+
+- `web:client-session` 保存 access token、refresh token、各自过期时间和 `WebSession`。读取 JSON 后必须用 Zod schema 校验，不能类型断言。
+- session 绝对过期或 refresh token 过期时删除本地值。access token 单独过期时保留 session，让 HTTP 模块请求 refresh。
+- 浏览器请求没有显式 Authorization 时才附加本地 access token。服务端请求和显式 Authorization 请求不读取本地 session。
+- 只有自动附加 token 的请求收到 `AUTH.ACCESS_EXPIRED` 才刷新。refresh 使用请求体里的 refresh token，不附加旧 access token。
+- 并发请求共用模块级 refresh Promise。成功后完整保存 rotation 返回值，每个原请求只用新 access token 重试一次。
+- refresh 或重试失败时清除本地 session。AbortError 原样抛出，不能因为取消请求清除登录态。
+
+### 8.4 校验与错误矩阵
+
+| 条件                              | 结果                                               |
+| --------------------------------- | -------------------------------------------------- |
+| 本地 JSON、字段或 `app` 无效      | 删除 `web:client-session`，返回 `null`             |
+| access 返回 `AUTH.ACCESS_EXPIRED` | 共用一次 refresh，保存新 session，原请求重试一次   |
+| access 缺失、无效或权限不足       | 原样抛 `HttpRequestError`，不 refresh              |
+| refresh 无效、重放或 session 撤销 | 清除本地 session，抛 refresh 的 `HttpRequestError` |
+| 显式 Authorization 请求到期       | 原样抛错，不改写当前浏览器 session                 |
+| 请求被 AbortSignal 取消           | 原样抛 AbortError，不清除 session                  |
+
+### 8.5 正常、基础、错误案例
+
+- 正常：profile access 到期，HTTP 模块 refresh 成功后用新 token 重试，guard 继续显示页面。
+- 基础：多个 profile/query 同时到期时只发送一个 refresh，所有调用等待同一 Promise。
+- 错误：在每个页面 catch 401 后各自 refresh，rotation 会让后续请求拿旧 refresh token，触发 replay 并撤销 session。
+
+### 8.6 必做检查
+
+- 登录后刷新浏览器，受保护页面能从经过 schema 校验的 session 恢复。
+- access 到期时 Network 中只有一个 `/auth/web/token/refresh`，原业务请求最多重试一次。
+- refresh 成功后本地 access token 和 refresh token 都变化。
+- refresh 失败后 `/app` 清除 session 并替换到 `/login`。
+- 显式 Authorization、服务端请求、非过期业务错误和 AbortError 不触发 refresh。
+- 依次运行 `pnpm check-types`、`pnpm lint`、`pnpm format:check` 和 `pnpm --filter web build`。
+
+### 8.7 错误与正确写法
+
+```ts
+// 错误：每个请求单独刷新，并继续复用旧 Authorization
+await refreshClientSession();
+return fetch(url, originalRequestInit);
+
+// 正确：等待共享 refresh，再根据最新 session 重建请求
+await ensureClientRefresh();
+const retryRequest = createRequestInit(method, options?.init, payload);
+return executeRequest(url, retryRequest.init, responseSchema);
+```

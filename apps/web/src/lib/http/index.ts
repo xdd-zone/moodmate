@@ -1,6 +1,15 @@
-import { createApiResponseSchema } from "@repo/contracts";
+import {
+  BizCode,
+  WebTokenRefreshResponseSchema,
+  createApiResponseSchema,
+} from "@repo/contracts";
 import type { z } from "zod";
 
+import {
+  clearClientSession,
+  readClientSession,
+  saveClientSession,
+} from "@/src/auth/client-session";
 import { getWebClientEnv } from "@/src/env/client";
 import { getWebServerEnv } from "@/src/env/server";
 
@@ -19,6 +28,13 @@ export type HttpRequestOptions = {
 };
 
 type HttpMethod = "GET" | "POST";
+
+interface PreparedRequest {
+  init: RequestInit;
+  usesClientSession: boolean;
+}
+
+let refreshPromise: Promise<void> | null = null;
 
 function resolveBaseURL() {
   if (typeof window === "undefined") {
@@ -72,9 +88,25 @@ function createRequestInit(
   method: HttpMethod,
   init?: RequestInit,
   payload?: unknown,
-): RequestInit {
+  attachClientSession = true,
+): PreparedRequest {
   const headers = new Headers(init?.headers);
   headers.set("accept", headers.get("accept") ?? "application/json");
+
+  let usesClientSession = false;
+
+  if (
+    attachClientSession &&
+    typeof window !== "undefined" &&
+    !headers.has("authorization")
+  ) {
+    const storedSession = readClientSession();
+
+    if (storedSession) {
+      headers.set("authorization", `Bearer ${storedSession.accessToken}`);
+      usesClientSession = true;
+    }
+  }
 
   const requestInit: RequestInit = {
     ...init,
@@ -84,7 +116,7 @@ function createRequestInit(
   };
 
   if (method === "GET") {
-    return requestInit;
+    return { init: requestInit, usesClientSession };
   }
 
   headers.set(
@@ -99,7 +131,7 @@ function createRequestInit(
 
   requestInit.body = body;
 
-  return requestInit;
+  return { init: requestInit, usesClientSession };
 }
 
 function isAbortError(error: unknown) {
@@ -111,15 +143,11 @@ function isAbortError(error: unknown) {
   );
 }
 
-async function request<TData>(
-  method: HttpMethod,
-  path: string,
+async function executeRequest<TData>(
+  url: string,
+  requestInit: RequestInit,
   responseSchema: z.ZodType<TData>,
-  options?: HttpRequestOptions,
-  payload?: unknown,
 ): Promise<TData> {
-  const url = buildURL(path, options?.query);
-  const requestInit = createRequestInit(method, options?.init, payload);
   let response: Response;
 
   try {
@@ -175,6 +203,81 @@ async function request<TData>(
   }
 
   return result.data.data;
+}
+
+async function refreshClientSession() {
+  const storedSession = readClientSession();
+
+  if (!storedSession) {
+    throw new HttpRequestError("登录状态已失效，请重新登录", {
+      kind: "http",
+      status: 401,
+    });
+  }
+
+  const url = buildURL("/auth/web/token/refresh");
+  const request = createRequestInit(
+    "POST",
+    undefined,
+    { refreshToken: storedSession.refreshToken },
+    false,
+  );
+  const response = await executeRequest(
+    url,
+    request.init,
+    WebTokenRefreshResponseSchema,
+  );
+
+  saveClientSession(response);
+}
+
+function ensureClientRefresh() {
+  if (!refreshPromise) {
+    refreshPromise = refreshClientSession().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
+function shouldRefresh(error: unknown, usesClientSession: boolean) {
+  return (
+    usesClientSession &&
+    error instanceof HttpRequestError &&
+    error.code === BizCode.AUTH_ACCESS_EXPIRED
+  );
+}
+
+async function request<TData>(
+  method: HttpMethod,
+  path: string,
+  responseSchema: z.ZodType<TData>,
+  options?: HttpRequestOptions,
+  payload?: unknown,
+): Promise<TData> {
+  const url = buildURL(path, options?.query);
+  const initialRequest = createRequestInit(method, options?.init, payload);
+
+  try {
+    return await executeRequest(url, initialRequest.init, responseSchema);
+  } catch (error) {
+    if (!shouldRefresh(error, initialRequest.usesClientSession)) {
+      throw error;
+    }
+  }
+
+  try {
+    await ensureClientRefresh();
+    const retryRequest = createRequestInit(method, options?.init, payload);
+    return await executeRequest(url, retryRequest.init, responseSchema);
+  } catch (error) {
+    if (!isAbortError(error)) {
+      clearClientSession();
+    }
+
+    throw error;
+  }
 }
 
 export const http = {

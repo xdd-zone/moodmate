@@ -34,6 +34,18 @@ FROM `applications`
 WHERE `code` = 'admin'
 ON CONFLICT (`application_id`, `provider`) DO NOTHING;
 
+INSERT INTO `application_auth_methods` (`id`, `application_id`, `provider`, `enabled`, `created_at_ms`, `updated_at_ms`)
+SELECT
+  '019f8276-71f6-78a0-8d47-1f98f427bca1',
+  `id`,
+  'password',
+  1,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000
+FROM `applications`
+WHERE `code` = 'web'
+ON CONFLICT (`application_id`, `provider`) DO NOTHING;
+
 INSERT INTO `roles` (`id`, `application_id`, `code`, `name`, `status`, `created_at_ms`, `updated_at_ms`)
 SELECT
   '019f6973-0137-749a-bfdd-d1b519b18016',
@@ -123,5 +135,23 @@ FROM `user_emails` AS email
 INNER JOIN `roles` AS role ON role.`code` = 'admin_owner'
 INNER JOIN `applications` AS application
   ON application.`id` = role.`application_id` AND application.`code` = 'admin'
+WHERE email.`normalized_email` = 'admin@moodmate.local'
+ON CONFLICT (`user_id`, `role_id`) DO NOTHING;
+
+INSERT INTO `user_role_bindings` (
+  `id`, `user_id`, `role_id`, `status`, `granted_at_ms`, `created_at_ms`, `updated_at_ms`
+)
+SELECT
+  '019f8276-71f7-76ac-863a-a76495291f43',
+  email.`user_id`,
+  role.`id`,
+  'active',
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000
+FROM `user_emails` AS email
+INNER JOIN `roles` AS role ON role.`code` = 'web_user'
+INNER JOIN `applications` AS application
+  ON application.`id` = role.`application_id` AND application.`code` = 'web'
 WHERE email.`normalized_email` = 'admin@moodmate.local'
 ON CONFLICT (`user_id`, `role_id`) DO NOTHING;

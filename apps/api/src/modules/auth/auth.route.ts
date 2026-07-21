@@ -4,6 +4,8 @@ import {
   AdminPasswordLoginRequestSchema,
   AdminRefreshRequestSchema,
   BizCode,
+  WebPasswordLoginRequestSchema,
+  WebRefreshRequestSchema,
   buildSuccess,
 } from "@repo/contracts";
 import { Hono } from "hono";
@@ -11,15 +13,82 @@ import { Hono } from "hono";
 import { AppError } from "@/shared/app-error";
 import type { ApiHonoEnv } from "@/shared/hono-env";
 import { createMeta } from "@/shared/meta";
-import { requireAdminAccess } from "./auth.middleware";
+import { requireAdminAccess, requireWebAccess } from "./auth.middleware";
 import {
+  getWebUserProfile,
   loginAdminWithPassword,
+  loginWebWithPassword,
   logoutAdmin,
   refreshAdminSession,
+  refreshWebSession,
 } from "./auth.service";
 
 export function createAuthRoute() {
   return new Hono<ApiHonoEnv>()
+    .post(
+      "/auth/web/password/login",
+      zValidator("json", WebPasswordLoginRequestSchema, (result) => {
+        if (result.success) {
+          return;
+        }
+
+        throw new AppError(
+          BizCode.COMMON_INVALID_REQUEST,
+          "请求参数无效",
+          400,
+          result.error.issues,
+        );
+      }),
+      async (c) => {
+        const result = await loginWebWithPassword({
+          bindings: c.env,
+          clientIp: c.req.header("CF-Connecting-IP"),
+          payload: c.req.valid("json"),
+          userAgent: c.req.header("User-Agent"),
+        });
+
+        return c.json(buildSuccess(result, createMeta(c.var.requestId)));
+      },
+    )
+    .post(
+      "/auth/web/token/refresh",
+      zValidator("json", WebRefreshRequestSchema, (result) => {
+        if (result.success) {
+          return;
+        }
+
+        if (!isRefreshTokenMissing(result.error.issues)) {
+          throw new AppError(
+            BizCode.COMMON_INVALID_REQUEST,
+            "请求参数无效",
+            400,
+            result.error.issues,
+          );
+        }
+
+        throw new AppError(
+          BizCode.AUTH_REFRESH_MISSING,
+          "缺少 refresh token",
+          401,
+        );
+      }),
+      async (c) => {
+        const result = await refreshWebSession(
+          c.env,
+          c.req.valid("json").refreshToken,
+        );
+
+        return c.json(buildSuccess(result, createMeta(c.var.requestId)));
+      },
+    )
+    .get("/rpc/user/profile", requireWebAccess, (c) => {
+      return c.json(
+        buildSuccess(
+          getWebUserProfile(c.var.webSession),
+          createMeta(c.var.requestId),
+        ),
+      );
+    })
     .post(
       "/auth/admin/password/login",
       zValidator("json", AdminPasswordLoginRequestSchema, (result) => {
