@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/admin/frontend/role-management.md", "reason": "角色管理前端链路的既有约定"}
+{"file": ".trellis/spec/admin/frontend/http-query-guidelines.md", "reason": "TanStack Query 与 BFF 请求封装规范"}
+{"file": ".trellis/spec/admin/frontend/auth-bff-guidelines.md", "reason": "BFF Route Handler 编写规范"}
+{"file": ".trellis/spec/admin/frontend/component-guidelines.md", "reason": "页面组件与 UI 交互约定"}
+{"file": ".trellis/spec/admin/frontend/state-management.md", "reason": "从本地 useState 切到服务端状态的约定"}
+{"file": ".trellis/spec/contracts/shared/role-management.md", "reason": "角色管理 Contract 定义"}
+{"file": ".trellis/spec/api/backend/role-management.md", "reason": "角色 API 端点与内置角色保护策略"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层数据流一致性检查思路"}

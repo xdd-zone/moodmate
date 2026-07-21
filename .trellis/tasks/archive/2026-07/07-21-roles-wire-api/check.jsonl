@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/admin/frontend/quality-guidelines.md", "reason": "admin 前端质量检查标准"}
+{"file": ".trellis/spec/admin/frontend/http-query-guidelines.md", "reason": "核对请求链路是否符合规范"}
+{"file": ".trellis/spec/admin/frontend/role-management.md", "reason": "核对角色管理实现与既有约定一致"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层数据流一致性检查"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "检查是否复用既有封装而非重复实现"}
