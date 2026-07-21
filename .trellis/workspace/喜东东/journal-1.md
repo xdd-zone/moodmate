@@ -615,3 +615,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: 角色管理页面接入真实 API
+
+**Date**: 2026-07-21
+**Task**: 角色管理页面接入真实 API
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+把 /roles 页面从 INITIAL_ROLES 演示数据切换到真实链路：列表走 adminRolesQueryOptions，新建、停用、删除走 useMutation 调 BFF，成功后失效 adminRoleKeys 缓存；移除权限矩阵 UI；内置角色隐藏停用删除入口并在 handler 早退。check 阶段修复并发 mutation 行内禁用缺口，改用 contract schema 做 code 校验单一来源，两条约定写入 admin/frontend spec。遗留：roles.query.ts 未传 signal、未导出 mutationOptions，留待后续卡统一。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `43761e8` | (see git log) |
+| `944a3e7` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
