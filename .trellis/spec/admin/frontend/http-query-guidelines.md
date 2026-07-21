@@ -67,4 +67,23 @@ export function getAdminUsers(options?: AdminRequestOptions) {
 }
 ```
 
+列表行内有多个 mutation（如停用、删除）时，行按钮的禁用要对每个 mutation 分别判断 `isPending && variables === rowId`。用一个共享的 `pendingId` 三元链会在两个 mutation 并发在途时只反映其中一个的行，另一行的按钮不禁用，留下重复提交窗口。
+
+```ts
+// 错误：三元链只取到第一个在途 mutation 的行 id
+const pendingRoleId = disableMutation.isPending
+  ? disableMutation.variables
+  : deleteMutation.isPending
+    ? deleteMutation.variables
+    : null;
+
+// 正确：逐个 mutation 判断，任一命中即禁用该行（见 roles-page.tsx）
+function isRolePending(roleId: string) {
+  return (
+    (disableMutation.isPending && disableMutation.variables === roleId) ||
+    (deleteMutation.isPending && deleteMutation.variables === roleId)
+  );
+}
+```
+
 QueryClient 只在 `src/providers/query-provider.tsx` 内通过 lazy `useState` 创建。不要创建模块级 QueryClient，也不要把 Admin 缓存放进共享 package。

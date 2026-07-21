@@ -34,6 +34,21 @@ setErrors((current) => ({
 
 提交按钮触发校验后，浏览器可能把同步设置的焦点留在按钮上。需要聚焦首个错误字段时，在错误状态写入后用 `requestAnimationFrame()` 聚焦对应输入框，并检查 `document.activeElement`。
 
+## 表单校验复用 contract schema
+
+字段格式规则只写在 contract 的 zod schema 里，页面校验直接调用 schema，不把正则复制到组件。复制出来的正则在 contract 改规则后不会跟着变，前端放行的值会被服务端拒绝。
+
+```ts
+// 错误：把 contract 里的正则复制到组件常量
+const ROLE_CODE_PATTERN = /^[a-z][a-z0-9_]*$/;
+if (!ROLE_CODE_PATTERN.test(trimmedCode)) { ... }
+
+// 正确：单字段校验取 schema 的对应 shape
+if (!RoleCreateRequestSchema.shape.code.safeParse(trimmedCode).success) { ... }
+```
+
+需要整体校验时对整个 payload 调 `safeParse`，错误文案可以在页面层自定义，规则本身不重复定义。
+
 ## 管理端与用户端分离
 
 - Admin 登录和 Web 登录使用不同入口与 session。
