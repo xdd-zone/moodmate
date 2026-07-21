@@ -581,3 +581,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: 实现 Web Token 静默刷新
+
+**Date**: 2026-07-21
+**Task**: 实现 Web Token 静默刷新
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+新增 Web 密码登录、应用隔离的 JWT 与 refresh token rotation；Web 请求在 access token 过期时合并刷新并重试一次；完成登录页、/app 路由守卫、迁移、开发 seed 与认证规范更新。类型检查、Lint、本次变更路径 Format、Web 构建、API 与浏览器关键流程验证通过；全仓 Format 仍受 3 个任务开始前已有的 Trellis 文件阻塞。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cc4ffc5` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
