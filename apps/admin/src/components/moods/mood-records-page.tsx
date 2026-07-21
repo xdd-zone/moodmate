@@ -216,6 +216,7 @@ const STAT_ITEMS: ReadonlyArray<{
   icon: LucideIcon;
   iconClass: string;
   label: string;
+  spark?: readonly number[];
   suffix?: string;
   value: string;
 }> = [
@@ -235,6 +236,7 @@ const STAT_ITEMS: ReadonlyArray<{
     icon: Activity,
     iconClass: "bg-success-subtle text-success",
     label: "平均心情分",
+    spark: [40, 55, 48, 70, 62, 80, 72],
     suffix: "/ 10",
     value: "7.2",
   },
@@ -358,7 +360,10 @@ export function MoodRecordsPage() {
         ))}
       </div>
 
-      <MoodDistribution />
+      <section className="mb-5 grid gap-3 xl:grid-cols-[2fr_1fr]">
+        <MoodDistribution />
+        <MoodTrend />
+      </section>
 
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 sm:p-4">
@@ -539,36 +544,54 @@ function StatCard({ item }: { item: (typeof STAT_ITEMS)[number] }) {
           </span>
         ) : null}
       </div>
-      <div
-        className={`mt-2 flex items-center gap-1 text-xs ${item.detailClass}`}
-      >
-        <DirectionIcon className="size-3.5" />
-        {item.detail}
-      </div>
+      {item.spark ? (
+        <div className="mt-2.5 flex h-7 items-end gap-1">
+          {item.spark.map((height, index) => (
+            <span
+              className={
+                index === item.spark!.length - 1
+                  ? "flex-1 rounded-t-sm bg-primary"
+                  : "flex-1 rounded-t-sm bg-primary-subtle"
+              }
+              key={index}
+              style={{ height: `${height}%` }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div
+          className={`mt-2 flex items-center gap-1 text-xs ${item.detailClass}`}
+        >
+          <DirectionIcon className="size-3.5" />
+          {item.detail}
+        </div>
+      )}
     </Card>
   );
 }
 
 function MoodDistribution() {
   return (
-    <Card className="mb-5 p-4 shadow-card">
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+    <Card className="h-full p-4 shadow-card">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">今日情绪分布</h2>
-        <span className="text-xs text-muted">327 条打卡</span>
-        <div className="flex flex-wrap gap-x-3 gap-y-1 sm:ml-auto">
-          {DISTRIBUTION.map((item) => {
-            const mood = MOODS[item.mood];
-            return (
-              <span
-                className="flex items-center gap-1.5 text-[0.6875rem] text-muted"
-                key={item.mood}
-              >
-                <span className={`size-2 rounded-sm ${mood.barClass}`} />
-                {mood.label}
-              </span>
-            );
-          })}
-        </div>
+        <span className="text-xs text-muted">
+          327 条打卡 · 按效价从积极到低落排列
+        </span>
+      </div>
+      <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1">
+        {DISTRIBUTION.map((item) => {
+          const mood = MOODS[item.mood];
+          return (
+            <span
+              className="flex items-center gap-1.5 text-[0.6875rem] text-muted"
+              key={item.mood}
+            >
+              <span className={`size-2 rounded-sm ${mood.barClass}`} />
+              {mood.label}
+            </span>
+          );
+        })}
       </div>
       <div
         className="flex h-9 gap-0.5 overflow-hidden rounded-md"
@@ -594,6 +617,90 @@ function MoodDistribution() {
       <div className="mt-2 flex flex-wrap justify-between gap-2 text-[0.6875rem] text-disabled">
         <span>积极情绪占比 36%</span>
         <span>需关注人群 15% · 已进入复核队列</span>
+      </div>
+    </Card>
+  );
+}
+
+function MoodTrend() {
+  const values = [268, 291, 254, 312, 298, 340, 327];
+  const labels = [
+    "07-12",
+    "07-13",
+    "07-14",
+    "07-15",
+    "07-16",
+    "07-17",
+    "07-18",
+  ];
+  const points = values
+    .map((value, index) => {
+      const x = 8 + (index / (values.length - 1)) * 84;
+      const y = 88 - ((value - 240) / 110) * 70;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <Card className="h-full p-4 shadow-card">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">近 7 日打卡量</h2>
+        <span className="text-xs text-muted">条 / 日</span>
+      </div>
+      <div className="relative h-44 min-h-44">
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between pb-6 text-[0.625rem] text-disabled">
+          <span>360</span>
+          <span>300</span>
+          <span>240</span>
+        </div>
+        <svg
+          aria-label="近 7 日打卡量折线图"
+          className="absolute inset-x-6 top-0 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] overflow-visible"
+          preserveAspectRatio="none"
+          role="img"
+          viewBox="0 0 100 100"
+        >
+          <path
+            d="M 8 88 H 92 M 8 53 H 92 M 8 18 H 92"
+            fill="none"
+            stroke="var(--color-border)"
+            strokeDasharray="1.5 2"
+            strokeWidth="0.55"
+          />
+          <polygon
+            fill="color-mix(in srgb, var(--color-primary) 14%, transparent)"
+            points={`8,88 ${points} 92,88`}
+          />
+          <polyline
+            fill="none"
+            points={points}
+            stroke="var(--color-primary)"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+          />
+          {points.split(" ").map((point, index) => {
+            const [cx, cy] = point.split(",");
+            return (
+              <circle
+                cx={cx}
+                cy={cy}
+                fill="var(--color-background)"
+                key={point}
+                r="2"
+                stroke="var(--color-primary)"
+                strokeWidth="1.2"
+              >
+                <title>{`${labels[index]} ${values[index]} 条`}</title>
+              </circle>
+            );
+          })}
+        </svg>
+        <div className="absolute inset-x-6 bottom-0 flex justify-between text-[0.625rem] text-disabled">
+          {labels.map((label) => (
+            <span key={label}>{label.slice(3)}</span>
+          ))}
+        </div>
       </div>
     </Card>
   );

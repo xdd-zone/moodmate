@@ -291,7 +291,7 @@ export function UserManagementPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-[90rem]">
+    <section className="w-full">
       <div className="mb-5 flex flex-wrap items-end gap-4">
         <div>
           <h1 className="text-xl font-semibold sm:text-2xl">用户管理</h1>

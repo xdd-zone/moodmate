@@ -1,5 +1,5 @@
-import { AdminDashboard } from "@/src/components/dashboard/admin-dashboard";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <AdminDashboard />;
+  redirect("/moods");
 }
