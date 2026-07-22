@@ -3,13 +3,6 @@
 import { AdminPasswordLoginRequestSchema } from "@repo/contracts";
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/card";
 import { Field, FieldLabel } from "@repo/ui/field";
 import { Input } from "@repo/ui/input";
 import { ThemeMenu } from "@repo/ui/theme-menu";
@@ -118,7 +111,7 @@ export function LoginForm() {
   }
 
   return (
-    <main className="admin-login-canvas relative isolate min-h-svh overflow-x-hidden px-5 py-[clamp(0.875rem,2.2vw,1.875rem)] text-foreground max-[560px]:px-[1.125rem] md:px-[clamp(2rem,4vw,4rem)]">
+    <main className="admin-login-canvas relative isolate min-h-svh overflow-x-hidden text-foreground">
       <div className="admin-login-frame">
         <header className="flex min-h-[3.625rem] items-center gap-2.5 border-b border-border px-4 max-[560px]:px-3 sm:px-5">
           <div className="flex items-center gap-2.5">
@@ -129,11 +122,8 @@ export function LoginForm() {
               M
             </span>
             <span className="text-[0.9375rem] font-semibold">moodmate</span>
-            <span className="inline-flex h-[1.3125rem] items-center rounded-sm border border-border px-[0.4375rem] text-[0.625rem] font-medium tracking-[0.08em] text-muted uppercase">
-              admin
-            </span>
           </div>
-          <ThemeMenu className="ml-auto [&>button]:size-[2.375rem] [&>button]:min-h-[2.375rem]" />
+          <ThemeMenu className="ml-auto" variant="ghost" />
         </header>
 
         <section className="admin-login-body mx-auto grid w-full max-w-[73.75rem] items-center gap-6 px-5 py-7 min-[561px]:gap-9 min-[561px]:px-8 min-[561px]:py-10 min-[861px]:grid-cols-[minmax(0,1fr)_minmax(22.5rem,26.875rem)] min-[861px]:gap-[clamp(3rem,8vw,8rem)] min-[861px]:px-[clamp(2rem,5vw,4.5rem)] min-[861px]:py-[clamp(3rem,8vh,5.75rem)]">
@@ -169,188 +159,183 @@ export function LoginForm() {
             </div>
           </div>
 
-          <Card className="w-full overflow-hidden rounded-lg">
-            <CardHeader className="gap-0 border-b border-border px-5 pt-[1.375rem] pb-[1.125rem] min-[561px]:px-[1.625rem] min-[561px]:pt-[1.5625rem] min-[561px]:pb-5">
-              <CardTitle className="text-xl leading-6 tracking-normal">
+          <section className="w-full border-t border-border pt-6 min-[861px]:border-t-0 min-[861px]:border-l min-[861px]:py-2 min-[861px]:pl-[clamp(2rem,5vw,4rem)]">
+            <header>
+              <h2 className="text-xl leading-6 font-semibold tracking-normal">
                 账号登录
-              </CardTitle>
-              <CardDescription className="mt-[0.4375rem] text-[0.78125rem] leading-[1.6]">
+              </h2>
+              <p className="mt-[0.4375rem] text-[0.78125rem] leading-[1.6] text-muted">
                 输入管理员邮箱和密码。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <form
-                aria-busy={isPending}
-                className="grid gap-[1.125rem] px-5 pt-[1.3125rem] pb-[1.375rem] min-[561px]:px-[1.625rem] min-[561px]:pt-6 min-[561px]:pb-[1.625rem]"
-                noValidate
-                onSubmit={handleSubmit}
-              >
-                <Field className="gap-0">
-                  <div className="mb-1.5 flex items-center gap-3">
-                    <FieldLabel className="m-0" htmlFor="email">
-                      邮箱
-                    </FieldLabel>
-                    <span className="ml-auto text-[0.65625rem] text-muted">
-                      管理员账号
-                    </span>
-                  </div>
+              </p>
+            </header>
+            <form
+              aria-busy={isPending}
+              className="mt-6 grid gap-[1.125rem]"
+              noValidate
+              onSubmit={handleSubmit}
+            >
+              <Field className="gap-0">
+                <div className="mb-1.5 flex items-center gap-3">
+                  <FieldLabel className="m-0" htmlFor="email">
+                    邮箱
+                  </FieldLabel>
+                  <span className="ml-auto text-[0.65625rem] text-muted">
+                    管理员账号
+                  </span>
+                </div>
+                <Input
+                  aria-describedby={
+                    fieldErrors.email ? "email-error" : undefined
+                  }
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  autoComplete="username"
+                  autoFocus
+                  className="h-10 min-h-10 px-[0.8125rem] text-[0.84375rem] disabled:cursor-wait disabled:bg-surface-muted"
+                  disabled={isPending}
+                  id="email"
+                  inputMode="email"
+                  maxLength={254}
+                  name="email"
+                  onBlur={(event) => {
+                    const input = event.currentTarget;
+
+                    setFieldErrors((current) => ({
+                      ...current,
+                      email: getEmailError(input),
+                    }));
+                  }}
+                  onChange={(event) => {
+                    if (!fieldErrors.email) return;
+                    const input = event.currentTarget;
+
+                    setFieldErrors((current) => ({
+                      ...current,
+                      email: getEmailError(input),
+                    }));
+                  }}
+                  placeholder="name@example.com"
+                  required
+                  type="email"
+                />
+                {fieldErrors.email ? (
+                  <p
+                    className="mt-1.5 text-[0.71875rem] leading-[1.5] text-danger"
+                    id="email-error"
+                    role="alert"
+                  >
+                    {fieldErrors.email}
+                  </p>
+                ) : null}
+              </Field>
+
+              <Field className="gap-0">
+                <div className="mb-1.5 flex items-center gap-3">
+                  <FieldLabel className="m-0" htmlFor="password">
+                    密码
+                  </FieldLabel>
+                  <span className="ml-auto text-[0.65625rem] text-muted">
+                    8-128 个字符
+                  </span>
+                </div>
+                <div className="relative">
                   <Input
                     aria-describedby={
-                      fieldErrors.email ? "email-error" : undefined
+                      fieldErrors.password ? "password-error" : undefined
                     }
-                    aria-invalid={Boolean(fieldErrors.email)}
-                    autoComplete="username"
-                    autoFocus
-                    className="h-[2.875rem] min-h-[2.875rem] px-[0.8125rem] text-[0.84375rem] disabled:cursor-wait disabled:bg-surface-muted"
+                    aria-invalid={Boolean(fieldErrors.password)}
+                    autoComplete="current-password"
+                    className="h-10 min-h-10 pr-[3.125rem] pl-[0.8125rem] text-[0.84375rem] disabled:cursor-wait disabled:bg-surface-muted"
                     disabled={isPending}
-                    id="email"
-                    inputMode="email"
-                    maxLength={254}
-                    name="email"
+                    id="password"
+                    maxLength={128}
+                    minLength={8}
+                    name="password"
                     onBlur={(event) => {
-                      const input = event.currentTarget;
+                      const { value } = event.currentTarget;
 
+                      if (!value) return;
                       setFieldErrors((current) => ({
                         ...current,
-                        email: getEmailError(input),
+                        password: getPasswordError(value),
                       }));
                     }}
                     onChange={(event) => {
-                      if (!fieldErrors.email) return;
-                      const input = event.currentTarget;
+                      if (!fieldErrors.password) return;
+                      const { value } = event.currentTarget;
 
                       setFieldErrors((current) => ({
                         ...current,
-                        email: getEmailError(input),
+                        password: getPasswordError(value),
                       }));
                     }}
-                    placeholder="name@example.com"
+                    ref={passwordRef}
                     required
-                    type="email"
+                    type={showPassword ? "text" : "password"}
                   />
-                  {fieldErrors.email ? (
-                    <p
-                      className="mt-1.5 text-[0.71875rem] leading-[1.5] text-danger"
-                      id="email-error"
-                      role="alert"
-                    >
-                      {fieldErrors.email}
-                    </p>
-                  ) : null}
-                </Field>
-
-                <Field className="gap-0">
-                  <div className="mb-1.5 flex items-center gap-3">
-                    <FieldLabel className="m-0" htmlFor="password">
-                      密码
-                    </FieldLabel>
-                    <span className="ml-auto text-[0.65625rem] text-muted">
-                      8-128 个字符
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      aria-describedby={
-                        fieldErrors.password ? "password-error" : undefined
-                      }
-                      aria-invalid={Boolean(fieldErrors.password)}
-                      autoComplete="current-password"
-                      className="h-[2.875rem] min-h-[2.875rem] pr-[3.125rem] pl-[0.8125rem] text-[0.84375rem] disabled:cursor-wait disabled:bg-surface-muted"
-                      disabled={isPending}
-                      id="password"
-                      maxLength={128}
-                      minLength={8}
-                      name="password"
-                      onBlur={(event) => {
-                        const { value } = event.currentTarget;
-
-                        if (!value) return;
-                        setFieldErrors((current) => ({
-                          ...current,
-                          password: getPasswordError(value),
-                        }));
-                      }}
-                      onChange={(event) => {
-                        if (!fieldErrors.password) return;
-                        const { value } = event.currentTarget;
-
-                        setFieldErrors((current) => ({
-                          ...current,
-                          password: getPasswordError(value),
-                        }));
-                      }}
-                      ref={passwordRef}
-                      required
-                      type={showPassword ? "text" : "password"}
-                    />
-                    <button
-                      aria-label={showPassword ? "隐藏密码" : "显示密码"}
-                      aria-pressed={showPassword}
-                      className="absolute top-px right-px grid size-11 place-items-center rounded-md border-0 bg-transparent text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset disabled:cursor-wait disabled:opacity-60"
-                      disabled={isPending}
-                      onClick={() => {
-                        setShowPassword((current) => !current);
-                        passwordRef.current?.focus();
-                      }}
-                      type="button"
-                    >
-                      {showPassword ? (
-                        <EyeOff
-                          aria-hidden="true"
-                          className="size-[1.125rem]"
-                        />
-                      ) : (
-                        <Eye aria-hidden="true" className="size-[1.125rem]" />
-                      )}
-                    </button>
-                  </div>
-                  {fieldErrors.password ? (
-                    <p
-                      className="mt-1.5 text-[0.71875rem] leading-[1.5] text-danger"
-                      id="password-error"
-                      role="alert"
-                    >
-                      {fieldErrors.password}
-                    </p>
-                  ) : null}
-                </Field>
-
-                {errorMessage ? (
-                  <Alert className="py-2.5 text-xs leading-5" variant="danger">
-                    {errorMessage}
-                  </Alert>
-                ) : null}
-
-                <Button
-                  aria-busy={isPending}
-                  className="mt-0.5 h-[2.875rem] w-full"
-                  disabled={isPending}
-                  type="submit"
-                >
-                  {isPending ? (
-                    <LoaderCircle
-                      aria-hidden="true"
-                      className="size-[0.9375rem] animate-spin"
-                    />
-                  ) : null}
-                  <span>{isPending ? "正在登录" : "登录管理台"}</span>
-                  {isPending ? null : (
-                    <ArrowRight aria-hidden="true" className="size-4" />
-                  )}
-                </Button>
-
-                <p className="pt-0.5 text-center text-[0.71875rem] leading-[1.6] text-muted">
-                  登录遇到问题？联系{" "}
-                  <a
-                    className="text-foreground underline underline-offset-[3px] hover:decoration-2 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                    href="mailto:support@moodmate.app"
+                  <button
+                    aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                    aria-pressed={showPassword}
+                    className="absolute top-px right-px grid size-[2.375rem] place-items-center rounded-md border-0 bg-transparent text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset disabled:cursor-wait disabled:opacity-60"
+                    disabled={isPending}
+                    onClick={() => {
+                      setShowPassword((current) => !current);
+                      passwordRef.current?.focus();
+                    }}
+                    type="button"
                   >
-                    support@moodmate.app
-                  </a>
-                </p>
-              </form>
-            </CardContent>
-          </Card>
+                    {showPassword ? (
+                      <EyeOff aria-hidden="true" className="size-[1.125rem]" />
+                    ) : (
+                      <Eye aria-hidden="true" className="size-[1.125rem]" />
+                    )}
+                  </button>
+                </div>
+                {fieldErrors.password ? (
+                  <p
+                    className="mt-1.5 text-[0.71875rem] leading-[1.5] text-danger"
+                    id="password-error"
+                    role="alert"
+                  >
+                    {fieldErrors.password}
+                  </p>
+                ) : null}
+              </Field>
+
+              {errorMessage ? (
+                <Alert className="py-2.5 text-xs leading-5" variant="danger">
+                  {errorMessage}
+                </Alert>
+              ) : null}
+
+              <Button
+                aria-busy={isPending}
+                className="mt-0.5 h-10 min-h-10 w-full"
+                disabled={isPending}
+                type="submit"
+              >
+                {isPending ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-[0.9375rem] animate-spin"
+                  />
+                ) : null}
+                <span>{isPending ? "正在登录" : "登录管理台"}</span>
+                {isPending ? null : (
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                )}
+              </Button>
+
+              <p className="pt-0.5 text-center text-[0.71875rem] leading-[1.6] text-muted">
+                登录遇到问题？联系{" "}
+                <a
+                  className="text-foreground underline underline-offset-[3px] hover:decoration-2 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  href="mailto:support@moodmate.app"
+                >
+                  support@moodmate.app
+                </a>
+              </p>
+            </form>
+          </section>
         </section>
 
         <footer className="flex min-h-[3.25rem] flex-wrap items-center gap-3 border-t border-border px-4 py-3.5 text-[0.65625rem] tracking-[0.02em] text-muted sm:px-5">

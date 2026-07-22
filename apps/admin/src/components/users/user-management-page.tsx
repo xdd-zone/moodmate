@@ -158,7 +158,7 @@ export function UserManagementPage() {
             <div className="ml-auto flex gap-2">
               <Button
                 aria-label="上一页"
-                className="size-9 min-h-9 p-0"
+                className="p-0"
                 disabled={page <= 1 || usersQuery.isFetching}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 size="icon"
@@ -170,7 +170,7 @@ export function UserManagementPage() {
               </Button>
               <Button
                 aria-label="下一页"
-                className="size-9 min-h-9 p-0"
+                className="p-0"
                 disabled={
                   totalPages === 0 ||
                   page >= totalPages ||
@@ -376,7 +376,7 @@ function NewUserDrawer({
           </div>
           <Button
             aria-label="关闭新建用户抽屉"
-            className="ml-auto size-9 min-h-9 p-0"
+            className="ml-auto p-0"
             onClick={onClose}
             size="icon"
             title="关闭"
@@ -392,7 +392,7 @@ function NewUserDrawer({
             <FieldLabel htmlFor="userDisplayName">显示名</FieldLabel>
             <Input
               autoComplete="off"
-              className="h-9 min-h-9 bg-background text-xs"
+              className="bg-background text-xs"
               disabled={createMutation.isPending}
               id="userDisplayName"
               maxLength={80}
@@ -406,7 +406,7 @@ function NewUserDrawer({
             </FieldLabel>
             <Input
               autoComplete="email"
-              className="h-9 min-h-9 bg-background text-xs"
+              className="bg-background text-xs"
               disabled={createMutation.isPending}
               id="userEmail"
               maxLength={254}
@@ -421,7 +421,7 @@ function NewUserDrawer({
             <div className="relative">
               <Input
                 autoComplete="new-password"
-                className="h-9 min-h-9 bg-background pr-10 text-xs"
+                className="bg-background pr-10 text-xs"
                 disabled={createMutation.isPending}
                 id="userPassword"
                 onChange={(event) => setPassword(event.target.value)}

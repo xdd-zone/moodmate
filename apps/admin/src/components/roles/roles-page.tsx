@@ -347,7 +347,7 @@ function NewRoleDrawer({
           </div>
           <Button
             aria-label="关闭新建角色抽屉"
-            className="ml-auto size-9 min-h-9 p-0"
+            className="ml-auto p-0"
             onClick={onClose}
             size="icon"
             type="button"
@@ -367,7 +367,7 @@ function NewRoleDrawer({
             </label>
             <Input
               autoComplete="off"
-              className="h-9 min-h-9 bg-background text-xs"
+              className="bg-background text-xs"
               id="roleName"
               maxLength={128}
               onChange={(event) => setName(event.target.value)}
@@ -384,7 +384,7 @@ function NewRoleDrawer({
             </label>
             <Input
               autoComplete="off"
-              className="h-9 min-h-9 bg-background text-xs"
+              className="bg-background text-xs"
               id="roleCode"
               maxLength={64}
               onChange={(event) => setCode(event.target.value)}

@@ -290,7 +290,7 @@ function NotifyPanel({ model, update }: PanelProps) {
       >
         <Input
           aria-label="通知邮箱"
-          className="h-9 min-h-9 w-full bg-background text-xs sm:w-64"
+          className="w-full bg-background text-xs sm:w-64"
           onChange={(event) => update("ntfEmail", event.target.value)}
           type="email"
           value={model.ntfEmail}
@@ -440,7 +440,7 @@ function DangerZone() {
   }
 
   return (
-    <Card className="mt-4 border-[color-mix(in_srgb,var(--color-danger)_30%,var(--color-border))] p-5 shadow-card">
+    <Card className="mt-4 border-[color-mix(in_srgb,var(--color-danger)_30%,var(--color-border))] p-5">
       <h3 className="text-[0.9375rem] font-semibold text-danger">危险操作</h3>
       <p className="mt-1 mb-4 text-xs text-muted">
         以下操作影响范围大，执行前请再次确认。
@@ -525,7 +525,7 @@ function SettingsSection({
   title: string;
 }) {
   return (
-    <Card className="p-5 shadow-card">
+    <Card className="p-5">
       <h3 className="text-[0.9375rem] font-semibold">{title}</h3>
       <p className="mt-1 mb-4 text-xs text-muted">{subtitle}</p>
       {children}
@@ -646,7 +646,7 @@ function TextField({
         {label}
       </label>
       <Input
-        className="h-9 min-h-9 bg-background text-xs"
+        className="bg-background text-xs"
         id={id}
         maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}

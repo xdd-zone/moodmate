@@ -371,7 +371,7 @@ export function MoodRecordsPage() {
             <span className="sr-only">按用户名或关键词筛选</span>
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-disabled" />
             <Input
-              className="h-9 min-h-9 bg-background pl-9 text-xs"
+              className="bg-background pl-9 text-xs"
               onChange={(event) => setKeyword(event.target.value)}
               placeholder="按用户名或关键词筛选"
               value={keyword}
@@ -527,7 +527,7 @@ function StatCard({ item }: { item: (typeof STAT_ITEMS)[number] }) {
   const DirectionIcon = item.direction === "up" ? ArrowUpRight : ArrowDownRight;
 
   return (
-    <Card className="p-4 shadow-card">
+    <Card className="p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="text-xs text-muted">{item.label}</span>
         <span
@@ -572,7 +572,7 @@ function StatCard({ item }: { item: (typeof STAT_ITEMS)[number] }) {
 
 function MoodDistribution() {
   return (
-    <Card className="h-full p-4 shadow-card">
+    <Card className="h-full p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">今日情绪分布</h2>
         <span className="text-xs text-muted">
@@ -642,7 +642,7 @@ function MoodTrend() {
     .join(" ");
 
   return (
-    <Card className="h-full p-4 shadow-card">
+    <Card className="h-full p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">近 7 日打卡量</h2>
         <span className="text-xs text-muted">条 / 日</span>
@@ -1102,7 +1102,7 @@ function MoodDetailDialog({
             </Button>
             <Button
               aria-label="更多操作"
-              className="size-9 min-h-9 p-0"
+              className="p-0"
               size="icon"
               type="button"
               variant="ghost"
