@@ -29,6 +29,21 @@ const variants = cva("...", {
 });
 ```
 
+## 默认密度与层级
+
+- `Button` 默认高度为 `36px`，`sm` 为 `32px`，`lg` 为 `40px`，`icon` 为 `36px`。
+- `Input` 默认高度为 `36px`。Admin 页面里的原生 `select` 使用相同高度。
+- `Card` 默认只有 `1px` 边框和 surface 背景，不带 `shadow-card`。只有菜单、抽屉和弹层等浮动界面可以使用阴影。
+- 页面不要用 `h-9 min-h-9` 重写共享组件的默认高度。只有登录主操作、移动端触控区域等明确需要更大尺寸的位置再写覆盖值。
+
+```tsx
+// 默认 36px，不重复写高度。
+<Input className="bg-background text-xs" />
+
+// 移动端主要操作可以单独扩大触控区域。
+<Button className="size-11 sm:size-9" size="icon" />
+```
+
 ## 布局组件的 asChild
 
 `app-shell.tsx` 的 `SidebarNavItem` 等导航组件不 import `next/link`，通过 `asChild`（Slot）把样式套到调用方传入的 `<Link>` 上。共享包只出样式和 `active` 状态，路由和菜单数据由应用侧传入。
