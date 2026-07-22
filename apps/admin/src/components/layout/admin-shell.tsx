@@ -9,6 +9,7 @@ import {
   Bell,
   LayoutDashboard,
   LogOut,
+  Images,
   Search,
   Settings,
   ShieldCheck,
@@ -35,6 +36,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { count: "2.4k", href: "/moods", icon: Smile, label: "情绪记录" },
   { href: "/users", icon: Users, label: "用户管理" },
   { href: "/roles", icon: ShieldCheck, label: "角色权限" },
+  { href: "/default-avatar", icon: Images, label: "默认头像" },
   { href: "/settings", icon: Settings, label: "系统设置" },
 ] as const;
 

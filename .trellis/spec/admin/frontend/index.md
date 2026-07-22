@@ -4,17 +4,18 @@
 
 ## 指南
 
-| 文件                                        | 适用内容                                 |
-| ------------------------------------------- | ---------------------------------------- |
-| [目录与边界](./directory-structure.md)      | route group、请求层、跨包依赖            |
-| [页面与组件](./component-guidelines.md)     | 服务端组件、后台组件职责、Web/Admin 分离 |
-| [环境变量](./environment-variables.md)      | 服务端、客户端配置边界与校验             |
-| [HTTP 与 Query](./http-query-guidelines.md) | typed HTTP、响应错误、客户端缓存         |
-| [认证 BFF](./auth-bff-guidelines.md)        | 同源请求、cookie、续期和页面保护         |
-| [角色管理](./role-management.md)            | 角色页面、BFF 和状态操作                 |
-| [用户管理](./user-management.md)            | 用户分页、创建表单和角色选择             |
-| [样式](./styling-guidelines.md)             | Tailwind 4、共享主题、密度和可访问性     |
-| [质量检查](./quality-guidelines.md)         | 类型、数据、禁止写法和验证命令           |
+| 文件                                           | 适用内容                                 |
+| ---------------------------------------------- | ---------------------------------------- |
+| [目录与边界](./directory-structure.md)         | route group、请求层、跨包依赖            |
+| [页面与组件](./component-guidelines.md)        | 服务端组件、后台组件职责、Web/Admin 分离 |
+| [环境变量](./environment-variables.md)         | 服务端、客户端配置边界与校验             |
+| [HTTP 与 Query](./http-query-guidelines.md)    | typed HTTP、响应错误、客户端缓存         |
+| [认证 BFF](./auth-bff-guidelines.md)           | 同源请求、cookie、续期和页面保护         |
+| [角色管理](./role-management.md)               | 角色页面、BFF 和状态操作                 |
+| [用户管理](./user-management.md)               | 用户分页、创建表单和角色选择             |
+| [默认头像管理](./default-avatar-management.md) | 当前版本、历史列表、上传和切换           |
+| [样式](./styling-guidelines.md)                | Tailwind 4、共享主题、密度和可访问性     |
+| [质量检查](./quality-guidelines.md)            | 类型、数据、禁止写法和验证命令           |
 
 ## 开发前检查
 

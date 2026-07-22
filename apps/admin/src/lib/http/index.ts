@@ -19,6 +19,10 @@ export type HttpRequestOptions = {
 
 type HttpMethod = "GET" | "POST";
 
+type HttpRequestBody =
+  | { kind: "form"; value: FormData }
+  | { kind: "json"; value: unknown };
+
 function resolveBaseURL() {
   if (typeof window === "undefined") {
     return getAdminServerEnv().API_BASE_URL;
@@ -70,7 +74,7 @@ function buildURL(path: string, query?: HttpQuery) {
 function createRequestInit(
   method: HttpMethod,
   init?: RequestInit,
-  payload?: unknown,
+  body?: HttpRequestBody,
 ): RequestInit {
   const headers = new Headers(init?.headers);
   headers.set("accept", headers.get("accept") ?? "application/json");
@@ -86,17 +90,22 @@ function createRequestInit(
     return requestInit;
   }
 
+  if (body?.kind === "form") {
+    requestInit.body = body.value;
+    return requestInit;
+  }
+
   headers.set(
     "content-type",
     headers.get("content-type") ?? "application/json",
   );
 
-  const body = JSON.stringify(payload);
-  if (body === undefined) {
+  const jsonBody = JSON.stringify(body?.value);
+  if (jsonBody === undefined) {
     throw new TypeError("POST payload 必须可以序列化为 JSON");
   }
 
-  requestInit.body = body;
+  requestInit.body = jsonBody;
 
   return requestInit;
 }
@@ -115,10 +124,10 @@ async function request<TData>(
   path: string,
   responseSchema: z.ZodType<TData>,
   options?: HttpRequestOptions,
-  payload?: unknown,
+  body?: HttpRequestBody,
 ): Promise<TData> {
   const url = buildURL(path, options?.query);
-  const requestInit = createRequestInit(method, options?.init, payload);
+  const requestInit = createRequestInit(method, options?.init, body);
   let response: Response;
 
   try {
@@ -134,10 +143,10 @@ async function request<TData>(
     });
   }
 
-  let body: unknown;
+  let responseBody: unknown;
 
   try {
-    body = await response.json();
+    responseBody = await response.json();
   } catch (error) {
     throw new HttpRequestError("API 返回的内容不是有效 JSON", {
       cause: error,
@@ -146,7 +155,8 @@ async function request<TData>(
     });
   }
 
-  const result = createApiResponseSchema(responseSchema).safeParse(body);
+  const result =
+    createApiResponseSchema(responseSchema).safeParse(responseBody);
   if (!result.success) {
     throw new HttpRequestError("API 返回的数据结构无效", {
       cause: result.error,
@@ -190,7 +200,21 @@ export const http = {
     responseSchema: z.ZodType<TData>,
     options?: HttpRequestOptions,
   ) {
-    return request("POST", path, responseSchema, options, payload);
+    return request("POST", path, responseSchema, options, {
+      kind: "json",
+      value: payload,
+    });
+  },
+  postForm<TData>(
+    path: string,
+    formData: FormData,
+    responseSchema: z.ZodType<TData>,
+    options?: HttpRequestOptions,
+  ) {
+    return request("POST", path, responseSchema, options, {
+      kind: "form",
+      value: formData,
+    });
   },
 };
 

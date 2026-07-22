@@ -11,6 +11,7 @@ HTTP 入口在 `apps/admin/src/lib/http/index.ts`：
 ```ts
 http.get(path, responseSchema, options?);
 http.post(path, payload, responseSchema, options?);
+http.postForm(path, formData, responseSchema, options?);
 ```
 
 后台业务接口放在 `apps/admin/src/api/<module>.api.ts`。Query 配置放在相邻的 `<module>.query.ts`，导出 key factory、`queryOptions()` 和 `mutationOptions()`。
@@ -22,6 +23,7 @@ http.post(path, payload, responseSchema, options?);
 - path 必须以单个 `/` 开头，业务接口不能传完整外部 URL。
 - query 支持 string、number、boolean 和同名数组；`null`、`undefined` 不写入 URL。
 - POST body 由 HTTP 层执行 `JSON.stringify()`，调用方不能通过 `RequestInit` 改 method 或 body。
+- FormData 只通过 `postForm()` 发送；HTTP 层不设置 `content-type`，由 `fetch()` 写入 multipart boundary。
 - 响应用 `createApiResponseSchema(responseSchema)` 校验，成功时返回 `data`，失败时抛 `HttpRequestError`。
 - 后台接口使用 Admin contract；不能复用用户端 DTO 后在页面隐藏字段。
 - Query function 把 TanStack Query 提供的 `signal` 放进 `RequestInit`。
@@ -44,6 +46,7 @@ http.post(path, payload, responseSchema, options?);
 
 - 正常：后台客户端组件调用 domain query options，mutation 成功后只使相关 key 失效。
 - 基础：后台服务端页面直接调用 `src/api` 函数，不创建 QueryClient。
+- 上传：业务 API 创建 FormData 后调用 `postForm()`，响应仍用统一 Contract Schema 校验。
 - 错误：Admin import Web 的 API 函数，共享用户端缓存和未来的用户 session。
 
 ## 6. 必做检查
