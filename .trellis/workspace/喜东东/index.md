@@ -7,6 +7,7 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
+
 - **Active File**: `journal-1.md`
 - **Total Sessions**: 25
 - **Last Active**: 2026-07-22
@@ -17,9 +18,11 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-| File | Lines | Status |
-|------|-------|--------|
-| `journal-1.md` | ~862 | Active |
+
+| File           | Lines | Status |
+| -------------- | ----- | ------ |
+| `journal-1.md` | ~862  | Active |
+
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -28,9 +31,9 @@
 
 <!-- @@@auto:session-history -->
 
-| # | Date | Title | Commits | Branch |
-|---|------|-------|---------|--------|
-| 25 | 2026-07-22 | 完成 GitHub OAuth 登录 | `f948063`, `72b3f97`, `cb885f2` | `main` |
+| #   | Date       | Title                                                       | Commits                                    | Branch |
+| --- | ---------- | ----------------------------------------------------------- | ------------------------------------------ | ------ |
+| 25  | 2026-07-22 | 完成 GitHub OAuth 登录                                      | `f948063`, `72b3f97`, `cb885f2`            | `main` |
 | 24  | 2026-07-22 | 实现 DeepSeek 伴侣聊天与本地 LLM 配置                       | `06fb8a2`, `17242f9`, `5da936c`            | `main` |
 | 23  | 2026-07-22 | 完成 Admin Halo UI 改造                                     | `c7e06c5`, `802bb37`, `352334b`            | `main` |
 | 22  | 2026-07-22 | 完成管理员资料与个人头像                                    | `e4ce2f9`, `ef632c5`, `6dac8cd`, `a5d85db` | `main` |

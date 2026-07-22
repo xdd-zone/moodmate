@@ -825,7 +825,6 @@
 
 - None - task complete
 
-
 ## Session 25: 完成 GitHub OAuth 登录
 
 **Date**: 2026-07-22
@@ -843,8 +842,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `f948063` | (see git log) |
 | `72b3f97` | (see git log) |
 | `cb885f2` | (see git log) |
