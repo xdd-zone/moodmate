@@ -2,7 +2,7 @@
 
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
-import { ThemeMenu } from "@repo/ui/theme-menu";
+import { ThemeToggle } from "@repo/ui/theme-toggle";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
@@ -245,7 +245,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <Bell aria-hidden="true" className="size-4" />
                 <span aria-hidden="true" className="admin-notice-dot" />
               </Button>
-              <ThemeMenu className="admin-theme-menu" variant="ghost" />
+              <ThemeToggle className="admin-theme-toggle" variant="ghost" />
               <Link
                 aria-label={`查看${displayName}的管理员资料`}
                 className="admin-user-chip"

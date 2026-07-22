@@ -5,7 +5,7 @@ import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Field, FieldLabel } from "@repo/ui/field";
 import { Input } from "@repo/ui/input";
-import { ThemeMenu } from "@repo/ui/theme-menu";
+import { ThemeToggle } from "@repo/ui/theme-toggle";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -123,7 +123,7 @@ export function LoginForm() {
             </span>
             <span className="text-[0.9375rem] font-semibold">moodmate</span>
           </div>
-          <ThemeMenu className="ml-auto" variant="ghost" />
+          <ThemeToggle className="ml-auto" variant="ghost" />
         </header>
 
         <section className="admin-login-body mx-auto grid w-full max-w-[73.75rem] items-center gap-6 px-5 py-7 min-[561px]:gap-9 min-[561px]:px-8 min-[561px]:py-10 min-[861px]:grid-cols-[minmax(0,1fr)_minmax(22.5rem,26.875rem)] min-[861px]:gap-[clamp(3rem,8vw,8rem)] min-[861px]:px-[clamp(2rem,5vw,4.5rem)] min-[861px]:py-[clamp(3rem,8vh,5.75rem)]">

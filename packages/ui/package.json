@@ -27,6 +27,7 @@
   "dependencies": {
     "@radix-ui/react-slot": "catalog:",
     "class-variance-authority": "catalog:",
+    "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   }

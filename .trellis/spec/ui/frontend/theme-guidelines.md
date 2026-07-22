@@ -44,8 +44,8 @@ function subscribeToTheme(onStoreChange: () => void): () => void;
 
 ## 5. 用例
 
-- Good：用户切到 Mocha，刷新后根节点仍是 `data-theme="mocha"`，Mocha 按钮为 `aria-pressed="true"`。
-- Base：首次访问没有 storage，页面和切换器都显示 Latte。
+- Good：用户切到 Mocha，刷新后根节点仍是 `data-theme="mocha"`，主题按钮为 `aria-pressed="true"`。
+- Base：首次访问没有 storage，页面使用 Latte，主题按钮显示用于切换到深色主题的月亮图标。
 - Bad：storage 写入 `frappe`、空字符串或其他值；页面必须回退 Latte，不能生成第三种主题。
 
 ## 6. 检查
@@ -64,7 +64,7 @@ pnpm --filter admin build
 
 - Latte/Mocha 切换、刷新保留和无效 storage 回退。
 - 390 x 844 与 1440 x 900 没有溢出、裁切或重叠。
-- 两个选项的 `aria-pressed`、2px `focus-visible` 焦点环和 `prefers-reduced-motion`。
+- 主题按钮的 `aria-pressed`、2px `focus-visible` 焦点环和 `prefers-reduced-motion`。
 - 控制台没有 hydration warning。
 
 项目没有自动化组件测试；不能用 build 代替上述浏览器检查。

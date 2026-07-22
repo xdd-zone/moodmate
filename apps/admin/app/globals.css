@@ -304,7 +304,7 @@ a {
   background: var(--color-danger);
 }
 
-.admin-theme-menu > button {
+.admin-theme-toggle {
   width: 2.25rem;
   min-height: 2.25rem;
   padding: 0;
@@ -523,7 +523,7 @@ textarea {
   }
 
   .admin-icon-button,
-  .admin-theme-menu > button {
+  .admin-theme-toggle {
     width: 2.75rem;
     min-height: 2.75rem;
   }

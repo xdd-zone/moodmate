@@ -318,6 +318,9 @@ importers:
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.25.0(react@19.2.6)
       react:
         specifier: 'catalog:'
         version: 19.2.6
