@@ -14,6 +14,7 @@
 | [头像存储](./assets.md)                     | R2、头像校验、元数据和接口            |
 | [Admin 与 Web 认证](./auth.md)              | 密码、JWT、session、refresh           |
 | [角色管理](./role-management.md)            | application 隔离、生命周期、Admin API |
+| [用户管理](./user-management.md)            | 用户分页、密码账号创建和角色绑定      |
 | [质量检查](./quality-guidelines.md)         | 类型边界、禁止写法、验证命令          |
 
 ## 开发前检查
