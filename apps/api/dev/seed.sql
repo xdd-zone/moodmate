@@ -46,6 +46,20 @@ FROM `applications`
 WHERE `code` = 'web'
 ON CONFLICT (`application_id`, `provider`) DO NOTHING;
 
+INSERT INTO `application_auth_methods` (`id`, `application_id`, `provider`, `enabled`, `created_at_ms`, `updated_at_ms`)
+SELECT
+  '019f8914-43ab-7ed1-814f-0de82e3f1af6',
+  `id`,
+  'github',
+  1,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+  CAST(strftime('%s', 'now') AS INTEGER) * 1000
+FROM `applications`
+WHERE `code` = 'web'
+ON CONFLICT (`application_id`, `provider`) DO UPDATE SET
+  `enabled` = 1,
+  `updated_at_ms` = excluded.`updated_at_ms`;
+
 INSERT INTO `roles` (`id`, `application_id`, `code`, `name`, `status`, `created_at_ms`, `updated_at_ms`)
 SELECT
   '019f6973-0137-749a-bfdd-d1b519b18016',

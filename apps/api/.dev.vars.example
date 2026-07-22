@@ -5,6 +5,12 @@ APP_ENV=development
 AUTH_ACCESS_SECRET=local-access-secret-change-before-use-2026
 AUTH_REFRESH_SECRET=local-refresh-secret-change-before-use-2026
 
+# GitHub OAuth
+GITHUB_OAUTH_CLIENT_ID=replace-with-github-client-id
+GITHUB_OAUTH_CLIENT_SECRET=replace-with-github-client-secret
+GITHUB_OAUTH_CALLBACK_URL=http://localhost:6155/auth/web/github/callback
+WEB_ORIGIN=http://localhost:6153
+
 # 跨域
 CORS_ORIGINS=http://localhost:6153,http://localhost:6154
 

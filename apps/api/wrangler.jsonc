@@ -8,6 +8,8 @@
     "APP_ENV": "development",
     "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
+    "GITHUB_OAUTH_CALLBACK_URL": "http://localhost:6155/auth/web/github/callback",
+    "WEB_ORIGIN": "http://localhost:6153",
   },
   "d1_databases": [
     {
@@ -27,6 +29,8 @@
         "APP_ENV": "test",
         "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
         "DEEPSEEK_MODEL": "deepseek-v4-flash",
+        "GITHUB_OAUTH_CALLBACK_URL": "http://localhost:6155/auth/web/github/callback",
+        "WEB_ORIGIN": "http://localhost:6153",
       },
     },
     "production": {

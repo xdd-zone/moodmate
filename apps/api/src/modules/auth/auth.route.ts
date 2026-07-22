@@ -4,6 +4,7 @@ import {
   AdminPasswordLoginRequestSchema,
   AdminRefreshRequestSchema,
   BizCode,
+  WebGithubTicketLoginRequestSchema,
   WebPasswordLoginRequestSchema,
   WebRefreshRequestSchema,
   buildSuccess,
@@ -22,9 +23,47 @@ import {
   refreshAdminSession,
   refreshWebSession,
 } from "./auth.service";
+import {
+  buildWebGithubAuthUrl,
+  handleWebGithubCallback,
+  loginWebWithGithubTicket,
+} from "./github-oauth.service";
 
 export function createAuthRoute() {
   return new Hono<ApiHonoEnv>()
+    .get("/auth/web/github/authorize", async (c) => {
+      const result = await buildWebGithubAuthUrl(c);
+
+      return c.json(buildSuccess(result, createMeta(c.var.requestId)));
+    })
+    .get("/auth/web/github/callback", (c) => {
+      return handleWebGithubCallback(c);
+    })
+    .post(
+      "/auth/web/github/ticket/login",
+      zValidator("json", WebGithubTicketLoginRequestSchema, (result) => {
+        if (result.success) {
+          return;
+        }
+
+        throw new AppError(
+          BizCode.COMMON_INVALID_REQUEST,
+          "GitHub 登录参数无效",
+          400,
+          result.error.issues,
+        );
+      }),
+      async (c) => {
+        const result = await loginWebWithGithubTicket({
+          bindings: c.env,
+          clientIp: c.req.header("CF-Connecting-IP"),
+          ticket: c.req.valid("json").ticket,
+          userAgent: c.req.header("User-Agent"),
+        });
+
+        return c.json(buildSuccess(result, createMeta(c.var.requestId)));
+      },
+    )
     .post(
       "/auth/web/password/login",
       zValidator("json", WebPasswordLoginRequestSchema, (result) => {

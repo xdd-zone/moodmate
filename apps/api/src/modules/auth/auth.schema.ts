@@ -180,6 +180,73 @@ export const applicationAuthMethods = sqliteTable(
   ],
 );
 
+export const oauthAccounts = sqliteTable(
+  "oauth_accounts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider", { enum: ["github", "google"] }).notNull(),
+    providerUserId: text("provider_user_id").notNull(),
+    providerLogin: text("provider_login"),
+    emailId: text("email_id").references(() => userEmails.id, {
+      onDelete: "set null",
+    }),
+    createdAtMs: integer("created_at_ms").notNull(),
+    updatedAtMs: integer("updated_at_ms").notNull(),
+  },
+  (table) => [
+    unique("oauth_accounts_provider_user_unique").on(
+      table.provider,
+      table.providerUserId,
+    ),
+    index("oauth_accounts_user_idx").on(table.userId),
+    check(
+      "oauth_accounts_provider_check",
+      sql`${table.provider} IN ('github', 'google')`,
+    ),
+    check(
+      "oauth_accounts_timestamps_check",
+      sql`${table.updatedAtMs} >= ${table.createdAtMs}`,
+    ),
+  ],
+);
+
+export const oauthLoginTickets = sqliteTable(
+  "oauth_login_tickets",
+  {
+    id: text("id").primaryKey(),
+    ticketHash: text("ticket_hash").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    applicationId: text("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    provider: text("provider", { enum: ["github", "google"] }).notNull(),
+    createdAtMs: integer("created_at_ms").notNull(),
+    expiresAtMs: integer("expires_at_ms").notNull(),
+    usedAtMs: integer("used_at_ms"),
+  },
+  (table) => [
+    unique("oauth_login_tickets_hash_unique").on(table.ticketHash),
+    index("oauth_login_tickets_user_idx").on(table.userId),
+    check(
+      "oauth_login_tickets_provider_check",
+      sql`${table.provider} IN ('github', 'google')`,
+    ),
+    check(
+      "oauth_login_tickets_expiry_check",
+      sql`${table.expiresAtMs} > ${table.createdAtMs}`,
+    ),
+    check(
+      "oauth_login_tickets_used_at_check",
+      sql`${table.usedAtMs} IS NULL OR ${table.usedAtMs} >= ${table.createdAtMs}`,
+    ),
+  ],
+);
+
 export const roles = sqliteTable(
   "roles",
   {

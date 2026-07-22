@@ -10,6 +10,10 @@ export interface ApiBindings {
   DEEPSEEK_API_KEY?: string;
   DEEPSEEK_BASE_URL?: string;
   DEEPSEEK_MODEL?: string;
+  GITHUB_OAUTH_CALLBACK_URL?: string;
+  GITHUB_OAUTH_CLIENT_ID?: string;
+  GITHUB_OAUTH_CLIENT_SECRET?: string;
+  WEB_ORIGIN?: string;
 }
 
 export interface ApiHonoEnv {

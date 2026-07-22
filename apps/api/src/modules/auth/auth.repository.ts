@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { createD1Client } from "@/infra/db/d1";
 
@@ -6,6 +6,8 @@ import {
   applicationAuthMethods,
   applications,
   authSessions,
+  oauthAccounts,
+  oauthLoginTickets,
   passwordCredentials,
   refreshTokens,
   roles,
@@ -111,6 +113,302 @@ export async function findActiveRoles(
         eq(applications.status, "active"),
       ),
     );
+}
+
+export async function findWebGithubLoginSetup(
+  database: D1Database | undefined,
+) {
+  const db = createD1Client(database);
+  const rows = await db
+    .select({
+      applicationId: applications.id,
+      roleId: roles.id,
+    })
+    .from(applications)
+    .innerJoin(
+      applicationAuthMethods,
+      eq(applicationAuthMethods.applicationId, applications.id),
+    )
+    .innerJoin(roles, eq(roles.applicationId, applications.id))
+    .where(
+      and(
+        eq(applications.code, "web"),
+        eq(applications.status, "active"),
+        eq(applicationAuthMethods.provider, "github"),
+        eq(applicationAuthMethods.enabled, true),
+        eq(roles.code, "web_user"),
+        eq(roles.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function findWebUserByGithubAccount(
+  database: D1Database | undefined,
+  providerUserId: string,
+) {
+  const db = createD1Client(database);
+  const rows = await db
+    .select({
+      userId: users.id,
+      userStatus: users.status,
+    })
+    .from(oauthAccounts)
+    .innerJoin(users, eq(users.id, oauthAccounts.userId))
+    .where(
+      and(
+        eq(oauthAccounts.provider, "github"),
+        eq(oauthAccounts.providerUserId, providerUserId),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function findAuthUserByNormalizedEmail(
+  database: D1Database | undefined,
+  normalizedEmail: string,
+) {
+  const db = createD1Client(database);
+  const rows = await db
+    .select({
+      emailId: userEmails.id,
+      userId: users.id,
+      userStatus: users.status,
+    })
+    .from(userEmails)
+    .innerJoin(users, eq(users.id, userEmails.userId))
+    .where(eq(userEmails.normalizedEmail, normalizedEmail))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function findWebOauthLoginContext(
+  database: D1Database | undefined,
+  userId: string,
+  applicationId: string,
+) {
+  const db = createD1Client(database);
+  const rows = await db
+    .select({
+      applicationCode: applications.code,
+      applicationStatus: applications.status,
+      displayName: users.displayName,
+      email: userEmails.email,
+      userStatus: users.status,
+    })
+    .from(users)
+    .innerJoin(
+      userEmails,
+      and(eq(userEmails.userId, users.id), eq(userEmails.isPrimary, true)),
+    )
+    .innerJoin(applications, eq(applications.id, applicationId))
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function createGithubWebUser(input: {
+  database: D1Database | undefined;
+  displayName: string;
+  email: string;
+  emailId: string;
+  normalizedEmail: string;
+  nowMs: number;
+  oauthAccountId: string;
+  providerLogin: string | null;
+  providerUserId: string;
+  roleBindingId: string;
+  userId: string;
+  webRoleId: string;
+}): Promise<void> {
+  const db = createD1Client(input.database);
+
+  await db.batch([
+    db.insert(users).values({
+      createdAtMs: input.nowMs,
+      displayName: input.displayName,
+      id: input.userId,
+      lastLoginAtMs: null,
+      status: "active",
+      updatedAtMs: input.nowMs,
+    }),
+    db.insert(userEmails).values({
+      createdAtMs: input.nowMs,
+      email: input.email,
+      id: input.emailId,
+      isPrimary: true,
+      isVerified: true,
+      normalizedEmail: input.normalizedEmail,
+      source: "oauth",
+      updatedAtMs: input.nowMs,
+      userId: input.userId,
+      verifiedAtMs: input.nowMs,
+    }),
+    db.insert(oauthAccounts).values({
+      createdAtMs: input.nowMs,
+      emailId: input.emailId,
+      id: input.oauthAccountId,
+      provider: "github",
+      providerLogin: input.providerLogin,
+      providerUserId: input.providerUserId,
+      updatedAtMs: input.nowMs,
+      userId: input.userId,
+    }),
+    db.insert(userRoleBindings).values({
+      createdAtMs: input.nowMs,
+      grantedAtMs: input.nowMs,
+      id: input.roleBindingId,
+      revokedAtMs: null,
+      roleId: input.webRoleId,
+      status: "active",
+      updatedAtMs: input.nowMs,
+      userId: input.userId,
+    }),
+  ]);
+}
+
+export async function linkGithubAccountToUser(input: {
+  database: D1Database | undefined;
+  emailId: string;
+  nowMs: number;
+  oauthAccountId: string;
+  providerLogin: string | null;
+  providerUserId: string;
+  userId: string;
+}): Promise<void> {
+  const db = createD1Client(input.database);
+
+  await db.insert(oauthAccounts).values({
+    createdAtMs: input.nowMs,
+    emailId: input.emailId,
+    id: input.oauthAccountId,
+    provider: "github",
+    providerLogin: input.providerLogin,
+    providerUserId: input.providerUserId,
+    updatedAtMs: input.nowMs,
+    userId: input.userId,
+  });
+}
+
+export async function updateGithubAccountLogin(input: {
+  database: D1Database | undefined;
+  nowMs: number;
+  providerLogin: string | null;
+  providerUserId: string;
+}): Promise<void> {
+  const db = createD1Client(input.database);
+
+  await db
+    .update(oauthAccounts)
+    .set({
+      providerLogin: input.providerLogin,
+      updatedAtMs: input.nowMs,
+    })
+    .where(
+      and(
+        eq(oauthAccounts.provider, "github"),
+        eq(oauthAccounts.providerUserId, input.providerUserId),
+      ),
+    );
+}
+
+export async function ensureUserHasRole(input: {
+  bindingId: string;
+  database: D1Database | undefined;
+  nowMs: number;
+  roleId: string;
+  userId: string;
+}): Promise<void> {
+  const db = createD1Client(input.database);
+
+  await db
+    .insert(userRoleBindings)
+    .values({
+      createdAtMs: input.nowMs,
+      grantedAtMs: input.nowMs,
+      id: input.bindingId,
+      revokedAtMs: null,
+      roleId: input.roleId,
+      status: "active",
+      updatedAtMs: input.nowMs,
+      userId: input.userId,
+    })
+    .onConflictDoUpdate({
+      set: {
+        grantedAtMs: input.nowMs,
+        revokedAtMs: null,
+        status: "active",
+        updatedAtMs: input.nowMs,
+      },
+      target: [userRoleBindings.userId, userRoleBindings.roleId],
+    });
+}
+
+export async function insertOauthLoginTicket(input: {
+  applicationId: string;
+  createdAtMs: number;
+  database: D1Database | undefined;
+  expiresAtMs: number;
+  id: string;
+  ticketHash: string;
+  userId: string;
+}): Promise<void> {
+  const db = createD1Client(input.database);
+
+  await db.insert(oauthLoginTickets).values({
+    applicationId: input.applicationId,
+    createdAtMs: input.createdAtMs,
+    expiresAtMs: input.expiresAtMs,
+    id: input.id,
+    provider: "github",
+    ticketHash: input.ticketHash,
+    usedAtMs: null,
+    userId: input.userId,
+  });
+}
+
+export async function consumeOauthLoginTicket(input: {
+  database: D1Database | undefined;
+  nowMs: number;
+  ticketHash: string;
+}) {
+  const db = createD1Client(input.database);
+  const rows = await db
+    .update(oauthLoginTickets)
+    .set({ usedAtMs: input.nowMs })
+    .where(
+      and(
+        eq(oauthLoginTickets.ticketHash, input.ticketHash),
+        eq(oauthLoginTickets.provider, "github"),
+        isNull(oauthLoginTickets.usedAtMs),
+        sql`${oauthLoginTickets.expiresAtMs} > ${input.nowMs}`,
+      ),
+    )
+    .returning({
+      applicationId: oauthLoginTickets.applicationId,
+      userId: oauthLoginTickets.userId,
+    });
+
+  return rows[0] ?? null;
+}
+
+export async function recordSuccessfulOauthLogin(
+  database: D1Database | undefined,
+  userId: string,
+  loggedInAtMs: number,
+): Promise<void> {
+  const db = createD1Client(database);
+
+  await db
+    .update(users)
+    .set({ lastLoginAtMs: loggedInAtMs, updatedAtMs: loggedInAtMs })
+    .where(eq(users.id, userId));
 }
 
 export async function findSessionById(

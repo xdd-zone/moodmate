@@ -133,6 +133,16 @@ export type {
   WebPasswordLoginResponse,
 } from "./auth/web-login.contract";
 export {
+  WebGithubAuthUrlResponseSchema,
+  WebGithubTicketLoginRequestSchema,
+  WebGithubTicketLoginResponseSchema,
+} from "./auth/web-github-login.contract";
+export type {
+  WebGithubAuthUrlResponse,
+  WebGithubTicketLoginRequest,
+  WebGithubTicketLoginResponse,
+} from "./auth/web-github-login.contract";
+export {
   WebRefreshRequestSchema,
   WebTokenRefreshResponseSchema,
 } from "./auth/web-refresh.contract";

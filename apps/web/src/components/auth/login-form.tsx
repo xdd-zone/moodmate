@@ -13,13 +13,14 @@ import {
 import { Field, FieldError, FieldLabel } from "@repo/ui/field";
 import { Input } from "@repo/ui/input";
 import { ThemeToggle } from "@repo/ui/theme-toggle";
+import { GitFork } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { FormEvent } from "react";
 
 import { readClientSession } from "@/src/auth/client-session";
-import { loginWeb } from "@/src/auth/login-client";
+import { loginWeb, redirectToGithubLogin } from "@/src/auth/login-client";
 import { HttpRequestError } from "@/src/lib/http";
 
 type FieldErrors = {
@@ -31,7 +32,9 @@ export function LoginForm() {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [isPending, startTransition] = useTransition();
+  const [isGithubPending, startGithubTransition] = useTransition();
+  const [isPasswordPending, startPasswordTransition] = useTransition();
+  const isPending = isGithubPending || isPasswordPending;
 
   useEffect(() => {
     if (readClientSession()) {
@@ -66,7 +69,7 @@ export function LoginForm() {
 
     setFieldErrors({});
 
-    startTransition(async () => {
+    startPasswordTransition(async () => {
       try {
         await loginWeb(result.data);
         router.replace("/app");
@@ -76,6 +79,23 @@ export function LoginForm() {
           error instanceof HttpRequestError
             ? error.message
             : "登录请求失败，请确认 API 服务已启动后重试",
+        );
+      }
+    });
+  }
+
+  function handleGithubLogin() {
+    setErrorMessage(null);
+    setFieldErrors({});
+
+    startGithubTransition(async () => {
+      try {
+        await redirectToGithubLogin();
+      } catch (error) {
+        setErrorMessage(
+          error instanceof HttpRequestError
+            ? error.message
+            : "无法发起 GitHub 登录，请确认 API 配置后重试",
         );
       }
     });
@@ -183,7 +203,27 @@ export function LoginForm() {
                 ) : null}
 
                 <Button className="w-full" disabled={isPending} type="submit">
-                  {isPending ? "正在登录" : "登录并继续"}
+                  {isPasswordPending ? "正在登录" : "登录并继续"}
+                </Button>
+
+                <div
+                  aria-hidden="true"
+                  className="flex items-center gap-3 text-xs text-muted"
+                >
+                  <span className="h-px flex-1 bg-border" />
+                  <span>或</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+
+                <Button
+                  className="w-full"
+                  disabled={isPending}
+                  onClick={handleGithubLogin}
+                  type="button"
+                  variant="outline"
+                >
+                  <GitFork aria-hidden="true" className="size-4" />
+                  {isGithubPending ? "正在前往 GitHub" : "使用 GitHub 登录"}
                 </Button>
 
                 <Button asChild className="w-full" variant="ghost">

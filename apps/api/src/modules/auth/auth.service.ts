@@ -21,7 +21,9 @@ import {
   findPasswordLoginContext,
   findRefreshTokenContext,
   findSessionContext,
+  findWebOauthLoginContext,
   recordFailedPasswordAttempt,
+  recordSuccessfulOauthLogin,
   recordSuccessfulPasswordLogin,
   revokeSession,
   rotateRefreshToken,
@@ -99,6 +101,53 @@ export function loginWebWithPassword(input: {
   userAgent?: string;
 }): Promise<WebAuthTokenResponse> {
   return loginWithPassword(WEB_AUTH_CONFIG, input);
+}
+
+export async function createWebSessionForOauthUser(input: {
+  applicationId: string;
+  bindings: ApiBindings;
+  clientIp?: string;
+  userAgent?: string;
+  userId: string;
+}): Promise<WebAuthTokenResponse> {
+  const context = await findWebOauthLoginContext(
+    input.bindings.DB,
+    input.userId,
+    input.applicationId,
+  );
+  const roleRows = await findActiveRoles(
+    input.bindings.DB,
+    input.userId,
+    WEB_AUTH_CONFIG.application,
+  );
+  const roles = roleRows.map((role) => role.code);
+
+  if (
+    !context ||
+    context.userStatus !== "active" ||
+    context.applicationCode !== WEB_AUTH_CONFIG.application ||
+    context.applicationStatus !== "active" ||
+    !roles.includes(WEB_AUTH_CONFIG.requiredRole)
+  ) {
+    throw sessionRevokedError();
+  }
+
+  const nowMs = Date.now();
+  const result = await issueNewSession(WEB_AUTH_CONFIG, {
+    applicationId: input.applicationId,
+    bindings: input.bindings,
+    clientIp: input.clientIp,
+    displayName: context.displayName,
+    email: context.email,
+    nowMs,
+    roles,
+    userAgent: input.userAgent,
+    userId: input.userId,
+  });
+
+  await recordSuccessfulOauthLogin(input.bindings.DB, input.userId, nowMs);
+
+  return result;
 }
 
 export async function getAdminSessionFromAccess(
@@ -218,7 +267,6 @@ async function loginWithPassword<TApplication extends AuthApplication>(
   input: PasswordLoginServiceInput,
 ): Promise<AuthTokenResponse<SessionByApplication[TApplication]>> {
   const { bindings, payload } = input;
-  const env = getApiEnv(bindings);
   const nowMs = Date.now();
   const loginContext = await findPasswordLoginContext(
     bindings.DB,
@@ -251,58 +299,22 @@ async function loginWithPassword<TApplication extends AuthApplication>(
     throw invalidCredentialsError();
   }
 
-  const sessionId = uuidv7();
-  const sessionExpiresAtMs = nowMs + SESSION_TTL_MS;
   const roleRows = await findActiveRoles(
     bindings.DB,
     loginContext.userId,
     config.application,
   );
   const roles = roleRows.map((role) => role.code);
-  const [accessToken, refreshToken] = await Promise.all([
-    issueAccessToken(
-      {
-        application: config.application,
-        roles,
-        sessionExpiresAtMs,
-        sessionId,
-        userId: loginContext.userId,
-      },
-      env.AUTH_ACCESS_SECRET,
-      nowMs,
-    ),
-    issueRefreshToken(
-      {
-        application: config.application,
-        sessionExpiresAtMs,
-        sessionId,
-        userId: loginContext.userId,
-      },
-      env.AUTH_REFRESH_SECRET,
-      nowMs,
-    ),
-  ]);
-
-  await createSessionWithRefreshToken(bindings.DB, {
-    refreshToken: {
-      expiresAtMs: refreshToken.expiresAtMs,
-      id: uuidv7(),
-      issuedAtMs: nowMs,
-      jtiHash: await hashTokenId(refreshToken.jti),
-      parentTokenId: null,
-      sessionId,
-    },
-    session: {
-      applicationId: loginContext.applicationId,
-      createdAtMs: nowMs,
-      expiresAtMs: sessionExpiresAtMs,
-      id: sessionId,
-      ip: truncate(input.clientIp, 64),
-      lastSeenAtMs: nowMs,
-      sessionType: config.application,
-      userAgent: truncate(input.userAgent, 512),
-      userId: loginContext.userId,
-    },
+  const result = await issueNewSession(config, {
+    applicationId: loginContext.applicationId,
+    bindings,
+    clientIp: input.clientIp,
+    displayName: loginContext.displayName,
+    email: loginContext.email,
+    nowMs,
+    roles,
+    userAgent: input.userAgent,
+    userId: loginContext.userId,
   });
   await recordSuccessfulPasswordLogin(
     bindings.DB,
@@ -311,18 +323,84 @@ async function loginWithPassword<TApplication extends AuthApplication>(
     nowMs,
   );
 
+  return result;
+}
+
+async function issueNewSession<TApplication extends AuthApplication>(
+  config: AuthApplicationConfig<TApplication>,
+  input: {
+    applicationId: string;
+    bindings: ApiBindings;
+    clientIp?: string;
+    displayName: string;
+    email: string;
+    nowMs: number;
+    roles: string[];
+    userAgent?: string;
+    userId: string;
+  },
+): Promise<AuthTokenResponse<SessionByApplication[TApplication]>> {
+  const env = getApiEnv(input.bindings);
+  const sessionId = uuidv7();
+  const sessionExpiresAtMs = input.nowMs + SESSION_TTL_MS;
+  const [accessToken, refreshToken] = await Promise.all([
+    issueAccessToken(
+      {
+        application: config.application,
+        roles: input.roles,
+        sessionExpiresAtMs,
+        sessionId,
+        userId: input.userId,
+      },
+      env.AUTH_ACCESS_SECRET,
+      input.nowMs,
+    ),
+    issueRefreshToken(
+      {
+        application: config.application,
+        sessionExpiresAtMs,
+        sessionId,
+        userId: input.userId,
+      },
+      env.AUTH_REFRESH_SECRET,
+      input.nowMs,
+    ),
+  ]);
+
+  await createSessionWithRefreshToken(input.bindings.DB, {
+    refreshToken: {
+      expiresAtMs: refreshToken.expiresAtMs,
+      id: uuidv7(),
+      issuedAtMs: input.nowMs,
+      jtiHash: await hashTokenId(refreshToken.jti),
+      parentTokenId: null,
+      sessionId,
+    },
+    session: {
+      applicationId: input.applicationId,
+      createdAtMs: input.nowMs,
+      expiresAtMs: sessionExpiresAtMs,
+      id: sessionId,
+      ip: truncate(input.clientIp, 64),
+      lastSeenAtMs: input.nowMs,
+      sessionType: config.application,
+      userAgent: truncate(input.userAgent, 512),
+      userId: input.userId,
+    },
+  });
+
   return {
     accessToken: accessToken.token,
     accessTokenExpiresAtMs: accessToken.expiresAtMs,
     refreshToken: refreshToken.token,
     refreshTokenExpiresAtMs: refreshToken.expiresAtMs,
     session: config.presentSession({
-      displayName: loginContext.displayName,
-      email: loginContext.email,
+      displayName: input.displayName,
+      email: input.email,
       expiresAtMs: sessionExpiresAtMs,
-      roles,
+      roles: input.roles,
       sessionId,
-      userId: loginContext.userId,
+      userId: input.userId,
     }),
   };
 }

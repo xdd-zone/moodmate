@@ -10,7 +10,11 @@ export interface ApiEnv {
   DEEPSEEK_API_KEY?: string;
   DEEPSEEK_BASE_URL: string;
   DEEPSEEK_MODEL: string;
+  GITHUB_OAUTH_CALLBACK_URL?: string;
+  GITHUB_OAUTH_CLIENT_ID?: string;
+  GITHUB_OAUTH_CLIENT_SECRET?: string;
   SERVICE_NAME: "api";
+  WEB_ORIGIN?: string;
 }
 
 const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
@@ -37,7 +41,16 @@ export function getApiEnv(bindings: ApiBindings): ApiEnv {
     ),
     DEEPSEEK_MODEL:
       parseOptionalValue(bindings.DEEPSEEK_MODEL) ?? DEFAULT_DEEPSEEK_MODEL,
+    GITHUB_OAUTH_CALLBACK_URL: parseOptionalHttpUrl(
+      bindings.GITHUB_OAUTH_CALLBACK_URL,
+      "GITHUB_OAUTH_CALLBACK_URL",
+    ),
+    GITHUB_OAUTH_CLIENT_ID: parseOptionalValue(bindings.GITHUB_OAUTH_CLIENT_ID),
+    GITHUB_OAUTH_CLIENT_SECRET: parseOptionalValue(
+      bindings.GITHUB_OAUTH_CLIENT_SECRET,
+    ),
     SERVICE_NAME: "api",
+    WEB_ORIGIN: parseOptionalHttpUrl(bindings.WEB_ORIGIN, "WEB_ORIGIN"),
   };
 }
 
@@ -58,6 +71,14 @@ function parseHttpUrl(value: string, name: string): string {
   } catch {
     throw new Error(`${name} 必须是有效的 HTTP URL。`);
   }
+}
+
+function parseOptionalHttpUrl(
+  value: string | undefined,
+  name: string,
+): string | undefined {
+  const normalizedValue = parseOptionalValue(value);
+  return normalizedValue ? parseHttpUrl(normalizedValue, name) : undefined;
 }
 
 function parseSecret(value: string | undefined, name: string): string {
