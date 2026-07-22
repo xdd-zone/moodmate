@@ -3,7 +3,7 @@ import {
   WebTokenRefreshResponseSchema,
   createApiResponseSchema,
 } from "@repo/contracts";
-import type { z } from "zod";
+import { z } from "zod";
 
 import {
   clearClientSession,
@@ -31,6 +31,11 @@ type HttpMethod = "GET" | "POST";
 
 interface PreparedRequest {
   init: RequestInit;
+  usesClientSession: boolean;
+}
+
+interface PreparedClientSessionRequest {
+  request: Request;
   usesClientSession: boolean;
 }
 
@@ -248,6 +253,92 @@ function shouldRefresh(error: unknown, usesClientSession: boolean) {
     error.code === BizCode.AUTH_ACCESS_EXPIRED
   );
 }
+
+async function responseRequiresRefresh(
+  response: Response,
+  usesClientSession: boolean,
+): Promise<boolean> {
+  if (!usesClientSession || response.status !== 401) {
+    return false;
+  }
+
+  try {
+    const body: unknown = await response.clone().json();
+    const result = createApiResponseSchema(z.unknown()).safeParse(body);
+
+    return (
+      result.success &&
+      !result.data.ok &&
+      result.data.error.code === BizCode.AUTH_ACCESS_EXPIRED
+    );
+  } catch {
+    return false;
+  }
+}
+
+function createClientSessionRequest(
+  request: Request,
+): PreparedClientSessionRequest {
+  const headers = new Headers(request.headers);
+  let usesClientSession = false;
+
+  if (typeof window !== "undefined" && !headers.has("authorization")) {
+    const storedSession = readClientSession();
+
+    if (storedSession) {
+      headers.set("authorization", `Bearer ${storedSession.accessToken}`);
+      usesClientSession = true;
+    }
+  }
+
+  const preparedRequest = new Request(request, { headers });
+
+  return {
+    request: preparedRequest,
+    usesClientSession,
+  };
+}
+
+export const fetchWithClientSession: typeof fetch = async (input, init) => {
+  const baseRequest = new Request(input, init);
+  const initialTemplate = baseRequest.clone();
+  const retryTemplate = baseRequest.clone();
+  const initialRequest = createClientSessionRequest(initialTemplate);
+  const response = await fetch(initialRequest.request);
+
+  if (
+    !(await responseRequiresRefresh(response, initialRequest.usesClientSession))
+  ) {
+    if (response.status === 401 && initialRequest.usesClientSession) {
+      clearClientSession();
+      window.location.replace("/login");
+    }
+
+    return response;
+  }
+
+  await response.body?.cancel();
+
+  try {
+    await ensureClientRefresh();
+    const retryRequest = createClientSessionRequest(retryTemplate);
+    const retryResponse = await fetch(retryRequest.request);
+
+    if (retryResponse.status === 401) {
+      clearClientSession();
+      window.location.replace("/login");
+    }
+
+    return retryResponse;
+  } catch (error) {
+    if (!isAbortError(error)) {
+      clearClientSession();
+      window.location.replace("/login");
+    }
+
+    throw error;
+  }
+};
 
 async function request<TData>(
   method: HttpMethod,

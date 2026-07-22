@@ -14,9 +14,12 @@
     "lint": "eslint --max-warnings 0"
   },
   "dependencies": {
+    "@ai-sdk/react": "catalog:",
     "@repo/contracts": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
+    "ai": "catalog:",
+    "lucide-react": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
