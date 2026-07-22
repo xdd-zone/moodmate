@@ -5,7 +5,11 @@ import { cn } from "./lib/utils";
 
 function Field({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div className={cn("grid gap-2", className)} data-slot="field" {...props} />
+    <div
+      className={cn("grid gap-1.5", className)}
+      data-slot="field"
+      {...props}
+    />
   );
 }
 
@@ -16,7 +20,7 @@ function FieldLabel({ className, ...props }: ComponentProps<"label">) {
 function FieldControl({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
-      className={cn("grid gap-1.5", className)}
+      className={cn("grid gap-1", className)}
       data-slot="field-control"
       {...props}
     />
@@ -26,7 +30,7 @@ function FieldControl({ className, ...props }: ComponentProps<"div">) {
 function FieldDescription({ className, ...props }: ComponentProps<"p">) {
   return (
     <p
-      className={cn("text-xs leading-5 text-muted", className)}
+      className={cn("text-xs leading-4 text-muted", className)}
       data-slot="field-description"
       {...props}
     />
@@ -36,7 +40,7 @@ function FieldDescription({ className, ...props }: ComponentProps<"p">) {
 function FieldError({ className, ...props }: ComponentProps<"p">) {
   return (
     <p
-      className={cn("text-xs leading-5 text-danger", className)}
+      className={cn("text-xs leading-4 text-danger", className)}
       data-slot="field-error"
       role="alert"
       {...props}

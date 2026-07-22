@@ -96,9 +96,15 @@ function ThemeGlyph({
   );
 }
 
-type ThemeMenuProps = Omit<ComponentProps<"div">, "children">;
+type ThemeMenuProps = Omit<ComponentProps<"div">, "children"> & {
+  variant?: ComponentProps<typeof Button>["variant"];
+};
 
-export function ThemeMenu({ className, ...props }: ThemeMenuProps) {
+export function ThemeMenu({
+  className,
+  variant = "secondary",
+  ...props
+}: ThemeMenuProps) {
   const theme = useSyncExternalStore(
     subscribeToTheme,
     getThemeSnapshot,
@@ -145,7 +151,7 @@ export function ThemeMenu({ className, ...props }: ThemeMenuProps) {
         size="icon"
         title="切换主题"
         type="button"
-        variant="secondary"
+        variant={variant}
       >
         <ThemeGlyph className="size-4" theme={theme} />
       </Button>

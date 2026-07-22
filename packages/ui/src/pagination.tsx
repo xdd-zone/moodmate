@@ -42,7 +42,7 @@ function Pagination({
       >
         {prevLabel}
       </Button>
-      <span className="text-sm text-muted" data-slot="pagination-status">
+      <span className="text-xs text-muted" data-slot="pagination-status">
         第 {page} / {safePageCount} 页
       </span>
       <Button

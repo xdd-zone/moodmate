@@ -44,7 +44,7 @@ function TableRow({ className, ...props }: ComponentProps<"tr">) {
 function TableHead({ className, ...props }: ComponentProps<"th">) {
   return (
     <th
-      className={cn("px-3 py-3 font-medium", className)}
+      className={cn("px-3 py-2.5 font-medium", className)}
       data-slot="table-head"
       {...props}
     />
@@ -54,7 +54,7 @@ function TableHead({ className, ...props }: ComponentProps<"th">) {
 function TableCell({ className, ...props }: ComponentProps<"td">) {
   return (
     <td
-      className={cn("px-3 py-4 align-top", className)}
+      className={cn("px-3 py-3 align-top", className)}
       data-slot="table-cell"
       {...props}
     />
