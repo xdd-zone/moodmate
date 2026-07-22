@@ -650,3 +650,40 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: 完成用户管理模块
+
+**Date**: 2026-07-22
+**Task**: 完成用户管理模块
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+新增用户分页和创建接口，接入 Admin 用户页面与真实角色数据，补充三层用户管理规范并完成本地验证。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4aaf510` | (see git log) |
+| `8f21ead` | (see git log) |
+| `0ac8787` | (see git log) |
+| `0acdad1` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
