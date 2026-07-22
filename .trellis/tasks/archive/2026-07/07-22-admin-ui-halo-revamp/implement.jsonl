@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/ui/frontend/index.md", "reason": "改 @repo/ui 共享组件的入口规范：改前需找到 web+admin 两处使用位置，样式归属、client 边界"}
+{"file": ".trellis/spec/ui/frontend/component-guidelines.md", "reason": "组件 Props、客户端边界、样式归属写法，改 button/input/card/theme-menu 时遵循"}
+{"file": ".trellis/spec/ui/frontend/theme-guidelines.md", "reason": "Latte/Mocha 主题规范，确认本次不改色板且双主题都要正常"}
+{"file": ".trellis/spec/admin/frontend/index.md", "reason": "admin 前端总规范与开发前/完成检查清单"}
+{"file": ".trellis/spec/admin/frontend/styling-guidelines.md", "reason": "Tailwind4、共享主题、密度与可访问性——布局壳与逐页去卡片的样式依据"}
+{"file": ".trellis/spec/admin/frontend/component-guidelines.md", "reason": "Web/Admin 组件分离、后台组件职责，重构 admin-shell 时遵循"}

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/admin/frontend/quality-guidelines.md", "reason": "类型/数据/禁止写法与验证命令，检查阶段依据"}
+{"file": ".trellis/spec/ui/frontend/quality-guidelines.md", "reason": "共享组件复用判断、starter 风险与命令"}
+{"file": ".trellis/spec/admin/frontend/index.md", "reason": "完成检查清单：pnpm check-types/lint/format:check + admin build"}
+{"file": ".trellis/spec/ui/frontend/index.md", "reason": "完成检查：client 边界、导出路径、无新增 app/contracts 依赖，双端手动验证"}
