@@ -11,6 +11,7 @@
 | [Admin 与 Web 认证合同](./auth-contracts.md) | 登录、token、safe session、profile   |
 | [角色管理合同](./role-management.md)         | 角色 DTO、状态和错误码               |
 | [用户管理合同](./user-management.md)         | 用户分页、创建、角色和错误码         |
+| [伴侣聊天合同](./companion-chat.md)          | AI SDK 消息、本地 LLM 配置和聊天请求 |
 | [边界与检查](./quality-guidelines.md)        | 包职责、禁止依赖、验证命令           |
 
 ## 开发前检查

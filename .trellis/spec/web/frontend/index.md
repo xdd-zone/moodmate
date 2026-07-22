@@ -4,14 +4,15 @@
 
 ## 指南
 
-| 文件                                        | 适用内容                         |
-| ------------------------------------------- | -------------------------------- |
-| [目录与数据边界](./directory-structure.md)  | 路由组、业务目录、跨包依赖       |
-| [页面与组件](./component-guidelines.md)     | 服务端组件、链接、文案和交互     |
-| [环境变量](./environment-variables.md)      | 服务端、客户端配置边界与校验     |
-| [HTTP 与 Query](./http-query-guidelines.md) | typed HTTP、响应错误、客户端缓存 |
-| [样式](./styling-guidelines.md)             | Tailwind 4、token、响应式和动效  |
-| [质量检查](./quality-guidelines.md)         | 禁止写法、类型、手动验证和命令   |
+| 文件                                        | 适用内容                           |
+| ------------------------------------------- | ---------------------------------- |
+| [目录与数据边界](./directory-structure.md)  | 路由组、业务目录、跨包依赖         |
+| [页面与组件](./component-guidelines.md)     | 服务端组件、链接、文案和交互       |
+| [环境变量](./environment-variables.md)      | 服务端、客户端配置边界与校验       |
+| [HTTP 与 Query](./http-query-guidelines.md) | typed HTTP、响应错误、客户端缓存   |
+| [样式](./styling-guidelines.md)             | Tailwind 4、token、响应式和动效    |
+| [伴侣聊天](./companion-chat.md)             | AI SDK 流、本地 LLM 配置和逐字显示 |
+| [质量检查](./quality-guidelines.md)         | 禁止写法、类型、手动验证和命令     |
 
 ## 开发前检查
 
