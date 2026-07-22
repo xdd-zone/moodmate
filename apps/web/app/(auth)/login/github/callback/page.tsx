@@ -4,10 +4,10 @@ import { Alert, AlertDescription } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Spinner } from "@repo/ui/spinner";
 import { ThemeToggle } from "@repo/ui/theme-toggle";
-import { GitFork } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { FaGithub } from "react-icons/fa6";
 
 import { readClientSession } from "@/src/auth/client-session";
 import {
@@ -99,7 +99,7 @@ function GithubCallbackStatus({
         <section className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center py-12 text-center">
           <div className="flex size-11 items-center justify-center rounded-md border border-border bg-surface">
             {errorMessage ? (
-              <GitFork aria-hidden="true" className="size-5" />
+              <FaGithub aria-hidden="true" className="size-5" />
             ) : (
               <Spinner aria-label="正在处理 GitHub 登录" className="size-5" />
             )}

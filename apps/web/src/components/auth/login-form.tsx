@@ -13,11 +13,11 @@ import {
 import { Field, FieldError, FieldLabel } from "@repo/ui/field";
 import { Input } from "@repo/ui/input";
 import { ThemeToggle } from "@repo/ui/theme-toggle";
-import { GitFork } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { FormEvent } from "react";
+import { FaGithub } from "react-icons/fa6";
 
 import { readClientSession } from "@/src/auth/client-session";
 import { loginWeb, redirectToGithubLogin } from "@/src/auth/login-client";
@@ -222,7 +222,7 @@ export function LoginForm() {
                   type="button"
                   variant="outline"
                 >
-                  <GitFork aria-hidden="true" className="size-4" />
+                  <FaGithub aria-hidden="true" className="size-4" />
                   {isGithubPending ? "正在前往 GitHub" : "使用 GitHub 登录"}
                 </Button>
 
