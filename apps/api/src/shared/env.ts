@@ -7,8 +7,14 @@ export interface ApiEnv {
   AUTH_ACCESS_SECRET: string;
   AUTH_REFRESH_SECRET: string;
   CORS_ORIGINS: string[];
+  DEEPSEEK_API_KEY?: string;
+  DEEPSEEK_BASE_URL: string;
+  DEEPSEEK_MODEL: string;
   SERVICE_NAME: "api";
 }
+
+const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
+const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash";
 
 export function getApiEnv(bindings: ApiBindings): ApiEnv {
   const appEnv = parseAppEnv(bindings.APP_ENV);
@@ -24,8 +30,34 @@ export function getApiEnv(bindings: ApiBindings): ApiEnv {
       "AUTH_REFRESH_SECRET",
     ),
     CORS_ORIGINS: parseCorsOrigins(bindings.CORS_ORIGINS, appEnv),
+    DEEPSEEK_API_KEY: parseOptionalValue(bindings.DEEPSEEK_API_KEY),
+    DEEPSEEK_BASE_URL: parseHttpUrl(
+      bindings.DEEPSEEK_BASE_URL ?? DEFAULT_DEEPSEEK_BASE_URL,
+      "DEEPSEEK_BASE_URL",
+    ),
+    DEEPSEEK_MODEL:
+      parseOptionalValue(bindings.DEEPSEEK_MODEL) ?? DEFAULT_DEEPSEEK_MODEL,
     SERVICE_NAME: "api",
   };
+}
+
+function parseOptionalValue(value: string | undefined): string | undefined {
+  const normalizedValue = value?.trim();
+  return normalizedValue || undefined;
+}
+
+function parseHttpUrl(value: string, name: string): string {
+  try {
+    const url = new URL(value);
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error();
+    }
+
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    throw new Error(`${name} 必须是有效的 HTTP URL。`);
+  }
 }
 
 function parseSecret(value: string | undefined, name: string): string {

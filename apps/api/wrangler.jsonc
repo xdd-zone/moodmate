@@ -6,6 +6,8 @@
   "keep_vars": true,
   "vars": {
     "APP_ENV": "development",
+    "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
+    "DEEPSEEK_MODEL": "deepseek-v4-flash",
   },
   "d1_databases": [
     {
@@ -23,11 +25,15 @@
     "test": {
       "vars": {
         "APP_ENV": "test",
+        "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
+        "DEEPSEEK_MODEL": "deepseek-v4-flash",
       },
     },
     "production": {
       "vars": {
         "APP_ENV": "production",
+        "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
+        "DEEPSEEK_MODEL": "deepseek-v4-flash",
       },
     },
   },

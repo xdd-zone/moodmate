@@ -7,6 +7,9 @@ export interface ApiBindings {
   AVATAR_BUCKET?: R2Bucket;
   CORS_ORIGINS?: string;
   DB?: D1Database;
+  DEEPSEEK_API_KEY?: string;
+  DEEPSEEK_BASE_URL?: string;
+  DEEPSEEK_MODEL?: string;
 }
 
 export interface ApiHonoEnv {

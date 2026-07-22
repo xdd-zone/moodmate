@@ -15,6 +15,17 @@ export type {
   ApiSuccess,
 } from "./common/response";
 export {
+  CompanionChatLlmConfigSchema,
+  CompanionChatMessageSchema,
+  CompanionChatPartSchema,
+  CompanionChatRequestSchema,
+} from "./chat/companion-chat.contract";
+export type {
+  CompanionChatLlmConfig,
+  CompanionChatMessage,
+  CompanionChatRequest,
+} from "./chat/companion-chat.contract";
+export {
   AdminDefaultAvatarCurrentResponseSchema,
   AdminDefaultAvatarHistoryResponseSchema,
   AdminDefaultAvatarSetCurrentRequestSchema,

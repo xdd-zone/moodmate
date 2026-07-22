@@ -2,3 +2,6 @@ APP_ENV=development
 AUTH_ACCESS_SECRET=local-access-secret-change-before-use-2026
 AUTH_REFRESH_SECRET=local-refresh-secret-change-before-use-2026
 CORS_ORIGINS=http://localhost:6153,http://localhost:6154
+DEEPSEEK_API_KEY=replace-with-deepseek-api-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-flash
