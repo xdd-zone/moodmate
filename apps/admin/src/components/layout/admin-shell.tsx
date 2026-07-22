@@ -33,7 +33,7 @@ type NavItem = {
 const NAV_ITEMS: readonly NavItem[] = [
   { icon: LayoutDashboard, label: "数据概览", soon: true },
   { count: "2.4k", href: "/moods", icon: Smile, label: "情绪记录" },
-  { count: "861", href: "/users", icon: Users, label: "用户管理" },
+  { href: "/users", icon: Users, label: "用户管理" },
   { href: "/roles", icon: ShieldCheck, label: "角色权限" },
   { href: "/settings", icon: Settings, label: "系统设置" },
 ] as const;
