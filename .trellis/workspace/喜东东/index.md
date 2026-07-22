@@ -7,6 +7,7 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
+
 - **Active File**: `journal-1.md`
 - **Total Sessions**: 22
 - **Last Active**: 2026-07-22
@@ -17,9 +18,11 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-| File | Lines | Status |
-|------|-------|--------|
-| `journal-1.md` | ~757 | Active |
+
+| File           | Lines | Status |
+| -------------- | ----- | ------ |
+| `journal-1.md` | ~757  | Active |
+
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -28,9 +31,9 @@
 
 <!-- @@@auto:session-history -->
 
-| # | Date | Title | Commits | Branch |
-|---|------|-------|---------|--------|
-| 22 | 2026-07-22 | 完成管理员资料与个人头像 | `e4ce2f9`, `ef632c5`, `6dac8cd`, `a5d85db` | `main` |
+| #   | Date       | Title                                                       | Commits                                    | Branch |
+| --- | ---------- | ----------------------------------------------------------- | ------------------------------------------ | ------ |
+| 22  | 2026-07-22 | 完成管理员资料与个人头像                                    | `e4ce2f9`, `ef632c5`, `6dac8cd`, `a5d85db` | `main` |
 | 21  | 2026-07-22 | 完成默认头像管理页面                                        | `8c0cbf8`, `00bc3b4`, `3ee8a03`            | `main` |
 | 20  | 2026-07-22 | 完成用户管理模块                                            | `4aaf510`, `8f21ead`, `0ac8787`, `0acdad1` | `main` |
 | 19  | 2026-07-21 | 角色管理页面接入真实 API                                    | `43761e8`, `944a3e7`                       | `main` |

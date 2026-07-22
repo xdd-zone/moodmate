@@ -719,7 +719,6 @@
 
 - None - task complete
 
-
 ## Session 22: 完成管理员资料与个人头像
 
 **Date**: 2026-07-22
@@ -737,8 +736,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `e4ce2f9` | (see git log) |
 | `ef632c5` | (see git log) |
 | `6dac8cd` | (see git log) |
