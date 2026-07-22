@@ -718,3 +718,40 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 22: 完成管理员资料与个人头像
+
+**Date**: 2026-07-22
+**Task**: 完成管理员资料与个人头像
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+新增 Admin 资料页、个人头像上传与显示回退，接入同源 BFF、Hono API、D1 和 R2；完成类型、Lint、Format、Admin build 及精简浏览器验证。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e4ce2f9` | (see git log) |
+| `ef632c5` | (see git log) |
+| `6dac8cd` | (see git log) |
+| `a5d85db` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
