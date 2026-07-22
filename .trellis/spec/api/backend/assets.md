@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-修改默认头像上传、头像读取、`AVATAR_BUCKET`、R2 key、版本历史、当前版本切换或 `default_avatar_versions` 时使用本规范。用户头像和 Agent 头像仍未实现。
+修改默认头像、管理员个人头像、头像读取、`AVATAR_BUCKET`、R2 key、版本切换、`default_avatar_versions` 或 `user_avatar_assets` 时使用本规范。Web 用户头像和 Agent 头像尚未实现。
 
 ## 2. 接口与数据签名
 
@@ -16,6 +16,10 @@ GET /rpc/admin/default-avatars/current
 GET /rpc/admin/default-avatars/history
 POST /rpc/admin/default-avatars/:versionId/current
 GET /rpc/assets/avatar?key=<default-avatar-key>
+
+GET  /rpc/admin/profile
+POST /rpc/admin/profile/avatar
+GET  /rpc/admin/profile/avatar?key=<resolved-avatar-key>
 ```
 
 ```ts
@@ -42,9 +46,22 @@ setCurrentDefaultAvatar(input: {
   database: D1Database | undefined;
   versionId: string;
 }): Promise<AdminDefaultAvatarSetCurrentResponse>;
+
+getAdminProfile(input: {
+  bindings: ApiBindings;
+  userId: string;
+}): Promise<AdminProfile>;
+
+uploadAdminProfileAvatar(input: {
+  bindings: ApiBindings;
+  file: File;
+  userId: string;
+}): Promise<AdminProfileAvatarUploadResponse>;
 ```
 
 数据库表为 `default_avatar_versions`。`0002_create_default_avatar_versions.sql` 建表，`0005_add_default_avatar_current.sql` 增加 `is_current` 和部分唯一索引。Drizzle schema 和 repository 位于 `apps/api/src/modules/assets/`。
+
+管理员个人头像使用 `user_avatar_assets`。`0006_create_user_avatar_assets.sql` 建表，`user_id` 和 `avatar_key` 分别唯一；Drizzle schema 和 repository 位于 `apps/api/src/modules/profile/`。
 
 ## 3. 合同
 
@@ -58,6 +75,12 @@ setCurrentDefaultAvatar(input: {
 - 上传时先写 R2，再用一个 D1 batch 清除旧当前标记并插入新当前版本。切换时先确认版本存在，再用一个 D1 batch 清除旧标记并设置目标版本。
 - 当前版本响应允许 `version: null`；历史列表按 `created_at_ms DESC, id DESC` 返回，条目包含 `id`、`key`、文件信息、上传时间和 `isCurrent`。
 - 上传成功返回统一 JSON 响应；读取成功直接返回 R2 body、HTTP metadata、`content-length` 和 `etag`。
+- 个人头像 key 固定为 `avatars/users/<userId>/<timestamp>-<uuidv7>.<jpg|png|webp>`。API 从已认证 session 读取 `userId` 并生成 key，浏览器不能提交或拼接 key。
+- `user_avatar_assets` 每个用户只保存一条当前头像元数据。替换时先读取旧记录、写入新 R2 对象、upsert D1，成功后再尽力删除旧对象；D1 失败时删除新对象。
+- Admin profile 优先返回个人头像；没有个人头像时返回当前默认头像；两者都不存在时返回 `avatar: null`。
+- `/rpc/admin/profile/avatar` 只读取当前用户的当前个人头像 key 或当前默认头像 key。格式合法但不属于当前用户、已被替换或不是当前默认版本的 key 返回 403。
+- 个人头像读取响应覆盖 R2 的 public metadata，固定使用 `private, max-age=31536000, immutable`，避免共享缓存绕过用户归属检查；默认头像公开读取继续使用 public 缓存。
+- 默认头像和个人头像共用 `avatar-storage.ts` 的 MIME、大小、R2 metadata、读取和删除逻辑，不能复制文件校验常量。
 
 ## 4. 校验与错误矩阵
 
@@ -73,6 +96,8 @@ setCurrentDefaultAvatar(input: {
 | version id 不存在               | 404  | `COMMON.NOT_FOUND`           |
 | R2 中没有该对象                 | 404  | `COMMON.NOT_FOUND`           |
 | `AVATAR_BUCKET` 缺失或 R2 失败  | 503  | `SYSTEM.STORAGE_UNAVAILABLE` |
+| 个人头像 key 格式无效           | 400  | `COMMON.INVALID_REQUEST`     |
+| 个人头像 key 不属于当前用户     | 403  | `AUTH.FORBIDDEN`             |
 
 R2 写入成功但 D1 插入失败时，service 必须尝试删除刚写入的对象。删除失败只写服务端日志，客户端不接收 bucket、key 以外的内部细节。
 
@@ -81,6 +106,9 @@ R2 写入成功但 D1 插入失败时，service 必须尝试删除刚写入的�
 - 正常：Admin 上传 PNG，API 返回 `.png` key；R2 metadata 与 D1 一致，新记录成为唯一当前版本，历史列表新增一条。
 - 基础：没有版本时当前接口返回 `version: null`、历史接口返回空数组；读取已上传 key 时响应带一年 immutable 缓存和 `etag`。
 - 错误：用两个独立数据库请求先清旧标记再设新标记，失败时会留下没有当前版本的中间状态；必须放进一个 D1 batch。
+- 正常：Admin 上传个人头像后，`user_avatar_assets` 仍只有该用户的一行，profile 返回 `source: "personal"`，旧对象删除失败只写服务端日志。
+- 基础：用户没有个人头像时返回当前默认头像；默认头像也不存在时返回 `avatar: null`，不生成占位 key。
+- 错误：只按 key 格式读取个人头像会允许已登录管理员读取其他用户对象；读取前必须把 key 与当前用户的 D1 记录比较。
 
 ## 6. 必做检查
 
@@ -103,6 +131,10 @@ pnpm format:check
 - 从包含多条旧记录的 `0002` 状态应用 `0005`，断言最新记录的 `is_current = 1`，其他记录为 `0`。
 - 尝试插入第二条 `is_current = 1`，断言部分唯一索引拒绝；切换后断言当前记录数仍为 `1`。
 - 验证当前、历史和设为当前端点都要求有效 Admin access；未知版本返回 404。
+- 依次上传 jpeg、png 和 webp 个人头像，断言返回 201、key 扩展名正确，并查询 `user_avatar_assets` 确认每个用户只有一行。
+- 验证错误 MIME、空文件和超限文件不会修改个人头像元数据；验证个人头像、默认头像和 `null` 三种 profile 结果。
+- 用另一个用户格式合法的个人头像 key 调用读取接口，断言 403；用当前 key 读取时断言 body、content type 和长度与上传文件一致。
+- 个人头像读取响应断言 `cache-control` 为 private；默认头像读取响应仍为 public。
 
 ## 7. 错误与正确写法
 
@@ -134,4 +166,16 @@ await db.batch([
     .set({ isCurrent: true })
     .where(eq(defaultAvatarVersions.id, versionId)),
 ]);
+```
+
+```ts
+// 错误：key 格式合法就直接从 R2 读取
+return getAvatarObject(bindings.AVATAR_BUCKET, key);
+
+// 正确：先确认 key 是当前用户的当前个人头像，再读取 R2
+const current = await findUserAvatarAsset(bindings.DB, userId);
+if (current?.avatarKey !== key) {
+  throw new AppError(BizCode.AUTH_FORBIDDEN, "不能读取该头像", 403);
+}
+return getAvatarObject(bindings.AVATAR_BUCKET, key);
 ```

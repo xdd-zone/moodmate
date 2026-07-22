@@ -45,6 +45,22 @@ export type {
   AdminSession,
 } from "./auth/admin-auth.contract";
 export {
+  AdminProfileAvatarReadQuerySchema,
+  AdminProfileAvatarSchema,
+  AdminProfileAvatarUploadResponseSchema,
+  AdminProfileSchema,
+  AdminProfileStatusSchema,
+  PERSONAL_AVATAR_MAX_BYTES,
+  PersonalAvatarContentTypeSchema,
+  PersonalAvatarKeySchema,
+} from "./auth/admin-profile.contract";
+export type {
+  AdminProfile,
+  AdminProfileAvatar,
+  AdminProfileAvatarReadQuery,
+  AdminProfileAvatarUploadResponse,
+} from "./auth/admin-profile.contract";
+export {
   RoleCreateRequestSchema,
   RoleListResponseSchema,
   RoleMutationResponseSchema,
