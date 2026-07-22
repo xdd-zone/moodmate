@@ -6,6 +6,7 @@ import {
   sqliteTable,
   text,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 import { users } from "@/modules/auth/auth.schema";
@@ -24,9 +25,15 @@ export const defaultAvatarVersions = sqliteTable(
       onDelete: "set null",
     }),
     createdAtMs: integer("created_at_ms").notNull(),
+    isCurrent: integer("is_current", { mode: "boolean" })
+      .notNull()
+      .default(false),
   },
   (table) => [
     unique("default_avatar_versions_avatar_key_unique").on(table.avatarKey),
+    uniqueIndex("default_avatar_versions_current_unique")
+      .on(table.isCurrent)
+      .where(sql`${table.isCurrent} = 1`),
     index("default_avatar_versions_created_at_ms_idx").on(table.createdAtMs),
     check(
       "default_avatar_versions_content_type_check",
@@ -45,3 +52,5 @@ export const defaultAvatarVersions = sqliteTable(
 
 export type NewDefaultAvatarVersionRecord =
   typeof defaultAvatarVersions.$inferInsert;
+export type DefaultAvatarVersionRecord =
+  typeof defaultAvatarVersions.$inferSelect;

@@ -1,15 +1,25 @@
 import {
   BizCode,
+  DEFAULT_AVATAR_MAX_BYTES,
+  type AdminDefaultAvatarCurrentResponse,
+  type AdminDefaultAvatarHistoryResponse,
+  type AdminDefaultAvatarSetCurrentResponse,
   type AdminDefaultAvatarUploadResponse,
+  type AdminDefaultAvatarVersion,
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
 
 import { AppError } from "@/shared/app-error";
 import type { ApiBindings } from "@/shared/hono-env";
 
-import { insertDefaultAvatarVersion } from "./assets.repository";
+import {
+  findCurrentDefaultAvatarVersion,
+  insertCurrentDefaultAvatarVersion,
+  listDefaultAvatarVersions,
+  setCurrentDefaultAvatarVersion,
+} from "./assets.repository";
+import type { DefaultAvatarVersionRecord } from "./assets.schema";
 
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const AVATAR_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 const avatarExtensionByMimeType = {
@@ -35,13 +45,14 @@ export async function uploadDefaultAvatar(input: {
   await putDefaultAvatar(bucket, avatarKey, input.file, extension);
 
   try {
-    await insertDefaultAvatarVersion(input.bindings.DB, {
+    await insertCurrentDefaultAvatarVersion(input.bindings.DB, {
       avatarKey,
       contentType: input.file.type as AvatarMimeType,
       createdAtMs: nowMs,
       createdByUserId: input.createdByUserId,
       fileName,
       id: uuidv7(),
+      isCurrent: true,
       sizeBytes: input.file.size,
     });
   } catch (error) {
@@ -53,6 +64,38 @@ export async function uploadDefaultAvatar(input: {
     key: avatarKey,
     updatedAtMs: nowMs,
   };
+}
+
+export async function getCurrentDefaultAvatar(
+  database: D1Database | undefined,
+): Promise<AdminDefaultAvatarCurrentResponse> {
+  const version = await findCurrentDefaultAvatarVersion(database);
+
+  return { version: version ? toDefaultAvatarVersion(version) : null };
+}
+
+export async function getDefaultAvatarHistory(
+  database: D1Database | undefined,
+): Promise<AdminDefaultAvatarHistoryResponse> {
+  const versions = await listDefaultAvatarVersions(database);
+
+  return { items: versions.map(toDefaultAvatarVersion) };
+}
+
+export async function setCurrentDefaultAvatar(input: {
+  database: D1Database | undefined;
+  versionId: string;
+}): Promise<AdminDefaultAvatarSetCurrentResponse> {
+  const version = await setCurrentDefaultAvatarVersion(
+    input.database,
+    input.versionId,
+  );
+
+  if (!version) {
+    throw new AppError(BizCode.COMMON_NOT_FOUND, "默认头像版本不存在", 404);
+  }
+
+  return { version: toDefaultAvatarVersion(version) };
 }
 
 export async function getDefaultAvatar(
@@ -92,7 +135,7 @@ function assertAvatarFile(file: File): AvatarExtension {
     throw new AppError(BizCode.COMMON_INVALID_REQUEST, "头像文件不能为空", 400);
   }
 
-  if (file.size > AVATAR_MAX_BYTES) {
+  if (file.size > DEFAULT_AVATAR_MAX_BYTES) {
     throw new AppError(
       BizCode.COMMON_INVALID_REQUEST,
       "头像文件不能超过 2 MiB",
@@ -159,4 +202,18 @@ function storageUnavailableError(): AppError {
     "头像存储不可用",
     503,
   );
+}
+
+function toDefaultAvatarVersion(
+  record: DefaultAvatarVersionRecord,
+): AdminDefaultAvatarVersion {
+  return {
+    contentType: record.contentType,
+    createdAtMs: record.createdAtMs,
+    fileName: record.fileName,
+    id: record.id,
+    isCurrent: record.isCurrent,
+    key: record.avatarKey,
+    sizeBytes: record.sizeBytes,
+  };
 }

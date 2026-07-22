@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import {
+  AdminDefaultAvatarSetCurrentRequestSchema,
   BizCode,
   DefaultAvatarReadQuerySchema,
   buildSuccess,
@@ -11,7 +12,13 @@ import { AppError } from "@/shared/app-error";
 import type { ApiHonoEnv } from "@/shared/hono-env";
 import { createMeta } from "@/shared/meta";
 
-import { getDefaultAvatar, uploadDefaultAvatar } from "./assets.service";
+import {
+  getCurrentDefaultAvatar,
+  getDefaultAvatar,
+  getDefaultAvatarHistory,
+  setCurrentDefaultAvatar,
+  uploadDefaultAvatar,
+} from "./assets.service";
 
 export function createAssetsRoute() {
   return new Hono<ApiHonoEnv>()
@@ -25,6 +32,52 @@ export function createAssetsRoute() {
 
       return c.json(buildSuccess(result, createMeta(c.var.requestId)), 201);
     })
+    .get(
+      "/rpc/admin/default-avatars/current",
+      requireAdminAccess,
+      async (c) => {
+        const result = await getCurrentDefaultAvatar(c.env.DB);
+
+        return c.json(buildSuccess(result, createMeta(c.var.requestId)));
+      },
+    )
+    .get(
+      "/rpc/admin/default-avatars/history",
+      requireAdminAccess,
+      async (c) => {
+        const result = await getDefaultAvatarHistory(c.env.DB);
+
+        return c.json(buildSuccess(result, createMeta(c.var.requestId)));
+      },
+    )
+    .post(
+      "/rpc/admin/default-avatars/:versionId/current",
+      requireAdminAccess,
+      zValidator(
+        "param",
+        AdminDefaultAvatarSetCurrentRequestSchema,
+        (result) => {
+          if (result.success) {
+            return;
+          }
+
+          throw new AppError(
+            BizCode.COMMON_INVALID_REQUEST,
+            "默认头像版本 id 无效",
+            400,
+            result.error.issues,
+          );
+        },
+      ),
+      async (c) => {
+        const result = await setCurrentDefaultAvatar({
+          database: c.env.DB,
+          versionId: c.req.valid("param").versionId,
+        });
+
+        return c.json(buildSuccess(result, createMeta(c.var.requestId)));
+      },
+    )
     .get(
       "/rpc/assets/avatar",
       zValidator("query", DefaultAvatarReadQuerySchema, (result) => {

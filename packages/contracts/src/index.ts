@@ -15,12 +15,24 @@ export type {
   ApiSuccess,
 } from "./common/response";
 export {
+  AdminDefaultAvatarCurrentResponseSchema,
+  AdminDefaultAvatarHistoryResponseSchema,
+  AdminDefaultAvatarSetCurrentRequestSchema,
+  AdminDefaultAvatarSetCurrentResponseSchema,
   AdminDefaultAvatarUploadResponseSchema,
+  AdminDefaultAvatarVersionSchema,
+  DEFAULT_AVATAR_MAX_BYTES,
+  DefaultAvatarContentTypeSchema,
   DefaultAvatarKeySchema,
   DefaultAvatarReadQuerySchema,
 } from "./assets/default-avatar.contract";
 export type {
+  AdminDefaultAvatarCurrentResponse,
+  AdminDefaultAvatarHistoryResponse,
+  AdminDefaultAvatarSetCurrentRequest,
+  AdminDefaultAvatarSetCurrentResponse,
   AdminDefaultAvatarUploadResponse,
+  AdminDefaultAvatarVersion,
   DefaultAvatarReadQuery,
 } from "./assets/default-avatar.contract";
 export {
