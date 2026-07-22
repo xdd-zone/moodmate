@@ -1,7 +1,14 @@
+# 应用环境
 APP_ENV=development
+
+# 身份认证
 AUTH_ACCESS_SECRET=local-access-secret-change-before-use-2026
 AUTH_REFRESH_SECRET=local-refresh-secret-change-before-use-2026
+
+# 跨域
 CORS_ORIGINS=http://localhost:6153,http://localhost:6154
+
+# DeepSeek
 DEEPSEEK_API_KEY=replace-with-deepseek-api-key
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-v4-flash
