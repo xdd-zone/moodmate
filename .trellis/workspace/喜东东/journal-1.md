@@ -824,3 +824,39 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: 完成 GitHub OAuth 登录
+
+**Date**: 2026-07-22
+**Task**: 完成 GitHub OAuth 登录
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+实现 Web GitHub OAuth 授权、账号绑定、一次性 ticket、统一 Web session/token 签发和回调页面；补充 D1 migration、Worker 配置、共享 contracts 与认证规范，并完成隔离 D1、重复 ticket、profile、refresh、响应式页面和项目质量检查。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f948063` | (see git log) |
+| `72b3f97` | (see git log) |
+| `cb885f2` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
