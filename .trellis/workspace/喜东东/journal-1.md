@@ -755,7 +755,6 @@
 
 - None - task complete
 
-
 ## Session 23: 完成 Admin Halo UI 改造
 
 **Date**: 2026-07-22
@@ -773,8 +772,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `c7e06c5` | (see git log) |
 | `802bb37` | (see git log) |
 | `352334b` | (see git log) |
@@ -790,7 +789,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 24: 实现 DeepSeek 伴侣聊天与本地 LLM 配置
 
@@ -809,8 +807,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `06fb8a2` | (see git log) |
 | `17242f9` | (see git log) |
 | `5da936c` | (see git log) |
