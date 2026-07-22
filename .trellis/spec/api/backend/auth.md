@@ -91,3 +91,72 @@ return loadActiveSession(
   claims.roles,
 );
 ```
+
+## 8. GitHub OAuth 登录
+
+### 8.1 适用范围
+
+修改 Web GitHub 授权 URL、API callback、账号绑定、一次性 ticket、OAuth 环境变量或登录页回调时使用本节。GitHub 只确认外部身份，最终登录态仍由 moodmate 的 Web session、access token 和 refresh token 提供。
+
+### 8.2 签名
+
+```text
+GET  /auth/web/github/authorize
+GET  /auth/web/github/callback?code=<code>&state=<state>
+POST /auth/web/github/ticket/login
+```
+
+```ts
+buildWebGithubAuthUrl(c): Promise<WebGithubAuthUrlResponse>;
+handleWebGithubCallback(c): Promise<Response>;
+loginWebWithGithubTicket(input): Promise<WebGithubTicketLoginResponse>;
+createWebSessionForOauthUser(input): Promise<WebAuthTokenResponse>;
+```
+
+D1 表为 `oauth_accounts` 和 `oauth_login_tickets`。账号唯一键是 `(provider, provider_user_id)`；ticket 原文不入库，只保存 SHA-256 base64url 摘要。
+
+### 8.3 合同
+
+- GitHub OAuth App 的 callback 必须指向 API 的 `/auth/web/github/callback`，不能指向 Web 页面。
+- authorize 返回 GitHub URL 和带 HMAC-SHA256 签名的 state。state 使用 `AUTH_REFRESH_SECRET`，有效期 10 分钟。
+- Web 把 state 写入 `sessionStorage`。API callback 校验签名和有效期，Web callback 再核对浏览器保存的 state。
+- GitHub scope 固定为 `read:user user:email`。账号匹配顺序固定为现有 GitHub 绑定、规范化邮箱、创建新用户；成功用户必须为 active 并拥有 active `web_user` 角色。
+- API callback 只把 2 分钟有效的一次性 ticket 和 state 放进 Web URL。GitHub access token、moodmate access token 和 refresh token 都不能进入 URL。
+- `POST /auth/web/github/ticket/login` 通过带 `used_at_ms IS NULL` 和 `expires_at_ms > now` 条件的 D1 update 原子标记 ticket，随后调用现有 Web session/token 签发函数。
+- `GITHUB_OAUTH_CLIENT_ID`、`GITHUB_OAUTH_CLIENT_SECRET`、`GITHUB_OAUTH_CALLBACK_URL` 和 `WEB_ORIGIN` 只在 GitHub 登录端点使用时必填。Client secret 只能放在 `.dev.vars` 或 Cloudflare secret。
+
+### 8.4 校验与错误矩阵
+
+| 条件                                       | HTTP 或 callback 结果                   | 业务码                     |
+| ------------------------------------------ | --------------------------------------- | -------------------------- |
+| GitHub 配置缺失或登录方式未启用            | authorize 返回 403                      | `AUTH.FORBIDDEN`           |
+| state 签名错误、过期或 callback 参数不完整 | 重定向到 Web callback，并带中文 `error` | 不签发 token               |
+| GitHub code 无效、资料无效或没有已验证邮箱 | 重定向到 Web callback，并带中文 `error` | 不签发 token               |
+| ticket 不存在、过期、摘要不匹配或已经使用  | ticket/login 返回 401                   | `AUTH.INVALID_CREDENTIALS` |
+| ticket 对应的用户、应用或必要角色失效      | ticket/login 返回 401                   | `AUTH.SESSION_REVOKED`     |
+
+### 8.5 正常、基础、错误案例
+
+- 正常：已绑定 GitHub 账号复用原用户，ticket 换得统一 Web 登录响应，profile 和 refresh 继续可用。
+- 基础：GitHub 已验证邮箱对应现有用户时增加 OAuth 绑定和 `web_user` 角色；没有对应用户时创建用户、主邮箱、绑定和角色。
+- 错误：把 GitHub client secret 放到 `NEXT_PUBLIC_*`，或把 moodmate token 直接拼进 Web callback URL。
+
+### 8.6 必做检查
+
+- 在隔离的 `--persist-to` 目录应用全部 migration 和 seed，确认 GitHub 登录方式已启用，`PRAGMA foreign_key_check` 返回空结果。
+- 检查 authorize URL 的 `client_id`、API callback、scope、state 和 `allow_signup=true`。
+- 插入一个已知摘要的有效 ticket，连续调用 ticket/login 两次；第一次必须创建完整 Web session，第二次必须返回 `AUTH.INVALID_CREDENTIALS`。
+- 用首次响应的 access token 请求 `/rpc/user/profile`，再用 refresh token 请求 `/auth/web/token/refresh`，两个请求都必须成功。
+- 检查 Web 登录页和 callback 页的移动端、桌面端、错误状态和键盘焦点。
+- 依次运行 `pnpm check-types`、`pnpm lint`、`pnpm format:check` 和 `pnpm --filter web build`。
+
+### 8.7 错误与正确写法
+
+```ts
+// 错误：callback 把长期 token 放进浏览器 URL
+callbackUrl.searchParams.set("accessToken", result.accessToken);
+
+// 正确：URL 只携带短时 ticket，Web 再调用 API 换登录态
+callbackUrl.searchParams.set("ticket", ticket);
+await loginWebWithGithubTicket({ ticket });
+```
