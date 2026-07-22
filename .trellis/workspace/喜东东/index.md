@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 20
+- **Total Sessions**: 21
 - **Last Active**: 2026-07-22
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~689 | Active |
+| `journal-1.md` | ~725 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -30,6 +30,7 @@
 
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 21 | 2026-07-22 | 完成默认头像管理页面 | `8c0cbf8`, `00bc3b4`, `3ee8a03` | `main` |
 | 20 | 2026-07-22 | 完成用户管理模块 | `4aaf510`, `8f21ead`, `0ac8787`, `0acdad1` | `main` |
 | 19 | 2026-07-21 | 角色管理页面接入真实 API | `43761e8`, `944a3e7` | `main` |
 | 18 | 2026-07-21 | 实现 Web Token 静默刷新 | `cc4ffc5` | `main` |

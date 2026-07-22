@@ -687,3 +687,39 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: 完成默认头像管理页面
+
+**Date**: 2026-07-22
+**Task**: 完成默认头像管理页面
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+实现默认头像版本管理、Admin BFF 与页面；验证 D1 唯一当前版本、上传、切换和刷新保持。根级 Format 仍受任务外既有 Trellis 文件影响。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8c0cbf8` | (see git log) |
+| `00bc3b4` | (see git log) |
+| `3ee8a03` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
