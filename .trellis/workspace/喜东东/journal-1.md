@@ -790,3 +790,39 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 24: 实现 DeepSeek 伴侣聊天与本地 LLM 配置
+
+**Date**: 2026-07-22
+**Task**: 实现 DeepSeek 伴侣聊天与本地 LLM 配置
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+为 Web 用户端加入受登录保护的伴侣聊天、DeepSeek V4 Flash 流式接口、Unicode 逐字显示和浏览器本地 OpenAI-compatible LLM 配置；补充跨层 Contract 与代码规范，并完成类型、Lint、任务文件 Format、Web 构建和命令行流式接口验证。按任务要求未做浏览器测试。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `06fb8a2` | (see git log) |
+| `17242f9` | (see git log) |
+| `5da936c` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
