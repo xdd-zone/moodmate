@@ -2,8 +2,9 @@ import { Hono } from "hono";
 
 import { createAssetsRoute } from "@/modules/assets";
 import { createAuthRoute } from "@/modules/auth";
-import { createSystemRoute } from "@/modules/system";
 import { createRoleRoute } from "@/modules/roles";
+import { createSystemRoute } from "@/modules/system";
+import { createUserRoute } from "@/modules/users";
 import type { ApiHonoEnv } from "@/shared/hono-env";
 
 export function createRoutes() {
@@ -11,6 +12,7 @@ export function createRoutes() {
     .route("/", createSystemRoute())
     .route("/", createAuthRoute())
     .route("/", createRoleRoute())
+    .route("/", createUserRoute())
     .route("/", createAssetsRoute());
 }
 

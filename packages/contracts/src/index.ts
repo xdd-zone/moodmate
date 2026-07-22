@@ -46,6 +46,23 @@ export type {
   RoleMutationResponse,
 } from "./auth/role-management.contract";
 export {
+  UserCreateRequestSchema,
+  UserListItemSchema,
+  UserListQuerySchema,
+  UserListResponseSchema,
+  UserMutationResponseSchema,
+  UserRoleSchema,
+  UserStatusSchema,
+} from "./auth/user-management.contract";
+export type {
+  UserCreateRequest,
+  UserListItem,
+  UserListQuery,
+  UserListResponse,
+  UserMutationResponse,
+  UserRole,
+} from "./auth/user-management.contract";
+export {
   AdminLogoutRequestSchema,
   AdminLogoutResponseSchema,
 } from "./auth/admin-logout.contract";
