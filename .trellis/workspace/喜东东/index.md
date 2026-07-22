@@ -7,6 +7,7 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
+
 - **Active File**: `journal-1.md`
 - **Total Sessions**: 21
 - **Last Active**: 2026-07-22
@@ -17,9 +18,11 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-| File | Lines | Status |
-|------|-------|--------|
-| `journal-1.md` | ~725 | Active |
+
+| File           | Lines | Status |
+| -------------- | ----- | ------ |
+| `journal-1.md` | ~725  | Active |
+
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -28,13 +31,13 @@
 
 <!-- @@@auto:session-history -->
 
-| # | Date | Title | Commits | Branch |
-|---|------|-------|---------|--------|
-| 21 | 2026-07-22 | 完成默认头像管理页面 | `8c0cbf8`, `00bc3b4`, `3ee8a03` | `main` |
-| 20 | 2026-07-22 | 完成用户管理模块 | `4aaf510`, `8f21ead`, `0ac8787`, `0acdad1` | `main` |
-| 19 | 2026-07-21 | 角色管理页面接入真实 API | `43761e8`, `944a3e7` | `main` |
-| 18 | 2026-07-21 | 实现 Web Token 静默刷新 | `cc4ffc5` | `main` |
-| 17 | 2026-07-21 | 完成 Admin Open Design 页面重构 | `6092757` | `main` |
+| #   | Date       | Title                                                       | Commits                                    | Branch |
+| --- | ---------- | ----------------------------------------------------------- | ------------------------------------------ | ------ |
+| 21  | 2026-07-22 | 完成默认头像管理页面                                        | `8c0cbf8`, `00bc3b4`, `3ee8a03`            | `main` |
+| 20  | 2026-07-22 | 完成用户管理模块                                            | `4aaf510`, `8f21ead`, `0ac8787`, `0acdad1` | `main` |
+| 19  | 2026-07-21 | 角色管理页面接入真实 API                                    | `43761e8`, `944a3e7`                       | `main` |
+| 18  | 2026-07-21 | 实现 Web Token 静默刷新                                     | `cc4ffc5`                                  | `main` |
+| 17  | 2026-07-21 | 完成 Admin Open Design 页面重构                             | `6092757`                                  | `main` |
 | 16  | 2026-07-20 | 完成 MoodMate 后台登录页改造                                | `b6f87d8`, `4ee28b7`, `458775d`, `6c196b0` | `main` |
 | 15  | 2026-07-19 | admin 按设计稿全量重构：新增用户/系统设置页，重构角色权限页 | `9fb902d`, `5d2125f`                       | `main` |
 | 14  | 2026-07-18 | 实现 MoodMate 情绪记录后台设计                              | `cbb5c6d`                                  | `main` |

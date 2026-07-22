@@ -548,7 +548,6 @@
 
 - None - task complete
 
-
 ## Session 17: 完成 Admin Open Design 页面重构
 
 **Date**: 2026-07-21
@@ -566,8 +565,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `6092757` | (see git log) |
 
 ### Testing
@@ -581,7 +580,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 18: 实现 Web Token 静默刷新
 
@@ -600,8 +598,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `cc4ffc5` | (see git log) |
 
 ### Testing
@@ -615,7 +613,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 19: 角色管理页面接入真实 API
 
@@ -634,8 +631,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `43761e8` | (see git log) |
 | `944a3e7` | (see git log) |
 
@@ -650,7 +647,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 20: 完成用户管理模块
 
@@ -669,8 +665,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `4aaf510` | (see git log) |
 | `8f21ead` | (see git log) |
 | `0ac8787` | (see git log) |
@@ -687,7 +683,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 21: 完成默认头像管理页面
 
@@ -706,8 +701,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `8c0cbf8` | (see git log) |
 | `00bc3b4` | (see git log) |
 | `3ee8a03` | (see git log) |
