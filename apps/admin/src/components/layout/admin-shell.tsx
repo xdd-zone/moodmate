@@ -4,7 +4,7 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { ThemeMenu } from "@repo/ui/theme-menu";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   LayoutDashboard,
@@ -21,7 +21,15 @@ import { usePathname, useRouter } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
 
 import { logoutAdmin } from "@/src/auth/api";
-import { adminSessionKeys } from "@/src/auth/session.query";
+import {
+  adminSessionKeys,
+  adminSessionQueryOptions,
+} from "@/src/auth/session.query";
+import {
+  adminProfileKeys,
+  adminProfileQueryOptions,
+} from "@/src/api/profile.query";
+import { AdminAvatar } from "@/src/components/profile/admin-avatar";
 
 type NavItem = {
   count?: string;
@@ -44,10 +52,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
+  const profileQuery = useQuery(adminProfileQueryOptions());
+  const sessionQuery = useQuery(adminSessionQueryOptions());
+  const displayName = sessionQuery.data?.displayName ?? "管理员";
   const logoutMutation = useMutation({
     mutationFn: logoutAdmin,
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: adminSessionKeys.all });
+      queryClient.removeQueries({ queryKey: adminProfileKeys.all });
       router.replace("/login");
       router.refresh();
     },
@@ -97,12 +109,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <span aria-hidden="true" className="admin-notice-dot" />
             </Button>
             <ThemeMenu className="admin-theme-menu" />
-            <div className="admin-user-chip">
-              <span aria-hidden="true" className="admin-avatar">
-                喜
-              </span>
-              <span className="admin-user-name">运营喜东东</span>
-            </div>
+            <Link
+              aria-label={`查看${displayName}的管理员资料`}
+              className="admin-user-chip"
+              href="/profile"
+            >
+              <AdminAvatar
+                alt=""
+                avatar={profileQuery.data?.avatar ?? null}
+                className="admin-avatar"
+                displayName={displayName}
+              />
+              <span className="admin-user-name">{displayName}</span>
+            </Link>
             <Button
               aria-label={logoutMutation.isPending ? "正在退出" : "退出登录"}
               className="admin-icon-button"

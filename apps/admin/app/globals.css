@@ -187,6 +187,20 @@ a {
   border-radius: 999px;
   background: var(--color-background);
   padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  color: var(--color-foreground);
+  outline: none;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.admin-user-chip:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+}
+
+.admin-user-chip:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-focus);
 }
 
 .admin-avatar {
