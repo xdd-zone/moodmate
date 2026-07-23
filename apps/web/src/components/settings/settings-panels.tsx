@@ -20,7 +20,6 @@ import {
   companionChatKeys,
   companionMemoriesQueryOptions,
 } from "@/src/api/chat.query";
-import { clearLocalLlmConfig } from "@/src/auth/local-llm-config";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
@@ -113,42 +112,6 @@ export function AppearancePanel() {
         </div>
         <ThemeToggle />
       </div>
-    </PanelShell>
-  );
-}
-
-export function DataPanel() {
-  const [notice, setNotice] = useState("");
-
-  function handleClear() {
-    clearLocalLlmConfig();
-    setNotice("本地 LLM 配置和 API Key 已删除。");
-  }
-
-  return (
-    <PanelShell description="管理保存在本浏览器的数据。" title="数据管理">
-      <div className="grid gap-4 py-6">
-        <div className="rounded-md border border-border bg-surface px-4 py-4">
-          <p className="text-sm font-medium">本地 LLM 配置</p>
-          <p className="mt-1 text-xs leading-5 text-muted">
-            清除保存在当前浏览器的 Provider、Base URL、Model 和 API Key。
-          </p>
-          <Button
-            className="mt-4 min-h-11"
-            onClick={handleClear}
-            type="button"
-            variant="danger"
-          >
-            <Trash2 aria-hidden="true" className="size-4" />
-            删除本地配置
-          </Button>
-        </div>
-      </div>
-      {notice ? (
-        <p className="text-sm text-muted" role="status">
-          {notice}
-        </p>
-      ) : null}
     </PanelShell>
   );
 }

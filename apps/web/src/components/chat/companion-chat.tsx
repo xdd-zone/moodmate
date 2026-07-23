@@ -13,7 +13,6 @@ import {
   Bot,
   Brain,
   ChevronLeft,
-  Database,
   History,
   LoaderCircle,
   MessageCircle,
@@ -21,7 +20,6 @@ import {
   Search,
   Settings2,
   SlidersHorizontal,
-  Sparkles,
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -32,10 +30,8 @@ import {
   companionConversationQueryOptions,
 } from "@/src/api/chat.query";
 import { clearClientSession } from "@/src/auth/client-session";
-import { readEnabledLocalLlmConfig } from "@/src/auth/local-llm-config";
 import {
   AppearancePanel,
-  DataPanel,
   GeneralPanel,
   MemoryPanel,
   ProfilePanel,
@@ -45,16 +41,9 @@ import { fetchWithClientSession } from "@/src/lib/http";
 
 import { ChatComposer } from "./chat-composer";
 import { ChatConversation } from "./chat-conversation";
-import { LlmSettings } from "./llm-settings";
 
 type AppMode = "chat" | "settings";
-type SettingsSection =
-  | "profile"
-  | "general"
-  | "llm"
-  | "memory"
-  | "appearance"
-  | "data";
+type SettingsSection = "profile" | "general" | "memory" | "appearance";
 
 const AGENT_NAME = "MoodMate";
 const AGENT_SUBTITLE = "你的 AI 伴侣";
@@ -73,17 +62,13 @@ interface SettingsMenuEntry {
 const settingsMenu: SettingsMenuEntry[] = [
   { icon: UserRound, label: "个人资料", section: "profile" },
   { icon: SlidersHorizontal, label: "General", section: "general" },
-  { icon: Sparkles, label: "LLM 配置", section: "llm" },
   { icon: Brain, label: "记忆", section: "memory" },
   { icon: Palette, label: "Appearance", section: "appearance" },
-  { icon: Database, label: "数据管理", section: "data" },
 ];
 
 const settingsTitle: Record<SettingsSection, string> = {
   appearance: "Appearance",
-  data: "数据管理",
   general: "General",
-  llm: "LLM 配置",
   memory: "记忆",
   profile: "个人资料",
 };
@@ -131,15 +116,12 @@ function CompanionChatAppInner({
         api: `${getWebClientEnv().NEXT_PUBLIC_API_BASE_URL}/rpc/chat/companion`,
         fetch: fetchWithClientSession,
         prepareSendMessagesRequest({ api, body, messages }) {
-          const llmConfig = readEnabledLocalLlmConfig();
-
           return {
             api,
             body: {
               ...body,
               conversationId: serverConversation.conversationId,
               messages: messages.slice(-20),
-              ...(llmConfig ? { llmConfig } : {}),
             },
           };
         },
@@ -336,11 +318,6 @@ function CompanionChatAppInner({
             messages={messages}
             onBack={() => setMobileDetailOpen(false)}
             onDraftChange={setDraft}
-            onOpenLlmSettings={() => {
-              setMode("settings");
-              setSettingsSection("llm");
-              setMobileDetailOpen(true);
-            }}
             onLoadMoreHistory={() => void loadMoreHistory()}
             onSend={handleSend}
             onStop={() => void stop()}
@@ -374,7 +351,6 @@ function ChatMode({
   messages,
   onBack,
   onDraftChange,
-  onOpenLlmSettings,
   onLoadMoreHistory,
   onSend,
   onStop,
@@ -391,7 +367,6 @@ function ChatMode({
   messages: UIMessage[];
   onBack: () => void;
   onDraftChange: (value: string) => void;
-  onOpenLlmSettings: () => void;
   onLoadMoreHistory: () => void;
   onSend: () => void;
   onStop: () => void;
@@ -457,17 +432,7 @@ function ChatMode({
             className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm sm:mx-6"
             role="alert"
           >
-            <p className="min-w-0 flex-1">
-              回复生成失败。请检查 LLM 配置或稍后重试。
-            </p>
-            <Button
-              onClick={onOpenLlmSettings}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              检查配置
-            </Button>
+            <p className="min-w-0 flex-1">回复生成失败，请稍后重试。</p>
             <Button
               onClick={clearError}
               size="sm"
@@ -518,10 +483,8 @@ function SettingsMode({
           />
         ) : null}
         {section === "general" ? <GeneralPanel /> : null}
-        {section === "llm" ? <LlmSettings /> : null}
         {section === "memory" ? <MemoryPanel /> : null}
         {section === "appearance" ? <AppearancePanel /> : null}
-        {section === "data" ? <DataPanel /> : null}
       </div>
     </>
   );
