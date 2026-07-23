@@ -6,6 +6,7 @@ import { ThemeToggle } from "@repo/ui/theme-toggle";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
+  Bot,
   Images,
   LayoutDashboard,
   LogOut,
@@ -49,6 +50,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/users", icon: Users, label: "用户管理" },
   { href: "/roles", icon: ShieldCheck, label: "角色权限" },
   { href: "/default-avatar", icon: Images, label: "默认头像" },
+  { href: "/llm-configs", icon: Bot, label: "模型配置" },
   { href: "/settings", icon: Settings, label: "系统设置" },
 ] as const;
 
