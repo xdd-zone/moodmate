@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 27
+- **Total Sessions**: 28
 - **Last Active**: 2026-07-23
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~929 | Active |
+| `journal-1.md` | ~967 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -30,6 +30,7 @@
 
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 28 | 2026-07-23 | 收敛 LLM 配置到 admin | `31ba34a`, `9215a0e`, `caf6e3d`, `9053c44`, `1db3b85` | `main` |
 | 27 | 2026-07-23 | Agent 聊天安全边界与意图识别 | `3610a58` | `main` |
 | 26 | 2026-07-23 | 实现 Agent 记忆系统 | `2049232` | `main` |
 | 25  | 2026-07-22 | 完成 GitHub OAuth 登录                                      | `f948063`, `72b3f97`, `cb885f2`            | `main` |

@@ -927,3 +927,41 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 28: 收敛 LLM 配置到 admin
+
+**Date**: 2026-07-23
+**Task**: 收敛 LLM 配置到 admin
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+移除 web 端浏览器本地 LLM 配置，把大模型配置收敛到 admin 后台统一管理。后端只走 OpenAI 协议：新增 llm-config 模块（6 个 RPC）、AES-GCM 加密存储 apiKey（主密钥走 LLM_CONFIG_ENC_KEY）、0009 迁移建 llm_provider_configs 表并用部分唯一索引保证至多一条激活配置；chat 与安全/意图分析改从激活配置解析 provider，isPlatformDeepSeek 换成通用 disableThinking；删除 DEEPSEEK_* 环境变量。admin 新增配置管理页（列表/新建/编辑/激活/删除/测试连接）+ BFF。三项质量门禁全绿，本地 D1 迁移验证通过。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `31ba34a` | (see git log) |
+| `9215a0e` | (see git log) |
+| `caf6e3d` | (see git log) |
+| `9053c44` | (see git log) |
+| `1db3b85` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
