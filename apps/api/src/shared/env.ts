@@ -7,18 +7,13 @@ export interface ApiEnv {
   AUTH_ACCESS_SECRET: string;
   AUTH_REFRESH_SECRET: string;
   CORS_ORIGINS: string[];
-  DEEPSEEK_API_KEY?: string;
-  DEEPSEEK_BASE_URL: string;
-  DEEPSEEK_MODEL: string;
   GITHUB_OAUTH_CALLBACK_URL?: string;
   GITHUB_OAUTH_CLIENT_ID?: string;
   GITHUB_OAUTH_CLIENT_SECRET?: string;
+  LLM_CONFIG_ENC_KEY: string;
   SERVICE_NAME: "api";
   WEB_ORIGIN?: string;
 }
-
-const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
-const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash";
 
 export function getApiEnv(bindings: ApiBindings): ApiEnv {
   const appEnv = parseAppEnv(bindings.APP_ENV);
@@ -34,13 +29,7 @@ export function getApiEnv(bindings: ApiBindings): ApiEnv {
       "AUTH_REFRESH_SECRET",
     ),
     CORS_ORIGINS: parseCorsOrigins(bindings.CORS_ORIGINS, appEnv),
-    DEEPSEEK_API_KEY: parseOptionalValue(bindings.DEEPSEEK_API_KEY),
-    DEEPSEEK_BASE_URL: parseHttpUrl(
-      bindings.DEEPSEEK_BASE_URL ?? DEFAULT_DEEPSEEK_BASE_URL,
-      "DEEPSEEK_BASE_URL",
-    ),
-    DEEPSEEK_MODEL:
-      parseOptionalValue(bindings.DEEPSEEK_MODEL) ?? DEFAULT_DEEPSEEK_MODEL,
+    LLM_CONFIG_ENC_KEY: parseEncryptionKey(bindings.LLM_CONFIG_ENC_KEY),
     GITHUB_OAUTH_CALLBACK_URL: parseOptionalHttpUrl(
       bindings.GITHUB_OAUTH_CALLBACK_URL,
       "GITHUB_OAUTH_CALLBACK_URL",
@@ -87,6 +76,28 @@ function parseSecret(value: string | undefined, name: string): string {
   }
 
   return value;
+}
+
+function parseEncryptionKey(value: string | undefined): string {
+  const normalizedValue = value?.trim();
+
+  if (!normalizedValue) {
+    throw new Error("LLM_CONFIG_ENC_KEY 未配置。");
+  }
+
+  let decodedLength: number;
+
+  try {
+    decodedLength = atob(normalizedValue).length;
+  } catch {
+    throw new Error("LLM_CONFIG_ENC_KEY 必须是 base64 编码字符串。");
+  }
+
+  if (decodedLength !== 32) {
+    throw new Error("LLM_CONFIG_ENC_KEY 解码后必须是 32 字节（AES-256）。");
+  }
+
+  return normalizedValue;
 }
 
 function parseAppEnv(value: string | undefined): ApiEnvValue {

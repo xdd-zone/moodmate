@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { createAssetsRoute } from "@/modules/assets";
 import { createAuthRoute } from "@/modules/auth";
 import { createChatRoute } from "@/modules/chat";
+import { createLlmConfigRoute } from "@/modules/llm-config";
 import { createProfileRoute } from "@/modules/profile";
 import { createRoleRoute } from "@/modules/roles";
 import { createSystemRoute } from "@/modules/system";
@@ -14,6 +15,7 @@ export function createRoutes() {
     .route("/", createSystemRoute())
     .route("/", createAuthRoute())
     .route("/", createChatRoute())
+    .route("/", createLlmConfigRoute())
     .route("/", createProfileRoute())
     .route("/", createRoleRoute())
     .route("/", createUserRoute())

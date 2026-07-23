@@ -7,12 +7,10 @@ export interface ApiBindings {
   AVATAR_BUCKET?: R2Bucket;
   CORS_ORIGINS?: string;
   DB?: D1Database;
-  DEEPSEEK_API_KEY?: string;
-  DEEPSEEK_BASE_URL?: string;
-  DEEPSEEK_MODEL?: string;
   GITHUB_OAUTH_CALLBACK_URL?: string;
   GITHUB_OAUTH_CLIENT_ID?: string;
   GITHUB_OAUTH_CLIENT_SECRET?: string;
+  LLM_CONFIG_ENC_KEY?: string;
   WEB_ORIGIN?: string;
 }
 

@@ -10,9 +10,7 @@ interface __BaseEnv_CloudflareBindings {
 	GITHUB_OAUTH_CALLBACK_URL: string;
 	WEB_ORIGIN: string;
 	CORS_ORIGINS: string;
-	DEEPSEEK_API_KEY: string;
-	DEEPSEEK_BASE_URL: string;
-	DEEPSEEK_MODEL: string;
+	LLM_CONFIG_ENC_KEY: string;
 	AVATAR_BUCKET?: R2Bucket;
 	DB?: D1Database;
 }
@@ -29,9 +27,7 @@ declare namespace Cloudflare {
 		GITHUB_OAUTH_CALLBACK_URL: string;
 		WEB_ORIGIN: string;
 		CORS_ORIGINS: string;
-		DEEPSEEK_API_KEY: string;
-		DEEPSEEK_BASE_URL: string;
-		DEEPSEEK_MODEL: string;
+		LLM_CONFIG_ENC_KEY: string;
 	}
 	interface ProductionEnv {
 		APP_ENV: string;
@@ -42,9 +38,7 @@ declare namespace Cloudflare {
 		GITHUB_OAUTH_CALLBACK_URL: string;
 		WEB_ORIGIN: string;
 		CORS_ORIGINS: string;
-		DEEPSEEK_API_KEY: string;
-		DEEPSEEK_BASE_URL: string;
-		DEEPSEEK_MODEL: string;
+		LLM_CONFIG_ENC_KEY: string;
 	}
 	interface Env extends __BaseEnv_CloudflareBindings {}
 }
