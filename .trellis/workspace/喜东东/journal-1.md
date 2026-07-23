@@ -893,3 +893,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: Agent 聊天安全边界与意图识别
+
+**Date**: 2026-07-23
+**Task**: Agent 聊天安全边界与意图识别
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+在 MoodMate 伴侣聊天回复前接入安全边界判断(47章)和 LangGraph 意图识别(48章)。安全/意图 schema 放 @repo/contracts，分析代码独立在 chat.analysis.ts，走 @langchain/openai + langgraph 结构化输出，多 method 重试+保守兜底。结果写入 metadata_json，refuse/crisis_support 直接返回固定回复，caution/redirect/soft_boundary 注入 system prompt，allowMemoryExtraction 门控记忆抽取。排查并修复了结构化输出全程走兜底的问题：根因是 prompt 缺少显式字段契约，DeepSeek 在 jsonMode 下瞎编字段名；补上字段名+枚举+类型契约后，实测 deepseek-v4-flash function calling 和 json mode 均正常，metadata_json 落库为真实分析结果。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3610a58` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
