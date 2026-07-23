@@ -2,22 +2,30 @@
 
 import { useChat } from "@ai-sdk/react";
 import type { WebSession, WebUserProfile } from "@repo/contracts";
-import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
-import { ThemeToggle } from "@repo/ui/theme-toggle";
 import { TextStreamChatTransport, type UIMessage } from "ai";
 import {
   Bot,
   ChevronLeft,
-  LogOut,
+  Database,
   MessageCircle,
+  Palette,
+  Search,
   Settings2,
+  SlidersHorizontal,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { clearClientSession } from "@/src/auth/client-session";
 import { readEnabledLocalLlmConfig } from "@/src/auth/local-llm-config";
+import {
+  AppearancePanel,
+  DataPanel,
+  GeneralPanel,
+  ProfilePanel,
+} from "@/src/components/settings/settings-panels";
 import { getWebClientEnv } from "@/src/env/client";
 import { fetchWithClientSession } from "@/src/lib/http";
 
@@ -25,20 +33,43 @@ import { ChatComposer } from "./chat-composer";
 import { ChatConversation } from "./chat-conversation";
 import { LlmSettings } from "./llm-settings";
 
-type AppView = "chat" | "settings" | "account";
+type AppMode = "chat" | "settings";
+type SettingsSection = "profile" | "general" | "llm" | "appearance" | "data";
+
+const AGENT_NAME = "MoodMate";
+const AGENT_SUBTITLE = "你的 AI 伴侣";
 
 interface CompanionChatAppProps {
   profile: WebUserProfile;
   session: WebSession;
 }
 
-const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+interface SettingsMenuEntry {
+  icon: typeof MessageCircle;
+  label: string;
+  section: SettingsSection;
+}
+
+const settingsMenu: SettingsMenuEntry[] = [
+  { icon: UserRound, label: "个人资料", section: "profile" },
+  { icon: SlidersHorizontal, label: "General", section: "general" },
+  { icon: Sparkles, label: "LLM 配置", section: "llm" },
+  { icon: Palette, label: "Appearance", section: "appearance" },
+  { icon: Database, label: "数据管理", section: "data" },
+];
+
+const settingsTitle: Record<SettingsSection, string> = {
+  appearance: "Appearance",
+  data: "数据管理",
+  general: "General",
+  llm: "LLM 配置",
+  profile: "个人资料",
+};
 
 export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
-  const [activeView, setActiveView] = useState<AppView>("chat");
+  const [mode, setMode] = useState<AppMode>("chat");
+  const [settingsSection, setSettingsSection] =
+    useState<SettingsSection>("profile");
   const [draft, setDraft] = useState("");
   const transport = useMemo(
     () =>
@@ -82,236 +113,327 @@ export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
     window.location.replace("/login");
   }
 
+  const lastMessage = messages.at(-1);
+  const lastMessageText =
+    lastMessage?.parts
+      .flatMap((part) => (part.type === "text" ? [part.text] : []))
+      .join("")
+      .trim() ?? "";
+  const conversationPreview = lastMessageText || AGENT_SUBTITLE;
+
+  // 移动端：聊天模式默认展示会话列表，进入会话后隐藏列表；设置模式同理展示菜单。
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+
   return (
-    <main className="h-svh overflow-hidden bg-background text-foreground lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
-      <aside className="hidden min-h-0 border-r border-border bg-surface lg:flex lg:flex-col">
-        <div className="flex min-h-16 items-center gap-2 border-b border-border px-5">
-          <span className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
-            <MessageCircle aria-hidden="true" className="size-4" />
+    <main className="h-svh overflow-hidden bg-background text-foreground lg:grid lg:grid-cols-[20rem_minmax(0,1fr)]">
+      <aside
+        className={`min-h-0 flex-col border-r border-border bg-surface lg:flex ${
+          mobileDetailOpen ? "hidden lg:flex" : "flex"
+        }`}
+      >
+        <div className="flex min-h-16 items-center gap-2 px-4">
+          <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
+            {mode === "chat" ? (
+              <MessageCircle aria-hidden="true" className="size-4" />
+            ) : (
+              <Settings2 aria-hidden="true" className="size-4" />
+            )}
           </span>
-          <span className="font-semibold">moodmate</span>
+          <span className="text-lg font-semibold">
+            {mode === "chat" ? AGENT_NAME : "设置"}
+          </span>
         </div>
 
-        <nav aria-label="应用导航" className="grid gap-1 p-3">
-          <NavButton
-            active={activeView === "chat"}
-            icon={MessageCircle}
-            label="对话"
-            onClick={() => setActiveView("chat")}
-          />
-          <NavButton
-            active={activeView === "settings"}
-            icon={Settings2}
-            label="LLM 设置"
-            onClick={() => setActiveView("settings")}
-          />
-          <NavButton
-            active={activeView === "account"}
-            icon={UserRound}
-            label="账号"
-            onClick={() => setActiveView("account")}
-          />
-        </nav>
+        <div className="px-3 pb-3">
+          <div className="flex items-center gap-2 rounded-full bg-surface-muted px-3.5 py-2 text-sm text-muted">
+            <Search aria-hidden="true" className="size-4 shrink-0" />
+            <span className="truncate">搜索</span>
+          </div>
+        </div>
 
-        <div className="mt-2 border-y border-border p-3">
-          <button
-            className="flex w-full items-center gap-3 rounded-md bg-primary-subtle px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            onClick={() => setActiveView("chat")}
-            type="button"
+        {mode === "chat" ? (
+          <nav
+            aria-label="会话列表"
+            className="min-h-0 flex-1 overflow-y-auto px-2"
           >
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-              <Bot aria-hidden="true" className="size-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold">MoodMate</span>
-              <span className="block truncate text-xs text-muted">
-                你的 AI 伴侣
-              </span>
-            </span>
-          </button>
-        </div>
+            <ConversationItem
+              active
+              name={AGENT_NAME}
+              onClick={() => setMobileDetailOpen(true)}
+              preview={conversationPreview}
+            />
+          </nav>
+        ) : (
+          <nav
+            aria-label="设置菜单"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2"
+          >
+            {settingsMenu.map((entry) => (
+              <SettingsMenuItem
+                active={settingsSection === entry.section}
+                icon={entry.icon}
+                key={entry.section}
+                label={entry.label}
+                onClick={() => {
+                  setSettingsSection(entry.section);
+                  setMobileDetailOpen(true);
+                }}
+              />
+            ))}
+          </nav>
+        )}
 
-        <div className="mt-auto grid gap-3 border-t border-border p-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-muted text-sm font-semibold">
-              {profile.displayName.slice(0, 1)}
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">
-                {profile.displayName}
-              </span>
-              <span className="block truncate text-xs text-muted">
-                {profile.email}
-              </span>
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <ThemeToggle />
-            <Button
-              aria-label="退出登录"
-              onClick={handleLogout}
-              size="icon"
-              title="退出登录"
-              variant="ghost"
-            >
-              <LogOut aria-hidden="true" className="size-4" />
-            </Button>
-          </div>
+        <div className="flex items-center gap-1 border-t border-border px-3 py-2.5">
+          <SidebarModeButton
+            active={mode === "chat"}
+            icon={MessageCircle}
+            label="聊天"
+            onClick={() => {
+              setMode("chat");
+              setMobileDetailOpen(false);
+            }}
+          />
+          <SidebarModeButton
+            active={mode === "settings"}
+            icon={Settings2}
+            label="设置"
+            onClick={() => {
+              setMode("settings");
+              setMobileDetailOpen(false);
+            }}
+          />
         </div>
       </aside>
 
-      <div className="flex h-svh min-h-0 flex-col">
-        <header className="flex min-h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 lg:hidden">
-          {activeView === "chat" ? (
-            <span className="grid size-8 place-items-center rounded-full bg-primary-subtle text-primary-strong">
-              <Bot aria-hidden="true" className="size-4" />
-            </span>
-          ) : (
-            <button
-              aria-label="返回对话"
-              className="grid size-9 place-items-center rounded-md text-muted outline-none hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus"
-              onClick={() => setActiveView("chat")}
-              title="返回对话"
-              type="button"
-            >
-              <ChevronLeft aria-hidden="true" className="size-5" />
-            </button>
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">
-              {activeView === "chat"
-                ? "MoodMate"
-                : activeView === "settings"
-                  ? "LLM 设置"
-                  : "账号"}
-            </p>
-            {activeView === "chat" ? (
-              <p className="text-xs text-muted">AI 伴侣</p>
-            ) : null}
-          </div>
-          <ThemeToggle className="ml-auto" />
-        </header>
-
-        {activeView === "chat" ? (
-          <section className="flex min-h-0 flex-1 flex-col">
-            <header className="hidden min-h-16 shrink-0 items-center gap-3 border-b border-border px-6 lg:flex">
-              <span className="grid size-9 place-items-center rounded-full bg-primary-subtle text-primary-strong">
-                <Bot aria-hidden="true" className="size-4" />
-              </span>
-              <div>
-                <h1 className="text-sm font-semibold">MoodMate</h1>
-                <p className="text-xs text-muted">AI 伴侣</p>
-              </div>
-              <Badge className="ml-auto" variant="outline">
-                流式对话
-              </Badge>
-            </header>
-
-            <ChatConversation messages={messages} status={status} />
-
-            {error ? (
-              <div
-                className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm sm:mx-6"
-                role="alert"
-              >
-                <p className="min-w-0 flex-1">
-                  回复生成失败。请检查 LLM 配置或稍后重试。
-                </p>
-                <Button
-                  onClick={() => setActiveView("settings")}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  检查配置
-                </Button>
-                <Button
-                  onClick={clearError}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  关闭
-                </Button>
-              </div>
-            ) : null}
-
-            <ChatComposer
-              isSending={isSending}
-              onChange={setDraft}
-              onStop={() => void stop()}
-              onSubmit={handleSend}
-              value={draft}
-            />
-          </section>
-        ) : null}
-
-        {activeView === "settings" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <LlmSettings />
-          </div>
-        ) : null}
-
-        {activeView === "account" ? (
-          <section className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-2xl px-4 py-7 sm:px-6 sm:py-10">
-              <div className="border-b border-border pb-5">
-                <h2 className="text-xl font-semibold">账号</h2>
-                <p className="mt-2 text-sm text-muted">当前登录信息</p>
-              </div>
-              <dl className="divide-y divide-border py-3 text-sm">
-                <AccountRow label="昵称" value={profile.displayName} />
-                <AccountRow label="邮箱" value={profile.email} />
-                <AccountRow label="身份" value={profile.roles.join("、")} />
-                <AccountRow
-                  label="会话有效期"
-                  value={dateTimeFormatter.format(
-                    new Date(session.expiresAtMs),
-                  )}
-                />
-              </dl>
-              <Button
-                className="mt-5 min-h-11"
-                onClick={handleLogout}
-                type="button"
-                variant="danger"
-              >
-                <LogOut aria-hidden="true" className="size-4" />
-                退出登录
-              </Button>
-            </div>
-          </section>
-        ) : null}
-
-        <nav
-          aria-label="移动端导航"
-          className="grid shrink-0 grid-cols-3 border-t border-border bg-surface pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
-        >
-          <MobileNavButton
-            active={activeView === "chat"}
-            icon={MessageCircle}
-            label="对话"
-            onClick={() => setActiveView("chat")}
+      <div
+        className={`h-svh min-h-0 flex-col lg:flex ${
+          mobileDetailOpen ? "flex" : "hidden lg:flex"
+        }`}
+      >
+        {mode === "chat" ? (
+          <ChatMode
+            clearError={clearError}
+            draft={draft}
+            error={error}
+            isSending={isSending}
+            messages={messages}
+            onBack={() => setMobileDetailOpen(false)}
+            onDraftChange={setDraft}
+            onOpenLlmSettings={() => {
+              setMode("settings");
+              setSettingsSection("llm");
+              setMobileDetailOpen(true);
+            }}
+            onSend={handleSend}
+            onStop={() => void stop()}
+            status={status}
           />
-          <MobileNavButton
-            active={activeView === "settings"}
-            icon={Settings2}
-            label="设置"
-            onClick={() => setActiveView("settings")}
+        ) : (
+          <SettingsMode
+            onBack={() => setMobileDetailOpen(false)}
+            onLogout={handleLogout}
+            profile={profile}
+            section={settingsSection}
+            session={session}
+            title={settingsTitle[settingsSection]}
           />
-          <MobileNavButton
-            active={activeView === "account"}
-            icon={UserRound}
-            label="账号"
-            onClick={() => setActiveView("account")}
-          />
-        </nav>
+        )}
       </div>
     </main>
   );
 }
 
-function NavButton({
+function ChatMode({
+  clearError,
+  draft,
+  error,
+  isSending,
+  messages,
+  onBack,
+  onDraftChange,
+  onOpenLlmSettings,
+  onSend,
+  onStop,
+  status,
+}: {
+  clearError: () => void;
+  draft: string;
+  error: Error | undefined;
+  isSending: boolean;
+  messages: UIMessage[];
+  onBack: () => void;
+  onDraftChange: (value: string) => void;
+  onOpenLlmSettings: () => void;
+  onSend: () => void;
+  onStop: () => void;
+  status: ReturnType<typeof useChat>["status"];
+}) {
+  return (
+    <>
+      <DetailHeader
+        onBack={onBack}
+        subtitle={AGENT_SUBTITLE}
+        title={AGENT_NAME}
+      >
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-strong">
+          <Bot aria-hidden="true" className="size-4" />
+        </span>
+      </DetailHeader>
+
+      <section className="flex min-h-0 flex-1 flex-col">
+        <ChatConversation messages={messages} status={status} />
+
+        {error ? (
+          <div
+            className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm sm:mx-6"
+            role="alert"
+          >
+            <p className="min-w-0 flex-1">
+              回复生成失败。请检查 LLM 配置或稍后重试。
+            </p>
+            <Button
+              onClick={onOpenLlmSettings}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              检查配置
+            </Button>
+            <Button
+              onClick={clearError}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              关闭
+            </Button>
+          </div>
+        ) : null}
+
+        <ChatComposer
+          isSending={isSending}
+          onChange={onDraftChange}
+          onStop={onStop}
+          onSubmit={onSend}
+          value={draft}
+        />
+      </section>
+    </>
+  );
+}
+
+function SettingsMode({
+  onBack,
+  onLogout,
+  profile,
+  section,
+  session,
+  title,
+}: {
+  onBack: () => void;
+  onLogout: () => void;
+  profile: WebUserProfile;
+  section: SettingsSection;
+  session: WebSession;
+  title: string;
+}) {
+  return (
+    <>
+      <DetailHeader onBack={onBack} title={title} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {section === "profile" ? (
+          <ProfilePanel
+            onLogout={onLogout}
+            profile={profile}
+            session={session}
+          />
+        ) : null}
+        {section === "general" ? <GeneralPanel /> : null}
+        {section === "llm" ? <LlmSettings /> : null}
+        {section === "appearance" ? <AppearancePanel /> : null}
+        {section === "data" ? <DataPanel /> : null}
+      </div>
+    </>
+  );
+}
+
+function DetailHeader({
+  children,
+  onBack,
+  subtitle,
+  title,
+}: {
+  children?: React.ReactNode;
+  onBack: () => void;
+  subtitle?: string;
+  title: string;
+}) {
+  return (
+    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
+      <button
+        aria-label="返回"
+        className="grid size-9 shrink-0 place-items-center rounded-md text-muted outline-none hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
+        onClick={onBack}
+        title="返回"
+        type="button"
+      >
+        <ChevronLeft aria-hidden="true" className="size-5" />
+      </button>
+      {children}
+      <div className="min-w-0">
+        <h1 className="truncate text-sm font-semibold">{title}</h1>
+        {subtitle ? (
+          <p className="truncate text-xs text-muted">{subtitle}</p>
+        ) : null}
+      </div>
+    </header>
+  );
+}
+
+function ConversationItem({
+  active,
+  name,
+  onClick,
+  preview,
+}: {
+  active: boolean;
+  name: string;
+  onClick: () => void;
+  preview: string;
+}) {
+  return (
+    <button
+      aria-current={active ? "page" : undefined}
+      className={`flex w-full items-start gap-3 rounded-lg px-2.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+        active ? "bg-primary text-primary-foreground" : "hover:bg-surface-muted"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <span
+        className={`grid size-12 shrink-0 place-items-center rounded-full ${
+          active
+            ? "bg-primary-foreground/15 text-primary-foreground"
+            : "bg-primary-subtle text-primary-strong"
+        }`}
+      >
+        <Bot aria-hidden="true" className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{name}</span>
+        <span
+          className={`mt-0.5 line-clamp-2 text-xs leading-snug ${
+            active ? "text-primary-foreground/80" : "text-muted"
+          }`}
+        >
+          {preview}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function SettingsMenuItem({
   active,
   icon: Icon,
   label,
@@ -325,51 +447,45 @@ function NavButton({
   return (
     <button
       aria-current={active ? "page" : undefined}
-      className={`flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-foreground hover:bg-surface-muted"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <Icon aria-hidden="true" className="size-5 shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
+function SidebarModeButton({
+  active,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: typeof MessageCircle;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-current={active ? "page" : undefined}
+      aria-label={label}
+      className={`grid size-10 place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus ${
         active
           ? "bg-primary-subtle text-primary-strong"
           : "text-muted hover:bg-surface-muted hover:text-foreground"
       }`}
       onClick={onClick}
+      title={label}
       type="button"
     >
-      <Icon aria-hidden="true" className="size-4" />
-      {label}
+      <Icon aria-hidden="true" className="size-5" />
     </button>
-  );
-}
-
-function MobileNavButton({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: typeof MessageCircle;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-current={active ? "page" : undefined}
-      className={`flex min-h-14 flex-col items-center justify-center gap-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${
-        active ? "text-primary-strong" : "text-muted"
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      <Icon aria-hidden="true" className="size-4" />
-      {label}
-    </button>
-  );
-}
-
-function AccountRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-1 py-4 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4">
-      <dt className="text-muted">{label}</dt>
-      <dd className="break-words sm:text-right">{value}</dd>
-    </div>
   );
 }
