@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 const TYPEWRITER_INTERVAL_MS = 18;
 
 interface ChatConversationProps {
+  historicalAssistantMessageIds: readonly string[];
   messages: UIMessage[];
   status: ChatStatus;
 }
@@ -36,12 +37,33 @@ function usePrefersReducedMotion(): boolean {
   return reducedMotion;
 }
 
-export function ChatConversation({ messages, status }: ChatConversationProps) {
+export function ChatConversation({
+  historicalAssistantMessageIds,
+  messages,
+  status,
+}: ChatConversationProps) {
   const reducedMotion = usePrefersReducedMotion();
   const endRef = useRef<HTMLDivElement>(null);
+  const historicalAssistantMessageIdSet = useMemo(
+    () => new Set(historicalAssistantMessageIds),
+    [historicalAssistantMessageIds],
+  );
   const [visibleAssistantTextById, setVisibleAssistantTextById] = useState<
     Record<string, string>
-  >({});
+  >(() => {
+    const initialText: Record<string, string> = {};
+
+    for (const message of messages) {
+      if (
+        message.role === "assistant" &&
+        historicalAssistantMessageIdSet.has(message.id)
+      ) {
+        initialText[message.id] = getMessageText(message);
+      }
+    }
+
+    return initialText;
+  });
   const assistantFullTextById = useMemo(() => {
     const textById: Record<string, string> = {};
 
@@ -66,7 +88,7 @@ export function ChatConversation({ messages, status }: ChatConversationProps) {
       for (const [id, fullText] of Object.entries(assistantFullTextById)) {
         const visibleText = current[id];
 
-        if (reducedMotion) {
+        if (reducedMotion || historicalAssistantMessageIdSet.has(id)) {
           next[id] = fullText;
           changed ||= visibleText !== fullText;
         } else if (
@@ -83,7 +105,7 @@ export function ChatConversation({ messages, status }: ChatConversationProps) {
       changed ||= Object.keys(current).length !== Object.keys(next).length;
       return changed ? next : current;
     });
-  }, [assistantFullTextById, reducedMotion]);
+  }, [assistantFullTextById, historicalAssistantMessageIdSet, reducedMotion]);
 
   const hasTypewriterWork = Object.entries(assistantFullTextById).some(
     ([id, fullText]) => {

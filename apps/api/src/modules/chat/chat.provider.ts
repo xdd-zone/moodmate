@@ -22,6 +22,7 @@ const DeepSeekStreamChunkSchema = z.object({
 
 export async function createCompanionTextStream(input: {
   messages: ChatCompletionMessage[];
+  onComplete?: (text: string) => Promise<void>;
   providerConfig: ChatProviderConfig;
   signal: AbortSignal;
 }): Promise<ReadableStream<Uint8Array>> {
@@ -92,12 +93,17 @@ export async function createCompanionTextStream(input: {
     );
   }
 
-  return convertSseToTextStream(upstream.body, () => clearTimeout(timeoutId));
+  return convertSseToTextStream(
+    upstream.body,
+    () => clearTimeout(timeoutId),
+    input.onComplete,
+  );
 }
 
 function convertSseToTextStream(
   upstreamBody: ReadableStream<Uint8Array>,
   cleanup: () => void,
+  onComplete?: (text: string) => Promise<void>,
 ): ReadableStream<Uint8Array> {
   const reader = upstreamBody.getReader();
   const decoder = new TextDecoder();
@@ -106,7 +112,11 @@ function convertSseToTextStream(
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       let buffer = "";
+      let completeText = "";
       let hasText = false;
+      const collectText = (text: string) => {
+        completeText += text;
+      };
 
       try {
         while (true) {
@@ -114,8 +124,14 @@ function convertSseToTextStream(
 
           if (done) {
             buffer += decoder.decode();
-            hasText ||= emitCompleteLines(buffer, controller, encoder);
-            finishStream(controller, hasText);
+            const emittedText = emitCompleteLines(
+              buffer,
+              controller,
+              encoder,
+              collectText,
+            );
+            hasText ||= emittedText;
+            await finishStream(controller, hasText, completeText, onComplete);
             return;
           }
 
@@ -124,12 +140,12 @@ function convertSseToTextStream(
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
-            const result = emitSseLine(line, controller, encoder);
+            const result = emitSseLine(line, controller, encoder, collectText);
             hasText ||= result === "text";
 
             if (result === "done") {
               await reader.cancel();
-              finishStream(controller, hasText);
+              await finishStream(controller, hasText, completeText, onComplete);
               return;
             }
           }
@@ -147,15 +163,18 @@ function convertSseToTextStream(
   });
 }
 
-function finishStream(
+async function finishStream(
   controller: ReadableStreamDefaultController<Uint8Array>,
   hasText: boolean,
-): void {
+  completeText: string,
+  onComplete?: (text: string) => Promise<void>,
+): Promise<void> {
   if (!hasText) {
     controller.error(new Error("模型服务未返回文本内容"));
     return;
   }
 
+  await onComplete?.(completeText);
   controller.close();
 }
 
@@ -163,11 +182,13 @@ function emitCompleteLines(
   value: string,
   controller: ReadableStreamDefaultController<Uint8Array>,
   encoder: TextEncoder,
+  onText: (text: string) => void,
 ): boolean {
   let hasText = false;
 
   for (const line of value.split("\n")) {
-    hasText ||= emitSseLine(line, controller, encoder) === "text";
+    const result = emitSseLine(line, controller, encoder, onText);
+    hasText ||= result === "text";
   }
 
   return hasText;
@@ -177,6 +198,7 @@ function emitSseLine(
   value: string,
   controller: ReadableStreamDefaultController<Uint8Array>,
   encoder: TextEncoder,
+  onText: (text: string) => void,
 ): "done" | "ignored" | "text" {
   const line = value.endsWith("\r") ? value.slice(0, -1) : value;
 
@@ -207,6 +229,7 @@ function emitSseLine(
   const content = payload.data.choices?.[0]?.delta?.content;
 
   if (typeof content === "string" && content) {
+    onText(content);
     controller.enqueue(encoder.encode(content));
     return "text";
   }

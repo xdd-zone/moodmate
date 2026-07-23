@@ -1,13 +1,21 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import type { WebSession, WebUserProfile } from "@repo/contracts";
+import type {
+  CompanionConversationResponse,
+  WebSession,
+  WebUserProfile,
+} from "@repo/contracts";
 import { Button } from "@repo/ui/button";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TextStreamChatTransport, type UIMessage } from "ai";
 import {
   Bot,
+  Brain,
   ChevronLeft,
   Database,
+  History,
+  LoaderCircle,
   MessageCircle,
   Palette,
   Search,
@@ -18,12 +26,18 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { getCompanionConversationMessages } from "@/src/api/chat.api";
+import {
+  companionChatKeys,
+  companionConversationQueryOptions,
+} from "@/src/api/chat.query";
 import { clearClientSession } from "@/src/auth/client-session";
 import { readEnabledLocalLlmConfig } from "@/src/auth/local-llm-config";
 import {
   AppearancePanel,
   DataPanel,
   GeneralPanel,
+  MemoryPanel,
   ProfilePanel,
 } from "@/src/components/settings/settings-panels";
 import { getWebClientEnv } from "@/src/env/client";
@@ -34,7 +48,13 @@ import { ChatConversation } from "./chat-conversation";
 import { LlmSettings } from "./llm-settings";
 
 type AppMode = "chat" | "settings";
-type SettingsSection = "profile" | "general" | "llm" | "appearance" | "data";
+type SettingsSection =
+  | "profile"
+  | "general"
+  | "llm"
+  | "memory"
+  | "appearance"
+  | "data";
 
 const AGENT_NAME = "MoodMate";
 const AGENT_SUBTITLE = "你的 AI 伴侣";
@@ -54,6 +74,7 @@ const settingsMenu: SettingsMenuEntry[] = [
   { icon: UserRound, label: "个人资料", section: "profile" },
   { icon: SlidersHorizontal, label: "General", section: "general" },
   { icon: Sparkles, label: "LLM 配置", section: "llm" },
+  { icon: Brain, label: "记忆", section: "memory" },
   { icon: Palette, label: "Appearance", section: "appearance" },
   { icon: Database, label: "数据管理", section: "data" },
 ];
@@ -63,10 +84,43 @@ const settingsTitle: Record<SettingsSection, string> = {
   data: "数据管理",
   general: "General",
   llm: "LLM 配置",
+  memory: "记忆",
   profile: "个人资料",
 };
 
 export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
+  const conversationQuery = useQuery(companionConversationQueryOptions());
+
+  if (conversationQuery.isPending) {
+    return <ConversationLoadingState />;
+  }
+
+  if (conversationQuery.isError) {
+    return (
+      <ConversationErrorState
+        onRetry={() => void conversationQuery.refetch()}
+      />
+    );
+  }
+
+  return (
+    <CompanionChatAppInner
+      key={conversationQuery.data.conversationId}
+      profile={profile}
+      serverConversation={conversationQuery.data}
+      session={session}
+    />
+  );
+}
+
+function CompanionChatAppInner({
+  profile,
+  serverConversation,
+  session,
+}: CompanionChatAppProps & {
+  serverConversation: CompanionConversationResponse;
+}) {
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<AppMode>("chat");
   const [settingsSection, setSettingsSection] =
     useState<SettingsSection>("profile");
@@ -83,18 +137,45 @@ export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
             api,
             body: {
               ...body,
+              conversationId: serverConversation.conversationId,
               messages: messages.slice(-20),
               ...(llmConfig ? { llmConfig } : {}),
             },
           };
         },
       }),
-    [],
+    [serverConversation.conversationId],
   );
-  const { clearError, error, messages, sendMessage, status, stop } = useChat({
+  const {
+    clearError,
+    error,
+    messages,
+    sendMessage,
+    setMessages,
+    status,
+    stop,
+  } = useChat({
+    id: serverConversation.conversationId,
+    messages: serverConversation.messages.map(toUiMessage),
+    onFinish({ isAbort, isDisconnect, isError }) {
+      if (!isAbort && !isDisconnect && !isError) {
+        void queryClient.invalidateQueries({
+          queryKey: companionChatKeys.conversation(),
+        });
+      }
+    },
     transport,
   });
   const isSending = status === "submitted" || status === "streaming";
+  const [nextCursor, setNextCursor] = useState(serverConversation.nextCursor);
+  const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
+  const [historyLoadError, setHistoryLoadError] = useState(false);
+  const [historicalAssistantMessageIds, setHistoricalAssistantMessageIds] =
+    useState<string[]>(() =>
+      serverConversation.messages
+        .filter((message) => message.role === "assistant")
+        .map((message) => message.id),
+    );
 
   function handleSend() {
     const text = draft.trim();
@@ -111,6 +192,39 @@ export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
   function handleLogout() {
     clearClientSession();
     window.location.replace("/login");
+  }
+
+  async function loadMoreHistory() {
+    if (!nextCursor || isLoadingMoreHistory) {
+      return;
+    }
+
+    setHistoryLoadError(false);
+    setIsLoadingMoreHistory(true);
+
+    try {
+      const result = await getCompanionConversationMessages(nextCursor);
+      const olderMessages = result.messages.map(toUiMessage);
+      const olderAssistantIds = result.messages
+        .filter((message) => message.role === "assistant")
+        .map((message) => message.id);
+
+      setHistoricalAssistantMessageIds((current) => [
+        ...new Set([...olderAssistantIds, ...current]),
+      ]);
+      setMessages((current) => {
+        const currentIds = new Set(current.map((message) => message.id));
+        return [
+          ...olderMessages.filter((message) => !currentIds.has(message.id)),
+          ...current,
+        ];
+      });
+      setNextCursor(result.nextCursor);
+    } catch {
+      setHistoryLoadError(true);
+    } finally {
+      setIsLoadingMoreHistory(false);
+    }
   }
 
   const lastMessage = messages.at(-1);
@@ -216,6 +330,9 @@ export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
             draft={draft}
             error={error}
             isSending={isSending}
+            historicalAssistantMessageIds={historicalAssistantMessageIds}
+            historyLoadError={historyLoadError}
+            isLoadingMoreHistory={isLoadingMoreHistory}
             messages={messages}
             onBack={() => setMobileDetailOpen(false)}
             onDraftChange={setDraft}
@@ -224,9 +341,11 @@ export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
               setSettingsSection("llm");
               setMobileDetailOpen(true);
             }}
+            onLoadMoreHistory={() => void loadMoreHistory()}
             onSend={handleSend}
             onStop={() => void stop()}
             status={status}
+            hasMoreHistory={nextCursor !== null}
           />
         ) : (
           <SettingsMode
@@ -247,11 +366,16 @@ function ChatMode({
   clearError,
   draft,
   error,
+  hasMoreHistory,
+  historicalAssistantMessageIds,
+  historyLoadError,
   isSending,
+  isLoadingMoreHistory,
   messages,
   onBack,
   onDraftChange,
   onOpenLlmSettings,
+  onLoadMoreHistory,
   onSend,
   onStop,
   status,
@@ -259,11 +383,16 @@ function ChatMode({
   clearError: () => void;
   draft: string;
   error: Error | undefined;
+  hasMoreHistory: boolean;
+  historicalAssistantMessageIds: readonly string[];
+  historyLoadError: boolean;
   isSending: boolean;
+  isLoadingMoreHistory: boolean;
   messages: UIMessage[];
   onBack: () => void;
   onDraftChange: (value: string) => void;
   onOpenLlmSettings: () => void;
+  onLoadMoreHistory: () => void;
   onSend: () => void;
   onStop: () => void;
   status: ReturnType<typeof useChat>["status"];
@@ -281,7 +410,47 @@ function ChatMode({
       </DetailHeader>
 
       <section className="flex min-h-0 flex-1 flex-col">
-        <ChatConversation messages={messages} status={status} />
+        {hasMoreHistory || historyLoadError ? (
+          <div className="flex min-h-11 shrink-0 items-center justify-center border-b border-border px-4 py-2">
+            {historyLoadError ? (
+              <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-danger">
+                <span>更早的消息加载失败</span>
+                <Button
+                  onClick={onLoadMoreHistory}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  重试
+                </Button>
+              </div>
+            ) : (
+              <Button
+                disabled={isLoadingMoreHistory}
+                onClick={onLoadMoreHistory}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                {isLoadingMoreHistory ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
+                ) : (
+                  <History aria-hidden="true" className="size-4" />
+                )}
+                {isLoadingMoreHistory ? "正在加载" : "加载更早消息"}
+              </Button>
+            )}
+          </div>
+        ) : null}
+
+        <ChatConversation
+          historicalAssistantMessageIds={historicalAssistantMessageIds}
+          messages={messages}
+          status={status}
+        />
 
         {error ? (
           <div
@@ -350,10 +519,51 @@ function SettingsMode({
         ) : null}
         {section === "general" ? <GeneralPanel /> : null}
         {section === "llm" ? <LlmSettings /> : null}
+        {section === "memory" ? <MemoryPanel /> : null}
         {section === "appearance" ? <AppearancePanel /> : null}
         {section === "data" ? <DataPanel /> : null}
       </div>
     </>
+  );
+}
+
+function toUiMessage(
+  message: CompanionConversationResponse["messages"][number],
+): UIMessage {
+  return {
+    id: message.id,
+    parts: [{ text: message.content, type: "text" }],
+    role: message.role,
+  };
+}
+
+function ConversationLoadingState() {
+  return (
+    <main
+      aria-busy="true"
+      className="grid min-h-svh place-items-center bg-background px-5 text-foreground"
+    >
+      <div className="flex items-center gap-3 text-sm text-muted" role="status">
+        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+        正在加载聊天记录
+      </div>
+    </main>
+  );
+}
+
+function ConversationErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main className="grid min-h-svh place-items-center bg-background px-5 text-foreground">
+      <section className="w-full max-w-sm text-center">
+        <h1 className="text-base font-semibold">聊天记录加载失败</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          请确认 API 已运行，并已应用最新 D1 迁移。
+        </p>
+        <Button className="mt-5 min-h-11" onClick={onRetry} type="button">
+          重新加载
+        </Button>
+      </section>
+    </main>
   );
 }
 

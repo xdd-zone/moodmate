@@ -27,7 +27,7 @@ export type HttpRequestOptions = {
   query?: HttpQuery;
 };
 
-type HttpMethod = "GET" | "POST";
+type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST";
 
 interface PreparedRequest {
   init: RequestInit;
@@ -120,7 +120,7 @@ function createRequestInit(
     method,
   };
 
-  if (method === "GET") {
+  if (method === "GET" || method === "DELETE") {
     return { init: requestInit, usesClientSession };
   }
 
@@ -372,6 +372,13 @@ async function request<TData>(
 }
 
 export const http = {
+  delete<TData>(
+    path: string,
+    responseSchema: z.ZodType<TData>,
+    options?: HttpRequestOptions,
+  ) {
+    return request("DELETE", path, responseSchema, options);
+  },
   get<TData>(
     path: string,
     responseSchema: z.ZodType<TData>,
@@ -386,6 +393,14 @@ export const http = {
     options?: HttpRequestOptions,
   ) {
     return request("POST", path, responseSchema, options, payload);
+  },
+  patch<TPayload, TData>(
+    path: string,
+    payload: TPayload,
+    responseSchema: z.ZodType<TData>,
+    options?: HttpRequestOptions,
+  ) {
+    return request("PATCH", path, responseSchema, options, payload);
   },
 };
 
