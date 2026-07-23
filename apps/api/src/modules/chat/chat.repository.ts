@@ -73,6 +73,7 @@ export async function insertCompanionConversationMessage(input: {
   conversationId: string;
   database: D1Database | undefined;
   id: string;
+  metadataJson?: string | null;
   nowMs: number;
   role: "assistant" | "user";
   summary?: string | null;
@@ -86,7 +87,7 @@ export async function insertCompanionConversationMessage(input: {
       conversationId: input.conversationId,
       createdAtMs: input.nowMs,
       id: input.id,
-      metadataJson: null,
+      metadataJson: input.metadataJson ?? null,
       role: input.role,
       status: "completed",
       userId: input.userId,

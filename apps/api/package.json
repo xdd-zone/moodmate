@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@hono/zod-validator": "catalog:",
+    "@langchain/core": "catalog:",
+    "@langchain/langgraph": "catalog:",
+    "@langchain/openai": "catalog:",
     "@repo/contracts": "workspace:*",
     "drizzle-orm": "catalog:",
     "jose": "catalog:",

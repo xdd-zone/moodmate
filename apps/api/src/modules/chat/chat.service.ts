@@ -3,6 +3,8 @@ import {
   type CompanionChatLlmConfig,
   type CompanionChatMessage,
   type CompanionMemory,
+  type ConversationIntent,
+  type ConversationSafety,
   type UpdateCompanionMemoryRequest,
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
@@ -11,6 +13,14 @@ import { AppError } from "@/shared/app-error";
 import { getApiEnv } from "@/shared/env";
 import type { ApiBindings } from "@/shared/hono-env";
 
+import {
+  analyzeConversationIntent,
+  analyzeConversationSafety,
+  buildBoundaryResponse,
+  getIntentSystemInstruction,
+  getSafetySystemInstruction,
+  buildConversationAnalysisMetadata,
+} from "./chat.analysis";
 import {
   getOrCreateCompanionConversation,
   insertCompanionConversationMessage,
@@ -36,9 +46,11 @@ export interface ChatProviderConfig extends CompanionChatLlmConfig {
 }
 
 export interface PreparedCompanionChat {
+  boundaryResponse: string;
   messages: ChatCompletionMessage[];
   providerConfig: ChatProviderConfig;
   turn: {
+    allowMemoryExtraction: boolean;
     conversationId: string;
     previousSummary: string | null;
     recentMessages: Array<{ content: string; role: "assistant" | "user" }>;
@@ -179,6 +191,7 @@ export async function prepareCompanionChat(input: {
   conversationId?: string;
   llmConfig?: CompanionChatLlmConfig;
   messages: CompanionChatMessage[];
+  signal: AbortSignal;
   userId: string;
 }): Promise<PreparedCompanionChat> {
   const conversation = await requireCompanionConversation(input);
@@ -210,6 +223,38 @@ export async function prepareCompanionChat(input: {
       userId: input.userId,
     }),
   ]);
+  const providerConfig = resolveProviderConfig(input.bindings, input.llmConfig);
+  const analysisMemories = activeMemories.map((memory) => ({
+    content: memory.content,
+    importance: memory.importance,
+    type: memory.type,
+  }));
+  const analysisRecentMessages = recentMessages.map((message) => ({
+    content: message.content,
+    role: message.role,
+  }));
+
+  const safety = await analyzeConversationSafety({
+    activeMemories: analysisMemories,
+    providerConfig,
+    recentMessages: analysisRecentMessages,
+    signal: input.signal,
+    userText: latestUserText,
+  });
+
+  const boundaryResponse = buildBoundaryResponse(safety);
+
+  const intent = boundaryResponse
+    ? null
+    : await analyzeConversationIntent({
+        activeMemories: analysisMemories,
+        providerConfig,
+        recentMessages: analysisRecentMessages,
+        safety,
+        signal: input.signal,
+        userText: latestUserText,
+      });
+
   const sourceUserMessageId = uuidv7();
   const nowMs = Date.now();
 
@@ -218,6 +263,7 @@ export async function prepareCompanionChat(input: {
     conversationId: conversation.id,
     database: input.bindings.DB,
     id: sourceUserMessageId,
+    metadataJson: buildConversationAnalysisMetadata({ intent, safety }),
     nowMs,
     role: "user",
     userId: input.userId,
@@ -226,7 +272,9 @@ export async function prepareCompanionChat(input: {
   const messages: ChatCompletionMessage[] = [
     {
       content: buildSystemPrompt({
+        intent,
         memories: activeMemories,
+        safety,
         summary: conversation.summary,
       }),
       role: "system",
@@ -239,9 +287,11 @@ export async function prepareCompanionChat(input: {
   ];
 
   return {
+    boundaryResponse,
     messages,
-    providerConfig: resolveProviderConfig(input.bindings, input.llmConfig),
+    providerConfig,
     turn: {
+      allowMemoryExtraction: safety.allowMemoryExtraction,
       conversationId: conversation.id,
       previousSummary: conversation.summary,
       recentMessages,
@@ -283,6 +333,10 @@ export async function saveCompanionAssistantTurn(input: {
     userId: input.turn.userId,
   });
 
+  if (!input.turn.allowMemoryExtraction) {
+    return;
+  }
+
   try {
     await saveCandidateMemories({
       bindings: input.bindings,
@@ -299,11 +353,15 @@ export async function saveCompanionAssistantTurn(input: {
 }
 
 function buildSystemPrompt(input: {
+  intent: ConversationIntent | null;
   memories: Array<{ content: string; importance: number; type: string }>;
+  safety: ConversationSafety;
   summary: string | null;
 }) {
   return [
     COMPANION_SYSTEM_PROMPT,
+    getSafetySystemInstruction(input.safety),
+    getIntentSystemInstruction(input.intent),
     input.memories.length > 0
       ? [
           "以下是用户的长期记忆，请优先尊重：",

@@ -131,8 +131,24 @@ export function createChatRoute() {
           conversationId: payload.conversationId,
           llmConfig: payload.llmConfig,
           messages: payload.messages,
+          signal: c.req.raw.signal,
           userId: c.var.webSession.userId,
         });
+
+        if (chat.boundaryResponse) {
+          await saveCompanionAssistantTurn({
+            assistantText: chat.boundaryResponse,
+            bindings: c.env,
+            turn: chat.turn,
+          });
+
+          return c.body(buildTextStream(chat.boundaryResponse), 200, {
+            "cache-control": "no-cache, no-transform",
+            "content-type": "text/plain; charset=utf-8",
+            "x-accel-buffering": "no",
+          });
+        }
+
         const stream = await createCompanionTextStream({
           messages: chat.messages,
           onComplete: (assistantText) =>
@@ -152,6 +168,15 @@ export function createChatRoute() {
         });
       },
     );
+}
+
+function buildTextStream(text: string): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
 }
 
 export default createChatRoute;

@@ -47,6 +47,16 @@ export type {
   UpdateCompanionMemoryResponse,
 } from "./chat/companion-chat.contract";
 export {
+  CompanionIntentPrimarySchema,
+  ConversationIntentSchema,
+  ConversationSafetySchema,
+} from "./chat/companion-analysis.contract";
+export type {
+  CompanionIntentPrimary,
+  ConversationIntent,
+  ConversationSafety,
+} from "./chat/companion-analysis.contract";
+export {
   AdminDefaultAvatarCurrentResponseSchema,
   AdminDefaultAvatarHistoryResponseSchema,
   AdminDefaultAvatarSetCurrentRequestSchema,
