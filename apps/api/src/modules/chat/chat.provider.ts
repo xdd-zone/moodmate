@@ -45,7 +45,7 @@ export async function createCompanionTextStream(input: {
         model: input.providerConfig.model,
         messages: input.messages,
         stream: true,
-        ...(input.providerConfig.isPlatformDeepSeek
+        ...(input.providerConfig.disableThinking
           ? { thinking: { type: "disabled" } }
           : {}),
       }),

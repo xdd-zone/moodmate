@@ -129,7 +129,6 @@ export function createChatRoute() {
         const chat = await prepareCompanionChat({
           bindings: c.env,
           conversationId: payload.conversationId,
-          llmConfig: payload.llmConfig,
           messages: payload.messages,
           signal: c.req.raw.signal,
           userId: c.var.webSession.userId,

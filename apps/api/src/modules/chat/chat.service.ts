@@ -9,8 +9,8 @@ import {
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
 
+import { resolveActiveLlmProviderConfig } from "@/modules/llm-config/llm-config.service";
 import { AppError } from "@/shared/app-error";
-import { getApiEnv } from "@/shared/env";
 import type { ApiBindings } from "@/shared/hono-env";
 
 import {
@@ -42,7 +42,7 @@ export interface ChatCompletionMessage {
 }
 
 export interface ChatProviderConfig extends CompanionChatLlmConfig {
-  isPlatformDeepSeek: boolean;
+  disableThinking: boolean;
 }
 
 export interface PreparedCompanionChat {
@@ -189,7 +189,6 @@ export async function deleteCompanionMemory(input: {
 export async function prepareCompanionChat(input: {
   bindings: ApiBindings;
   conversationId?: string;
-  llmConfig?: CompanionChatLlmConfig;
   messages: CompanionChatMessage[];
   signal: AbortSignal;
   userId: string;
@@ -223,7 +222,7 @@ export async function prepareCompanionChat(input: {
       userId: input.userId,
     }),
   ]);
-  const providerConfig = resolveProviderConfig(input.bindings, input.llmConfig);
+  const providerConfig = await resolveProviderConfig(input.bindings);
   const analysisMemories = activeMemories.map((memory) => ({
     content: memory.content,
     importance: memory.importance,
@@ -537,34 +536,17 @@ async function saveCandidateMemories(input: {
   }
 }
 
-function resolveProviderConfig(
+async function resolveProviderConfig(
   bindings: ApiBindings,
-  llmConfig?: CompanionChatLlmConfig,
-): ChatProviderConfig {
-  if (llmConfig) {
-    return {
-      ...llmConfig,
-      baseURL: normalizeBaseURL(llmConfig.baseURL),
-      isPlatformDeepSeek: false,
-    };
-  }
-
-  const env = getApiEnv(bindings);
-
-  if (!env.DEEPSEEK_API_KEY) {
-    throw new AppError(
-      BizCode.SYSTEM_INTERNAL_ERROR,
-      "平台 DeepSeek 尚未配置，请在 LLM 设置中填写本地配置",
-      503,
-    );
-  }
+): Promise<ChatProviderConfig> {
+  const active = await resolveActiveLlmProviderConfig(bindings);
 
   return {
-    providerName: "DeepSeek",
-    baseURL: env.DEEPSEEK_BASE_URL,
-    model: env.DEEPSEEK_MODEL,
-    apiKey: env.DEEPSEEK_API_KEY,
-    isPlatformDeepSeek: true,
+    providerName: active.providerName,
+    baseURL: normalizeBaseURL(active.baseURL),
+    model: active.model,
+    apiKey: active.apiKey,
+    disableThinking: active.disableThinking,
   };
 }
 
