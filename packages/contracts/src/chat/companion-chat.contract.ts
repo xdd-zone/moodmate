@@ -27,7 +27,6 @@ export const CompanionChatLlmConfigSchema = z.object({
 export const CompanionChatRequestSchema = z.object({
   conversationId: z.string().min(1).optional(),
   messages: z.array(CompanionChatMessageSchema).min(1).max(20),
-  llmConfig: CompanionChatLlmConfigSchema.optional(),
 });
 
 export const CompanionConversationMessageRoleSchema = z.enum([

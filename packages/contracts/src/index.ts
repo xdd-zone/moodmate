@@ -181,6 +181,27 @@ export type {
   WebRefreshRequest,
   WebTokenRefreshResponse,
 } from "./auth/web-refresh.contract";
+export {
+  LlmConfigBaseUrlSchema,
+  LlmConfigCreateRequestSchema,
+  LlmConfigDeleteResponseSchema,
+  LlmConfigItemSchema,
+  LlmConfigListResponseSchema,
+  LlmConfigMutationResponseSchema,
+  LlmConfigTestRequestSchema,
+  LlmConfigTestResponseSchema,
+  LlmConfigUpdateRequestSchema,
+} from "./llm/llm-config.contract";
+export type {
+  LlmConfigCreateRequest,
+  LlmConfigDeleteResponse,
+  LlmConfigItem,
+  LlmConfigListResponse,
+  LlmConfigMutationResponse,
+  LlmConfigTestRequest,
+  LlmConfigTestResponse,
+  LlmConfigUpdateRequest,
+} from "./llm/llm-config.contract";
 export { HealthResponseSchema, ApiEnvSchema } from "./system/health.contract";
 export type { ApiEnvValue, HealthResponse } from "./system/health.contract";
 export { PingRequestSchema, PingResponseSchema } from "./system/ping.contract";
