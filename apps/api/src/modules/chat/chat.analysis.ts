@@ -3,11 +3,13 @@ import {
   ConversationIntentSchema,
   ConversationSafetySchema,
   ReplyPolicySchema,
+  ReplyQualityGuardSchema,
   type ConversationEmotion,
   type ConversationIntent,
   type ConversationSafety,
   type EmotionRoute,
   type ReplyPolicy,
+  type ReplyQualityGuard,
 } from "@repo/contracts";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
@@ -1338,5 +1340,250 @@ export function buildConversationAnalysisMetadata(params: {
     emotion: params.emotion,
     route: params.route,
     replyPolicy: params.replyPolicy,
+  });
+}
+
+const fallbackReplyQualityGuard: ReplyQualityGuard = {
+  status: "pass",
+  score: 1,
+  sentenceCount: 0,
+  questionCount: 0,
+  adviceCount: 0,
+  violations: [],
+};
+
+const advicePatterns: RegExp[] = [
+  /建议你/g,
+  /你可以/g,
+  /不妨/g,
+  /最好/g,
+  /应该/g,
+  /试着/g,
+  /尝试/g,
+  /可以先/g,
+];
+
+type ReplyGuardViolation = ReplyQualityGuard["violations"][number];
+
+function countReplySentences(text: string) {
+  const segments = text
+    .split(/[。！？!?…\n]+/)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+
+  return Math.max(1, segments.length);
+}
+
+function countPatternMatches(text: string, patterns: RegExp[]) {
+  return patterns.reduce((total, pattern) => {
+    const matches = text.match(pattern);
+    return total + (matches ? matches.length : 0);
+  }, 0);
+}
+
+function addReplyGuardViolation(
+  violations: ReplyGuardViolation[],
+  violation: ReplyGuardViolation,
+) {
+  violations.push({
+    code: violation.code,
+    severity: violation.severity,
+    evidence: violation.evidence.slice(0, 160),
+  });
+}
+
+const INTERNAL_LABEL_KEYWORDS = [
+  "intent",
+  "emotion",
+  "route",
+  "policy",
+  "safety",
+  "replyPolicy",
+  "意图判断",
+  "情绪路由",
+  "回复策略",
+  "metadata",
+];
+
+const IMMERSION_BREAK_KEYWORDS = [
+  "作为一个 AI",
+  "作为一个AI",
+  "我只是 AI",
+  "我只是AI",
+  "我是语言模型",
+  "我没有真实情感",
+  "我没有身体",
+];
+
+const FORBIDDEN_MOVE_CLUES: Partial<
+  Record<
+    ReplyPolicy["forbiddenMoves"][number],
+    {
+      code: ReplyGuardViolation["code"];
+      keywords: string[];
+    }
+  >
+> = {
+  lecture: {
+    code: "forbidden_lecture",
+    keywords: ["你要明白", "你必须", "正确的做法是", "你应该要"],
+  },
+  over_explain: {
+    code: "forbidden_over_explain",
+    keywords: ["之所以", "原因是", "具体来说"],
+  },
+  intense_flirt: {
+    code: "forbidden_intense_flirt",
+    keywords: ["想你", "爱你", "亲亲", "抱紧", "宝贝"],
+  },
+  diagnose_user: {
+    code: "forbidden_diagnosis",
+    keywords: ["你这是", "你有点", "你可能得了", "焦虑症", "抑郁症"],
+  },
+  take_sides_aggressively: {
+    code: "forbidden_aggressive_siding",
+    keywords: ["他就是", "绝对是对方的错", "你没错都是他"],
+  },
+  pressure_to_disclose: {
+    code: "forbidden_pressure",
+    keywords: ["你倒是说啊", "到底怎么了", "必须告诉我"],
+  },
+  promise_real_world_action: {
+    code: "forbidden_real_world_promise",
+    keywords: ["我帮你去", "我会到", "我明天见你", "我打电话给"],
+  },
+};
+
+function firstMatchedKeyword(text: string, keywords: string[]) {
+  return keywords.find((keyword) => text.includes(keyword)) ?? null;
+}
+
+export function evaluateReplyQuality(params: {
+  assistantText: string;
+  replyPolicy: ReplyPolicy | null;
+}): ReplyQualityGuard {
+  const text = normalizeStoredMessage(params.assistantText);
+
+  if (!text) {
+    return { ...fallbackReplyQualityGuard, violations: [] };
+  }
+
+  const replyPolicy = params.replyPolicy ?? fallbackReplyPolicy;
+  const sentenceCount = countReplySentences(text);
+  const questionCount = countPatternMatches(text, [/？/g, /\?/g]);
+  const adviceCount = countPatternMatches(text, advicePatterns);
+
+  const violations: ReplyGuardViolation[] = [];
+
+  if (sentenceCount > replyPolicy.sentenceBudget.max) {
+    const severity: ReplyGuardViolation["severity"] =
+      sentenceCount > replyPolicy.sentenceBudget.max + 2 ? "high" : "medium";
+    addReplyGuardViolation(violations, {
+      code: "too_many_sentences",
+      severity,
+      evidence: `回复 ${sentenceCount} 句，超过策略上限 ${replyPolicy.sentenceBudget.max} 句。`,
+    });
+  }
+
+  if (questionCount > replyPolicy.questionLimit) {
+    addReplyGuardViolation(violations, {
+      code: "too_many_questions",
+      severity: "medium",
+      evidence: `回复含 ${questionCount} 个问句，超过上限 ${replyPolicy.questionLimit}。`,
+    });
+  }
+
+  if (adviceCount > replyPolicy.adviceLimit) {
+    addReplyGuardViolation(violations, {
+      code: "too_many_suggestions",
+      severity: "medium",
+      evidence: `回复含 ${adviceCount} 处建议型表达，超过上限 ${replyPolicy.adviceLimit}。`,
+    });
+  }
+
+  const leakedLabel = firstMatchedKeyword(text, INTERNAL_LABEL_KEYWORDS);
+  if (leakedLabel) {
+    addReplyGuardViolation(violations, {
+      code: "internal_label_leak",
+      severity: "high",
+      evidence: `命中内部标签词：${leakedLabel}。`,
+    });
+  }
+
+  const immersionBreak = firstMatchedKeyword(text, IMMERSION_BREAK_KEYWORDS);
+  if (immersionBreak) {
+    addReplyGuardViolation(violations, {
+      code: "breaks_immersion",
+      severity: "high",
+      evidence: `命中破坏沉浸感句式：${immersionBreak}。`,
+    });
+  }
+
+  for (const move of replyPolicy.forbiddenMoves) {
+    const clue = FORBIDDEN_MOVE_CLUES[move];
+    if (!clue) {
+      continue;
+    }
+
+    const matched = firstMatchedKeyword(text, clue.keywords);
+    if (matched) {
+      addReplyGuardViolation(violations, {
+        code: clue.code,
+        severity: "medium",
+        evidence: `命中禁止动作 ${move} 线索：${matched}。`,
+      });
+    }
+  }
+
+  if (
+    replyPolicy.forbiddenMoves.includes("premature_advice") &&
+    adviceCount > 0
+  ) {
+    addReplyGuardViolation(violations, {
+      code: "forbidden_premature_advice",
+      severity: "medium",
+      evidence: `策略禁止过早建议，回复出现 ${adviceCount} 处建议型表达。`,
+    });
+  }
+
+  const cappedViolations = violations.slice(0, 12);
+  const highCount = cappedViolations.filter(
+    (v) => v.severity === "high",
+  ).length;
+  const mediumCount = cappedViolations.filter(
+    (v) => v.severity === "medium",
+  ).length;
+  const lowCount = cappedViolations.filter((v) => v.severity === "low").length;
+
+  const score = Math.max(
+    0,
+    1 - highCount * 0.35 - mediumCount * 0.18 - lowCount * 0.08,
+  );
+
+  const status: ReplyQualityGuard["status"] =
+    highCount > 0 || score < 0.5
+      ? "fail"
+      : cappedViolations.length > 0
+        ? "warn"
+        : "pass";
+
+  return ReplyQualityGuardSchema.parse({
+    status,
+    score,
+    sentenceCount,
+    questionCount,
+    adviceCount,
+    violations: cappedViolations,
+  });
+}
+
+export function toAssistantReplyQualityMetadata(params: {
+  replyPolicy: ReplyPolicy | null;
+  guard: ReplyQualityGuard;
+}) {
+  return JSON.stringify({
+    analysisVersion: "reply-quality-guard-v1",
+    replyPolicy: params.replyPolicy,
+    guard: params.guard,
   });
 }

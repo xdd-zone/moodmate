@@ -25,6 +25,8 @@ import {
   getReplyPolicySystemInstruction,
   getSafetySystemInstruction,
   buildConversationAnalysisMetadata,
+  evaluateReplyQuality,
+  toAssistantReplyQualityMetadata,
 } from "./chat.analysis";
 import {
   getCompanionProfile,
@@ -351,11 +353,20 @@ export async function saveCompanionAssistantTurn(input: {
     userText: input.turn.userText,
   });
 
+  const replyQualityGuard = evaluateReplyQuality({
+    assistantText,
+    replyPolicy: input.turn.replyPolicy,
+  });
+
   await insertCompanionConversationMessage({
     content: assistantText,
     conversationId: input.turn.conversationId,
     database: input.bindings.DB,
     id: assistantMessageId,
+    metadataJson: toAssistantReplyQualityMetadata({
+      replyPolicy: input.turn.replyPolicy,
+      guard: replyQualityGuard,
+    }),
     nowMs,
     role: "assistant",
     summary,
