@@ -121,8 +121,16 @@ Reply Policy（代码治理层，不调 LLM，接在 route 之后）：
 - 用户消息落库前完成安全分析，safety + intent + emotion + route + replyPolicy 通过 `buildConversationAnalysisMetadata`（`analysisVersion: conversation-understanding-v2`）写入 `metadata_json`。
 - `boundaryAction` 为 `refuse` / `crisis_support` 时，`buildBoundaryResponse` 直接返回固定文本流，不调用上游模型；assistant 消息仍完整落库。存在 boundaryResponse 时不进理解链路，intent/emotion/route/replyPolicy 全为 null。
 - `caution` / `redirect` / `soft_boundary` 时，`getSafetySystemInstruction`、`getIntentSystemInstruction`、`getEmotionRouteSystemInstruction` 和 `getReplyPolicySystemInstruction` 把策略注入 system prompt，顺序为安全、意图、情绪路由、Reply Policy、长期记忆、会话摘要。情绪路由和 Reply Policy 指令末句都要求不暴露内部标签。
-- `replyPolicy` 随理解结果挂到 `PreparedCompanionChat['turn']` 上并透传到 assistant 落库，供章 51 Reply Quality Guard 质检使用。
+- `replyPolicy` 随理解结果挂到 `PreparedCompanionChat['turn']` 上并透传到 assistant 落库，供 Reply Quality Guard 质检使用。
 - 记忆抽取受 `safety.allowMemoryExtraction` 门控；为 false 时 `saveCompanionAssistantTurn` 跳过 `saveCandidateMemories`。
+
+Reply Quality Guard（回复后质检，纯代码，不调 LLM）：
+
+- `evaluateReplyQuality({ assistantText, replyPolicy })` 在 `saveCompanionAssistantTurn` 里 assistant 消息落库前跑，检测这段回复是否超句数、追问过多、过早给建议、暴露内部标签、破坏沉浸感、命中 forbidden move。空文本返回 `fallbackReplyQualityGuard`（status pass、score 1、计数全 0）；`replyPolicy` 为 null 时退到 `fallbackReplyPolicy`。
+- 六类检测：句数按 `sentenceBudget.max` 判，超出 2 句以上记 high，否则 medium；问句统计 `？`/`?` 超 `questionLimit`；建议按 `advicePatterns` 统计超 `adviceLimit`；内部标签泄露和破坏沉浸感命中关键词记 high；forbidden move 遍历 `replyPolicy.forbiddenMoves`，只对 `FORBIDDEN_MOVE_CLUES` 覆盖的 7 个动作做关键词检测，另加 `premature_advice` 与 adviceCount 联动记 `forbidden_premature_advice`。
+- `score = 1 - high*0.35 - medium*0.18 - low*0.08`（下限 0）；`status` 有 high 或 score<0.5 为 fail，否则有违规为 warn，无违规为 pass；`violations` 上限 12 条，评分与状态都按截断后的列表算。
+- 第一版只记录不拦截、不重写、不二次生成，结果由 `toAssistantReplyQualityMetadata({ replyPolicy, guard })` 以 `analysisVersion: reply-quality-guard-v1` 写进 assistant 消息 `metadata_json`（含 `replyPolicy` 和 `guard` 两个对象），不进 LangGraph 图，不改流式主流程和用户可见回复。
+- 不新增 D1 迁移，复用 `companion_conversation_messages.metadata_json` 字段（此前 assistant 落库未传 metadata，本层补上）。
 
 companion 档案前置基础：
 
