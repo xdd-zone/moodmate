@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 31
+- **Total Sessions**: 32
 - **Last Active**: 2026-07-24
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1071 | Active |
+| `journal-1.md` | ~1108 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -30,6 +30,7 @@
 
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 32 | 2026-07-24 | 关系阶段系统：LangGraph 关系阶段判断影响路由与策略 | `20fc4c0`, `87c965d`, `3596e47`, `1c12525` | `main` |
 | 31 | 2026-07-24 | Reply Quality Guard 回复后质检落库 | `b057e08`, `23b2135`, `b42a238` | `main` |
 | 30 | 2026-07-24 | Reply Policy 引擎（章50） | `fb8e9cf` | `main` |
 | 29 | 2026-07-24 | 情绪路由 LangGraph（章49） | `7fd1e18` | `main` |

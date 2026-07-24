@@ -1069,3 +1069,40 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 32: 关系阶段系统：LangGraph 关系阶段判断影响路由与策略
+
+**Date**: 2026-07-24
+**Task**: 关系阶段系统：LangGraph 关系阶段判断影响路由与策略
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+移植课程章 52 关系阶段系统。contracts 加 ConversationRelationshipStageSchema；api 加 LangChain 判断器 + 启发式兜底 + normalizeRelationshipStage 产品规则兜底，接入 LangGraph（detectEmotion 与 routeEmotion 之间），buildEmotionRoute/buildReplyPolicy 增 relationshipStage 入参做强制修正，metadata 升 v3，注入关系阶段 system 指令；web 单聊页头部按 messageCount 轻量映射展示阶段名。本地数据库验证 v3 生效、新会话拉回 new_connection、route 不进 playful_flirt。四子任务全部完成。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `20fc4c0` | (see git log) |
+| `87c965d` | (see git log) |
+| `3596e47` | (see git log) |
+| `1c12525` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
