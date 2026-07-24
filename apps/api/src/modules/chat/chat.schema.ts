@@ -121,8 +121,31 @@ export const companionMemories = sqliteTable(
   ],
 );
 
+export const companionProfiles = sqliteTable(
+  "companion_profiles",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    displayName: text("display_name"),
+    persona: text("persona"),
+    guardrails: text("guardrails"),
+    createdAtMs: integer("created_at_ms").notNull(),
+    updatedAtMs: integer("updated_at_ms").notNull(),
+  },
+  (table) => [
+    unique("companion_profiles_user_unique").on(table.userId),
+    check(
+      "companion_profiles_timestamps_check",
+      sql`${table.updatedAtMs} >= ${table.createdAtMs}`,
+    ),
+  ],
+);
+
 export type CompanionConversationRecord =
   typeof companionConversations.$inferSelect;
 export type CompanionConversationMessageRecord =
   typeof companionConversationMessages.$inferSelect;
 export type CompanionMemoryRecord = typeof companionMemories.$inferSelect;
+export type CompanionProfileRecord = typeof companionProfiles.$inferSelect;

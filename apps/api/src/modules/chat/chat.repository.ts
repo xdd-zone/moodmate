@@ -7,7 +7,23 @@ import {
   companionConversationMessages,
   companionConversations,
   companionMemories,
+  companionProfiles,
 } from "./chat.schema";
+
+export async function getCompanionProfile(input: {
+  database: D1Database | undefined;
+  userId: string;
+}) {
+  const db = createD1Client(input.database);
+
+  const rows = await db
+    .select()
+    .from(companionProfiles)
+    .where(eq(companionProfiles.userId, input.userId))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
 
 export async function getOrCreateCompanionConversation(input: {
   database: D1Database | undefined;

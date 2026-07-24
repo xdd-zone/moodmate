@@ -3,8 +3,10 @@ import {
   type CompanionChatLlmConfig,
   type CompanionChatMessage,
   type CompanionMemory,
+  type ConversationEmotion,
   type ConversationIntent,
   type ConversationSafety,
+  type EmotionRoute,
   type UpdateCompanionMemoryRequest,
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
@@ -14,14 +16,16 @@ import { AppError } from "@/shared/app-error";
 import type { ApiBindings } from "@/shared/hono-env";
 
 import {
-  analyzeConversationIntent,
   analyzeConversationSafety,
+  analyzeConversationUnderstanding,
   buildBoundaryResponse,
+  getEmotionRouteSystemInstruction,
   getIntentSystemInstruction,
   getSafetySystemInstruction,
   buildConversationAnalysisMetadata,
 } from "./chat.analysis";
 import {
+  getCompanionProfile,
   getOrCreateCompanionConversation,
   insertCompanionConversationMessage,
   insertCompanionMemory,
@@ -209,7 +213,7 @@ export async function prepareCompanionChat(input: {
     throw new AppError(BizCode.COMMON_INVALID_REQUEST, "聊天内容不能为空", 400);
   }
 
-  const [recentMessages, activeMemories] = await Promise.all([
+  const [recentMessages, activeMemories, profile] = await Promise.all([
     listCompanionConversationMessages({
       conversationId: conversation.id,
       database: input.bindings.DB,
@@ -221,7 +225,13 @@ export async function prepareCompanionChat(input: {
       limit: COMPANION_MEMORY_INJECTION_LIMIT,
       userId: input.userId,
     }),
+    getCompanionProfile({
+      database: input.bindings.DB,
+      userId: input.userId,
+    }),
   ]);
+  const agentName = profile?.displayName?.trim() || "MoodMate";
+  const agentGuardrails = profile?.guardrails?.trim() || null;
   const providerConfig = await resolveProviderConfig(input.bindings);
   const analysisMemories = activeMemories.map((memory) => ({
     content: memory.content,
@@ -243,16 +253,22 @@ export async function prepareCompanionChat(input: {
 
   const boundaryResponse = buildBoundaryResponse(safety);
 
-  const intent = boundaryResponse
+  const understanding = boundaryResponse
     ? null
-    : await analyzeConversationIntent({
+    : await analyzeConversationUnderstanding({
         activeMemories: analysisMemories,
+        agentGuardrails,
+        agentName,
         providerConfig,
         recentMessages: analysisRecentMessages,
         safety,
         signal: input.signal,
         userText: latestUserText,
       });
+
+  const intent = understanding?.intent ?? null;
+  const emotion = understanding?.emotion ?? null;
+  const route = understanding?.route ?? null;
 
   const sourceUserMessageId = uuidv7();
   const nowMs = Date.now();
@@ -262,7 +278,12 @@ export async function prepareCompanionChat(input: {
     conversationId: conversation.id,
     database: input.bindings.DB,
     id: sourceUserMessageId,
-    metadataJson: buildConversationAnalysisMetadata({ intent, safety }),
+    metadataJson: buildConversationAnalysisMetadata({
+      emotion,
+      intent,
+      route,
+      safety,
+    }),
     nowMs,
     role: "user",
     userId: input.userId,
@@ -271,8 +292,10 @@ export async function prepareCompanionChat(input: {
   const messages: ChatCompletionMessage[] = [
     {
       content: buildSystemPrompt({
+        emotion,
         intent,
         memories: activeMemories,
+        route,
         safety,
         summary: conversation.summary,
       }),
@@ -352,8 +375,10 @@ export async function saveCompanionAssistantTurn(input: {
 }
 
 function buildSystemPrompt(input: {
+  emotion: ConversationEmotion | null;
   intent: ConversationIntent | null;
   memories: Array<{ content: string; importance: number; type: string }>;
+  route: EmotionRoute | null;
   safety: ConversationSafety;
   summary: string | null;
 }) {
@@ -361,6 +386,10 @@ function buildSystemPrompt(input: {
     COMPANION_SYSTEM_PROMPT,
     getSafetySystemInstruction(input.safety),
     getIntentSystemInstruction(input.intent),
+    getEmotionRouteSystemInstruction({
+      emotion: input.emotion,
+      route: input.route,
+    }),
     input.memories.length > 0
       ? [
           "以下是用户的长期记忆，请优先尊重：",
