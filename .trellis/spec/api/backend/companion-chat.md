@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-修改固定伴侣会话、聊天历史、长期记忆、平台 DeepSeek 配置、OpenAI-compatible Chat Completions 请求或 SSE 转纯文本流时使用本规范。实现位于 `apps/api/src/modules/chat/`，数据库迁移位于 `apps/api/migrations/`。
+修改固定伴侣会话、聊天历史、长期记忆、会话前置分析（安全边界 / 意图 / 情绪 / 路由）、companion 档案、平台 DeepSeek 配置、OpenAI-compatible Chat Completions 请求或 SSE 转纯文本流时使用本规范。实现位于 `apps/api/src/modules/chat/`，数据库迁移位于 `apps/api/migrations/`。
 
 ## 2. 公开签名
 
@@ -92,24 +92,36 @@ await db
   );
 ```
 
-## 8. 会话前置分析（安全边界 + 意图识别）
+## 8. 会话前置分析（安全边界 + 意图 + 情绪 + 路由）
 
-`POST /rpc/chat/companion` 在回复生成前，先在 service 里跑两步结构化分析，实现位于 `chat.analysis.ts`：
+`POST /rpc/chat/companion` 在回复生成前，先在 service 里跑结构化分析链路，实现位于 `chat.analysis.ts`：
 
-- 安全边界判断 `analyzeConversationSafety` 先执行；意图识别 `analyzeConversationIntent` 用 LangGraph 编排，仅在安全通过后执行。
-- 两步都用当前 `providerConfig`（请求级 `llmConfig` 或平台 DeepSeek），走 `@langchain/openai` 的 `ChatOpenAI` + `withStructuredOutput`，`temperature: 0`。
-- 结构化输出按 `functionCalling -> jsonSchema -> jsonMode` 顺序重试；全部失败用保守 `fallbackSafety` / `fallbackIntent`，不回退关键词规则。
-- 分析 schema（`ConversationSafetySchema`、`ConversationIntentSchema`）定义在 `@repo/contracts`，service 和 analysis 都从 contracts 导入，不在 API 侧重复定义。
+- 安全边界判断 `analyzeConversationSafety` 先执行；安全通过后调用 `analyzeConversationUnderstanding` 跑完整理解图，返回 `{ intent, emotion, route }`。
+- LangGraph 图结构：`normalizeInput -> classifyIntent -> detectEmotion -> routeEmotion -> END`。intent、emotion 走 LLM 结构化输出；route 是纯代码规则（`buildEmotionRoute`），不调 LLM。
+- LLM 步骤都用当前 `providerConfig`（请求级 `llmConfig` 或平台 DeepSeek），走 `@langchain/openai` 的 `ChatOpenAI` + `withStructuredOutput`，`temperature: 0`。
+- 结构化输出按 `functionCalling -> jsonSchema -> jsonMode` 顺序重试；全部失败用保守 `fallbackSafety` / `fallbackEmotion`，不回退关键词规则。图整体 catch 时三层兜底：intent、emotion 归一化 fallback，route 由 `buildEmotionRoute` 从兜底 intent/emotion 推。
+- 分析 schema（`ConversationSafetySchema`、`ConversationIntentSchema`、`ConversationEmotionSchema`、`EmotionRouteSchema`）定义在 `@repo/contracts`，service 和 analysis 都从 contracts 导入，不在 API 侧重复定义。
+
+情绪归一化与路由（代码治理层，不调 LLM）：
+
+- `normalizeConversationEmotion(emotion, safety)`：去重去空 `secondaryEmotions` 并 slice(0,3)；`self_harm` / `crisis` 收紧为严肃策略（intensity≥0.85、negative、needsComfort/needsDeescalation=true、serious）；`emotional_dependency` 把 playful/light 收到 warm；强负面（intensity≥0.7 且 negative）置 needsComfort；高激活 angry/hurt 置 needsDeescalation。
+- `buildEmotionRoute({ safety, intent, emotion })` 分支顺序固定，必须照此顺序：`soft_boundary` 强制 `calm_deescalation`（提前 return，安全优先）-> needsDeescalation/angry -> conversation_repair/agent_feedback -> romantic_flirt/affectionate -> relationship_advice/analyze_situation（先安抚再建议）-> needsComfort/negative（tired 或 companionship_presence 走 `quiet_presence`）-> 默认 `light_companion`。
 
 分流与落库：
 
-- 用户消息落库前完成安全分析，安全 + 意图结果通过 `buildConversationAnalysisMetadata`（`analysisVersion: conversation-analysis-v1`）写入 `metadata_json`。
-- `boundaryAction` 为 `refuse` / `crisis_support` 时，`buildBoundaryResponse` 直接返回固定文本流，不调用上游模型；assistant 消息仍完整落库。
-- `caution` / `redirect` / `soft_boundary` 时，`getSafetySystemInstruction` 和 `getIntentSystemInstruction` 把策略注入 system prompt，顺序为安全、意图、长期记忆、会话摘要。
+- 用户消息落库前完成安全分析，safety + intent + emotion + route 通过 `buildConversationAnalysisMetadata`（`analysisVersion: conversation-understanding-v1`）写入 `metadata_json`。
+- `boundaryAction` 为 `refuse` / `crisis_support` 时，`buildBoundaryResponse` 直接返回固定文本流，不调用上游模型；assistant 消息仍完整落库。存在 boundaryResponse 时不进理解链路，intent/emotion/route 全为 null。
+- `caution` / `redirect` / `soft_boundary` 时，`getSafetySystemInstruction`、`getIntentSystemInstruction` 和 `getEmotionRouteSystemInstruction` 把策略注入 system prompt，顺序为安全、意图、情绪路由、长期记忆、会话摘要。情绪路由指令末句要求「不要在回复中暴露这些标签」。
 - 记忆抽取受 `safety.allowMemoryExtraction` 门控；为 false 时 `saveCompanionAssistantTurn` 跳过 `saveCandidateMemories`。
+
+companion 档案前置基础：
+
+- `companion_profiles` 表（迁移 0010）挂在 `user_id` 上（唯一），存 `display_name` / `persona` / `guardrails`，三个业务字段全可空。当前只做只读 `getCompanionProfile`，没有写入接口和管理 UI。
+- service 解析：`agentName` 缺省 `"MoodMate"`，`agentGuardrails` 缺省 null（分析 prompt 里显示暂无）。persona 本阶段不注入 prompt。
+- `agentName` / `agentGuardrails` 作为分析器入参供给情绪识别 prompt；后续关系阶段章节复用同一档案入参。
 
 结构化输出 prompt 契约（必做）：
 
-- 两个分析 prompt 的 system 段必须显式列出 JSON 字段名、类型和允许的枚举值，并要求「只返回 JSON、不要 markdown 代码块或多余文字」。
-- 原因：DeepSeek 官方模型（`deepseek-v4-flash`）是推理模型，`functionCalling` / `jsonSchema` 在三方中转或部分场景会失败，最终落到 `jsonMode`；`jsonMode` 不会把 schema 结构喂给模型，缺字段契约时模型会自创字段名（如 `safety` / `intent`），导致 Zod parse 失败并全程走兜底。
-- 判定功能是否真正生效：查用户消息 `metadata_json`，真实结果的 `reason` 是贴合内容的具体文案且 `confidence` 高；兜底恒为 `caution` / `other` / `unclear` / `0.3` 与固定文案。
+- 三个 LLM 分析 prompt（safety / intent / emotion）的 system 段必须显式列出 JSON 字段名、类型和允许的枚举值，并要求「只返回 JSON、不要 markdown 代码块或多余文字」。
+- 原因：DeepSeek 官方模型（`deepseek-v4-flash`）是推理模型，`functionCalling` / `jsonSchema` 在三方中转或部分场景会失败，最终落到 `jsonMode`；`jsonMode` 不会把 schema 结构喂给模型，缺字段契约时模型会自创字段名（如 `safety` / `intent` / `emotion`），导致 Zod parse 失败并全程走兜底。
+- 判定功能是否真正生效：查用户消息 `metadata_json`，真实结果的 `reason` / `emotionalCue` 是贴合内容的具体文案且 `confidence` 高；兜底恒为 `caution` / `other` / `unclear` / `0.3`、emotion 恒为 `neutral` + 固定 cue 文案。

@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "chat 模块分析链路、LangGraph 编排、prompt 组装、流式落库和第 8 节结构化输出兜底约定，本任务全程依据"}
+{"file": ".trellis/spec/api/backend/d1.md", "reason": "新增 0010 companion_profiles 迁移、Drizzle schema 和本地 apply/list 验证按此指南"}
+{"file": ".trellis/spec/api/backend/directory-structure.md", "reason": "确认 schema/analysis/service/repository 分层职责和依赖方向"}
+{"file": ".trellis/spec/contracts/shared/companion-chat.md", "reason": "新增 ConversationEmotionSchema/EmotionRouteSchema 时对齐现有聊天合同风格"}
+{"file": ".trellis/spec/contracts/shared/contract-guidelines.md", "reason": "Zod schema 写法、类型推导和 index.ts 导出规范"}
