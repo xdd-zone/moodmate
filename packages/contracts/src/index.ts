@@ -53,6 +53,7 @@ export {
   ConversationSafetySchema,
   EmotionRouteSchema,
   ReplyPolicySchema,
+  ReplyQualityGuardSchema,
 } from "./chat/companion-analysis.contract";
 export type {
   CompanionIntentPrimary,
@@ -61,6 +62,7 @@ export type {
   ConversationSafety,
   EmotionRoute,
   ReplyPolicy,
+  ReplyQualityGuard,
 } from "./chat/companion-analysis.contract";
 export {
   AdminDefaultAvatarCurrentResponseSchema,
