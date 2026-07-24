@@ -999,3 +999,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 30: Reply Policy 引擎（章50）
+
+**Date**: 2026-07-24
+**Task**: Reply Policy 引擎（章50）
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+在情绪路由之后加 Reply Policy 层：contracts 新增 ReplyPolicySchema（policy/sentenceBudget/rhythm/openingMove/allowedMoves/forbiddenMoves/questionLimit/adviceLimit/intimacyLevel/styleGuidance）；chat.analysis.ts 加 fallbackReplyPolicy、sentenceBudgetForRoute、纯代码规则 buildReplyPolicy（7 个 route 分支 + memory_ack 覆盖 + 4 条二次修正 + forbiddenMoves 去重防越界）、buildReplyPolicyNode 接进 LangGraph 图（routeEmotion->buildReplyPolicy->END）、getReplyPolicySystemInstruction、metadata 升到 conversation-understanding-v2；chat.service.ts 注入 prompt 并把 replyPolicy 挂到 turn 供章51质检。实现+检查子代理均通过三项 quality gate。父任务 agent-chat-understanding 进度 2/4。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fb8e9cf` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
