@@ -1,0 +1,7 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "新增关怀计划/事件表、API 与 repository，遵循分层"}
+{"file": ".trellis/spec/api/backend/d1.md", "reason": "新增 2 张关怀表，按迁移规范新增迁移文件"}
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "主动关怀消息写入真实会话历史，复用消息插入与会话统计"}
+{"file": ".trellis/spec/api/backend/routing-and-middleware.md", "reason": "新增关怀 CRUD/generate 路由与校验、应用挂载"}
+{"file": ".trellis/spec/contracts/shared/contract-guidelines.md", "reason": "关怀计划/事件/场景枚举 contract 与导出"}
+{"file": ".trellis/spec/web/frontend/companion-chat.md", "reason": "关怀设置面板挂入 settings section、聊天入口未读提示"}

@@ -25,22 +25,23 @@ web 聊天 ─POST /rpc/chat/companion─▶ chat.service.resolveProviderConfig
 
 新增 D1 表 `llm_provider_configs`（drizzle schema，放 `apps/api/src/modules/llm-config/llm-config.schema.ts`）：
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| id | text pk | uuidv7 |
-| name | text notNull | 展示名，如「生产 DeepSeek」 |
-| provider_name | text notNull | 协议侧 provider 名，如 DeepSeek/OpenAI/GLM |
-| base_url | text notNull | OpenAI 兼容 baseURL |
-| model | text notNull | 模型 id |
-| api_key_ciphertext | text notNull | AES-GCM 密文（base64） |
-| api_key_iv | text notNull | 12 字节 IV（base64） |
-| api_key_last4 | text notNull | 明文后四位，脱敏回显用 |
-| disable_thinking | integer notNull default 0 | 是否给上游带 `thinking:{type:"disabled"}` |
-| is_active | integer notNull default 0 | 激活标记 |
-| created_at_ms | integer notNull | |
-| updated_at_ms | integer notNull | |
+| 列                 | 类型                      | 说明                                       |
+| ------------------ | ------------------------- | ------------------------------------------ |
+| id                 | text pk                   | uuidv7                                     |
+| name               | text notNull              | 展示名，如「生产 DeepSeek」                |
+| provider_name      | text notNull              | 协议侧 provider 名，如 DeepSeek/OpenAI/GLM |
+| base_url           | text notNull              | OpenAI 兼容 baseURL                        |
+| model              | text notNull              | 模型 id                                    |
+| api_key_ciphertext | text notNull              | AES-GCM 密文（base64）                     |
+| api_key_iv         | text notNull              | 12 字节 IV（base64）                       |
+| api_key_last4      | text notNull              | 明文后四位，脱敏回显用                     |
+| disable_thinking   | integer notNull default 0 | 是否给上游带 `thinking:{type:"disabled"}`  |
+| is_active          | integer notNull default 0 | 激活标记                                   |
+| created_at_ms      | integer notNull           |                                            |
+| updated_at_ms      | integer notNull           |                                            |
 
 约束：
+
 - 部分唯一索引 `CREATE UNIQUE INDEX llm_provider_configs_active_unique ON llm_provider_configs (is_active) WHERE is_active = 1;` 保证至多一条激活。
 - `check` 约束 `is_active IN (0,1)`、`updated_at_ms >= created_at_ms`。
 
@@ -87,6 +88,7 @@ web 聊天 ─POST /rpc/chat/companion─▶ chat.service.resolveProviderConfig
 ## 聊天/分析改造
 
 `chat.service.ts`：
+
 - `resolveProviderConfig` 改为 `async`，读激活配置：无则抛 `AppError(SYSTEM..., "请先在管理后台配置并激活模型", 503)`。
 - 解密 apiKey，返回 `ChatProviderConfig`（含 `disableThinking`，去掉 `isPlatformDeepSeek`）。
 - `prepareCompanionChat` 里 `resolveProviderConfig(...)` 调用点改 `await`。
@@ -98,6 +100,7 @@ web 聊天 ─POST /rpc/chat/companion─▶ chat.service.resolveProviderConfig
 ## env 改造
 
 `apps/api/src/shared/env.ts`：
+
 - 删除 `DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / DEEPSEEK_MODEL` 及默认常量。
 - 新增 `LLM_CONFIG_ENC_KEY: string`（必填），解析时 base64 解码校验 32 字节，否则抛错。
 - 同步 `worker-configuration.d.ts`、`hono-env.ts` 的 `ApiBindings`。

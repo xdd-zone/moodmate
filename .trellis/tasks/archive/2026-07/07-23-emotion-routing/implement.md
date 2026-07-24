@@ -22,6 +22,7 @@
 3. `apps/api/src/modules/chat/chat.repository.ts` 加 `getCompanionProfile({ database, userId })`，只读，查不到返回 null。
 
 验证：
+
 ```
 pnpm --filter api exec wrangler d1 migrations apply moodmate-local --local
 pnpm --filter api exec wrangler d1 migrations list moodmate-local --local
@@ -69,6 +70,7 @@ pnpm format:check
 ```
 
 功能判定：本地发一条消息，查 user 消息 `metadata_json`：
+
 - `analysisVersion` == `conversation-understanding-v1`
 - emotion.emotionalCue 是贴合内容的具体文案（非兜底固定句）
 - route 分支符合输入（如"今天好累不想说话"应走 quiet_presence）

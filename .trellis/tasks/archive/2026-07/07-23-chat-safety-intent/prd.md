@@ -1,6 +1,7 @@
 # Agent 聊天安全边界与意图识别
 
 对应课程章节：
+
 - docs/temp/47-agent-chat-safety-boundary.txt（安全边界判断）
 - docs/temp/48-agent-chat-intent-langgraph.txt（意图识别 + LangGraph）
 
@@ -9,6 +10,7 @@
 ## Goal
 
 在 MoodMate 伴侣聊天回复生成之前，增加两个结构化前置分析步骤：
+
 1. 安全边界判断：先判断本轮用户输入是否碰到安全边界，据此分流（正常聊天 / 软边界 / 转向 / 拒绝 / 危机支持）。
 2. 意图识别：安全通过后，用 LangChain + LangGraph 判断用户真实意图，把结果作为隐藏策略注入回复 prompt。
 

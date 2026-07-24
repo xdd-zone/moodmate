@@ -4,18 +4,18 @@
 
 改动分布在四层，全部沿用 moodmate 现有分层与命名：
 
-| 层 | 文件 | 改动 |
-| --- | --- | --- |
-| 迁移 | `apps/api/migrations/0011_companion_message_feedbacks.sql`（新建） | 建反馈表 + 唯一索引 |
-| schema | `apps/api/src/modules/chat/chat.schema.ts` | 新增 `companionMessageFeedbacks` 表定义 + 推断类型 |
-| contract | `packages/contracts/src/chat/companion-chat.contract.ts` | 新增 rating/reason/feedback schema，`CompanionConversationMessageSchema` 加 feedback 字段，新增提交请求/响应 schema |
-| contract 导出 | `packages/contracts/src/index.ts` | 手动 re-export 新 schema 与类型 |
-| repository | `apps/api/src/modules/chat/chat.repository.ts` | 新增 upsert 反馈、list 最近反馈、消息查询 left join 反馈 |
-| service | `apps/api/src/modules/chat/chat.service.ts` | 新增提交反馈编排、反馈注入 prompt、读取最近反馈 |
-| presenter | `apps/api/src/modules/chat/chat.presenter.ts` | 消息映射带上 feedback |
-| route | `apps/api/src/modules/chat/chat.route.ts` | 新增 POST feedback 端点 |
-| web api | `apps/web/src/api/chat.api.ts` + `chat.query.ts` | 新增 submitFeedback 调用 + mutation |
-| web ui | `apps/web/src/components/chat/chat-conversation.tsx` | assistant 气泡下加点赞/点踩按钮 |
+| 层            | 文件                                                               | 改动                                                                                                                |
+| ------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| 迁移          | `apps/api/migrations/0011_companion_message_feedbacks.sql`（新建） | 建反馈表 + 唯一索引                                                                                                 |
+| schema        | `apps/api/src/modules/chat/chat.schema.ts`                         | 新增 `companionMessageFeedbacks` 表定义 + 推断类型                                                                  |
+| contract      | `packages/contracts/src/chat/companion-chat.contract.ts`           | 新增 rating/reason/feedback schema，`CompanionConversationMessageSchema` 加 feedback 字段，新增提交请求/响应 schema |
+| contract 导出 | `packages/contracts/src/index.ts`                                  | 手动 re-export 新 schema 与类型                                                                                     |
+| repository    | `apps/api/src/modules/chat/chat.repository.ts`                     | 新增 upsert 反馈、list 最近反馈、消息查询 left join 反馈                                                            |
+| service       | `apps/api/src/modules/chat/chat.service.ts`                        | 新增提交反馈编排、反馈注入 prompt、读取最近反馈                                                                     |
+| presenter     | `apps/api/src/modules/chat/chat.presenter.ts`                      | 消息映射带上 feedback                                                                                               |
+| route         | `apps/api/src/modules/chat/chat.route.ts`                          | 新增 POST feedback 端点                                                                                             |
+| web api       | `apps/web/src/api/chat.api.ts` + `chat.query.ts`                   | 新增 submitFeedback 调用 + mutation                                                                                 |
+| web ui        | `apps/web/src/components/chat/chat-conversation.tsx`               | assistant 气泡下加点赞/点踩按钮                                                                                     |
 
 ## 数据模型
 
@@ -42,10 +42,22 @@ CREATE UNIQUE INDEX companion_message_feedbacks_user_message_unique
 ## Contract 设计
 
 ```ts
-export const CompanionMessageFeedbackRatingSchema = z.enum(["positive", "negative"]);
+export const CompanionMessageFeedbackRatingSchema = z.enum([
+  "positive",
+  "negative",
+]);
 export const CompanionMessageFeedbackReasonSchema = z.enum([
-  "good_tone", "helpful", "warm", "remembered_context",
-  "bad_tone", "too_long", "too_cold", "too_pushy", "wrong_memory", "unsafe", "other",
+  "good_tone",
+  "helpful",
+  "warm",
+  "remembered_context",
+  "bad_tone",
+  "too_long",
+  "too_cold",
+  "too_pushy",
+  "wrong_memory",
+  "unsafe",
+  "other",
 ]);
 export const CompanionMessageFeedbackSchema = z.object({
   rating: CompanionMessageFeedbackRatingSchema,

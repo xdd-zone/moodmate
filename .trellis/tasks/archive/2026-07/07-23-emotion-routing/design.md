@@ -68,9 +68,21 @@ const agentGuardrails = profile?.guardrails?.trim() || null;
 ```ts
 export const ConversationEmotionSchema = z.object({
   primaryEmotion: z.enum([
-    "neutral", "happy", "tired", "lonely", "sad", "anxious", "angry",
-    "jealous", "embarrassed", "affectionate", "playful", "confused",
-    "disappointed", "stressed", "hurt",
+    "neutral",
+    "happy",
+    "tired",
+    "lonely",
+    "sad",
+    "anxious",
+    "angry",
+    "jealous",
+    "embarrassed",
+    "affectionate",
+    "playful",
+    "confused",
+    "disappointed",
+    "stressed",
+    "hurt",
   ]),
   secondaryEmotions: z.array(z.string().trim().min(1).max(40)).max(3),
   intensity: z.number().min(0).max(1),
@@ -81,8 +93,14 @@ export const ConversationEmotionSchema = z.object({
   needsClarification: z.boolean(),
   emotionalCue: z.string().trim().max(300),
   replyTone: z.enum([
-    "light", "warm", "soft", "playful", "calm", "serious",
-    "reassuring", "apologetic",
+    "light",
+    "warm",
+    "soft",
+    "playful",
+    "calm",
+    "serious",
+    "reassuring",
+    "apologetic",
   ]),
 });
 ```
@@ -92,9 +110,15 @@ export const ConversationEmotionSchema = z.object({
 ```ts
 export const EmotionRouteSchema = z.object({
   route: z.enum([
-    "light_companion", "warm_comfort", "deep_comfort", "playful_flirt",
-    "calm_deescalation", "relationship_repair", "gentle_clarification",
-    "practical_support", "quiet_presence",
+    "light_companion",
+    "warm_comfort",
+    "deep_comfort",
+    "playful_flirt",
+    "calm_deescalation",
+    "relationship_repair",
+    "gentle_clarification",
+    "practical_support",
+    "quiet_presence",
   ]),
   responseLength: z.enum(["very_short", "short", "medium", "long"]),
   shouldAskQuestion: z.boolean(),

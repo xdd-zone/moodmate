@@ -10,6 +10,7 @@
 ## 数据流
 
 现状：
+
 ```
 saveCompanionAssistantTurn
   -> 插入 assistant 消息
@@ -21,6 +22,7 @@ saveCompanionAssistantTurn
 ```
 
 改造后：
+
 ```
 saveCompanionAssistantTurn
   -> 插入 assistant 消息
@@ -44,9 +46,18 @@ const CompanionMemoryCandidateSchema = z.object({
   shouldExtract: z.boolean(),
   confidence: z.number().min(0).max(1),
   category: z.enum([
-    "preference", "boundary", "relationship_goal", "conversation_style",
-    "important_fact", "identity_profile", "temporary_emotion",
-    "small_talk", "assistant_generated", "duplicate", "unsafe", "unclear",
+    "preference",
+    "boundary",
+    "relationship_goal",
+    "conversation_style",
+    "important_fact",
+    "identity_profile",
+    "temporary_emotion",
+    "small_talk",
+    "assistant_generated",
+    "duplicate",
+    "unsafe",
+    "unclear",
   ]),
   stability: z.enum(["stable", "likely_stable", "temporary", "unclear"]),
   importance: z.number().int().min(0).max(5),
@@ -59,18 +70,24 @@ const CompanionMemoryCandidateSchema = z.object({
 
 ```ts
 const CompanionExtractedMemorySchema = z.object({
-  memories: z.array(z.object({
-    content: z.string().trim().min(1).max(500),
-    type: z.enum(["偏好", "边界", "关系目标", "对话风格", "重要事实"]),
-    importance: z.number().int().min(1).max(5),
-  })).max(3),
+  memories: z
+    .array(
+      z.object({
+        content: z.string().trim().min(1).max(500),
+        type: z.enum(["偏好", "边界", "关系目标", "对话风格", "重要事实"]),
+        importance: z.number().int().min(1).max(5),
+      }),
+    )
+    .max(3),
 });
 ```
+
 抽取器 prompt 注入候选判断结论（类别/稳定性/重要度/候选事实）作为精抽方向。
 
 ## Fast Reject 规则（本地，无 LLM）
 
 按 docs/temp/53 复刻，落到 moodmate：
+
 1. userText / assistantText 为空 → skip（unclear）
 2. userText 长度 < 6 且无记忆信号正则 → skip（small_talk）
 3. 命中常见确认语正则（好/嗯/哦/哈哈/谢谢/晚安/ok…）→ skip（small_talk）
@@ -80,6 +97,7 @@ const CompanionExtractedMemorySchema = z.object({
 ## 规范化闸门
 
 模型返回后强制约束（同 docs/temp/53）：
+
 - category ∈ {small_talk, temporary_emotion, assistant_generated, duplicate, unsafe} → shouldExtract=false
 - stability === "temporary" 或 importance <= 0 → shouldExtract=false
 - confidence < 0.55 且 importance < 4 → shouldExtract=false

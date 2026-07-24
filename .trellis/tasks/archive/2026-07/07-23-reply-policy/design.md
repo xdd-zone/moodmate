@@ -144,16 +144,16 @@ const fallbackReplyPolicy: ReplyPolicy = {
 
 **route.route → policy 分支映射**：
 
-| route.route | 分支 | 说明 |
-| --- | --- | --- |
-| `quiet_presence` | quiet_presence | 见下 |
-| `warm_comfort` | warm_companion | 见下 |
-| `deep_comfort` | deep_empathy | 见下 |
-| `playful_flirt` | playful_flirt | 见下 |
-| `calm_deescalation` | calm_boundary | 见下 |
-| `relationship_repair` | relationship_repair | 见下 |
-| `practical_support` | practical_support | 见下 |
-| `light_companion` / `gentle_clarification` | 无 case | 保持初始默认（warm_companion） |
+| route.route                                | 分支                | 说明                           |
+| ------------------------------------------ | ------------------- | ------------------------------ |
+| `quiet_presence`                           | quiet_presence      | 见下                           |
+| `warm_comfort`                             | warm_companion      | 见下                           |
+| `deep_comfort`                             | deep_empathy        | 见下                           |
+| `playful_flirt`                            | playful_flirt       | 见下                           |
+| `calm_deescalation`                        | calm_boundary       | 见下                           |
+| `relationship_repair`                      | relationship_repair | 见下                           |
+| `practical_support`                        | practical_support   | 见下                           |
+| `light_companion` / `gentle_clarification` | 无 case             | 保持初始默认（warm_companion） |
 
 课程 EmotionRoute.route 有 9 个枚举值，Reply Policy switch 只覆盖 7 个。`light_companion`、`gentle_clarification` 不进 case，落初始默认。
 

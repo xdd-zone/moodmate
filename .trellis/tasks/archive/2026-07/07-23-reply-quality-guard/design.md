@@ -96,16 +96,16 @@ const fallbackReplyQualityGuard: ReplyQualityGuard = {
 
 **forbidden move → code + 检测线索**（覆盖 8 个，其余 forbidden 枚举本版不检测）：
 
-| forbiddenMove | code | 文本线索（命中即记） |
-| --- | --- | --- |
-| `lecture` | `forbidden_lecture` | `你要明白`、`你必须`、`正确的做法是`、`你应该要` |
-| `over_explain` | `forbidden_over_explain` | 回复过长（句数明显超预算）或出现`之所以`、`原因是`、`具体来说`密集堆叠 |
-| `premature_advice` | `forbidden_premature_advice` | `adviceCount > 0`（策略已禁建议却出现建议型表达） |
-| `intense_flirt` | `forbidden_intense_flirt` | `想你`、`爱你`、`亲亲`、`抱紧`、`宝贝` 等强暧昧表达 |
-| `diagnose_user` | `forbidden_diagnosis` | `你这是`、`你有点`、`你可能得了`、`焦虑症`、`抑郁症` |
-| `take_sides_aggressively` | `forbidden_aggressive_siding` | `他就是`、`绝对是对方的错`、`你没错都是他` |
-| `pressure_to_disclose` | `forbidden_pressure` | `你倒是说啊`、`到底怎么了`、`必须告诉我` |
-| `promise_real_world_action` | `forbidden_real_world_promise` | `我帮你去`、`我会到`、`我明天见你`、`我打电话给` |
+| forbiddenMove               | code                           | 文本线索（命中即记）                                                   |
+| --------------------------- | ------------------------------ | ---------------------------------------------------------------------- |
+| `lecture`                   | `forbidden_lecture`            | `你要明白`、`你必须`、`正确的做法是`、`你应该要`                       |
+| `over_explain`              | `forbidden_over_explain`       | 回复过长（句数明显超预算）或出现`之所以`、`原因是`、`具体来说`密集堆叠 |
+| `premature_advice`          | `forbidden_premature_advice`   | `adviceCount > 0`（策略已禁建议却出现建议型表达）                      |
+| `intense_flirt`             | `forbidden_intense_flirt`      | `想你`、`爱你`、`亲亲`、`抱紧`、`宝贝` 等强暧昧表达                    |
+| `diagnose_user`             | `forbidden_diagnosis`          | `你这是`、`你有点`、`你可能得了`、`焦虑症`、`抑郁症`                   |
+| `take_sides_aggressively`   | `forbidden_aggressive_siding`  | `他就是`、`绝对是对方的错`、`你没错都是他`                             |
+| `pressure_to_disclose`      | `forbidden_pressure`           | `你倒是说啊`、`到底怎么了`、`必须告诉我`                               |
+| `promise_real_world_action` | `forbidden_real_world_promise` | `我帮你去`、`我会到`、`我明天见你`、`我打电话给`                       |
 
 线索表是启发式关键词，命中判定尽量保守（宁可漏报不误报）：短关键词用 `includes`，避免对正常表达误伤。severity 按课程默认给 `medium`，`internal_label_leak` / `breaks_immersion` 给 `high`。实现时线索词列表可在这份表基础上按需增删，但 code 枚举和 severity 档次固定。
 

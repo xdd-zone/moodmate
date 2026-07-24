@@ -2,15 +2,15 @@
 
 ## 分层落点
 
-| 改动 | 文件 | 说明 |
-| --- | --- | --- |
-| 分析 schema | `packages/contracts/src/chat/companion-analysis.contract.ts`（新增） | safety + intent 的 Zod schema 与类型 |
-| contracts 导出 | `packages/contracts/src/index.ts` | 导出新 schema 和类型 |
-| 分析实现 | `apps/api/src/modules/chat/chat.analysis.ts`（新增） | LangChain 模型构造、安全分析、意图分析（LangGraph）、归一化、兜底、prompt 注入、metadata 组装 |
-| 接入分析 | `apps/api/src/modules/chat/chat.service.ts` | `prepareCompanionChat` 前置分析、prompt 注入、boundary 短路、记忆门控 |
-| metadata 落库 | `apps/api/src/modules/chat/chat.repository.ts` | `insertCompanionConversationMessage` 支持传入 `metadataJson` |
-| boundary 分流 | `apps/api/src/modules/chat/chat.route.ts` | 短路时返回固定文本流，不走上游模型 |
-| 依赖 | `apps/api/package.json` + `pnpm-workspace.yaml` catalog | `@langchain/core`、`@langchain/openai`、`@langchain/langgraph` |
+| 改动           | 文件                                                                 | 说明                                                                                          |
+| -------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 分析 schema    | `packages/contracts/src/chat/companion-analysis.contract.ts`（新增） | safety + intent 的 Zod schema 与类型                                                          |
+| contracts 导出 | `packages/contracts/src/index.ts`                                    | 导出新 schema 和类型                                                                          |
+| 分析实现       | `apps/api/src/modules/chat/chat.analysis.ts`（新增）                 | LangChain 模型构造、安全分析、意图分析（LangGraph）、归一化、兜底、prompt 注入、metadata 组装 |
+| 接入分析       | `apps/api/src/modules/chat/chat.service.ts`                          | `prepareCompanionChat` 前置分析、prompt 注入、boundary 短路、记忆门控                         |
+| metadata 落库  | `apps/api/src/modules/chat/chat.repository.ts`                       | `insertCompanionConversationMessage` 支持传入 `metadataJson`                                  |
+| boundary 分流  | `apps/api/src/modules/chat/chat.route.ts`                            | 短路时返回固定文本流，不走上游模型                                                            |
+| 依赖           | `apps/api/package.json` + `pnpm-workspace.yaml` catalog              | `@langchain/core`、`@langchain/openai`、`@langchain/langgraph`                                |
 
 ## 关键取舍
 
@@ -38,6 +38,7 @@ function getStructuredOutputMethods() {
 ### 2. 无 Agent 概念
 
 MoodMate 是固定「MoodMate 伴侣」。安全 / 意图 prompt 中：
+
 - `agentName` 固定为「MoodMate」。
 - 无 `guardrailsPrompt`，prompt 中 Agent 自定义边界规则填「暂无」。
 - 意图 prompt 仍传入 safety 结果、长期记忆、最近消息。
