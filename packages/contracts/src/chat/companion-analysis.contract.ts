@@ -150,6 +150,74 @@ export const EmotionRouteSchema = z.object({
   routeGuidance: z.string().trim().max(600),
 });
 
+export const ReplyPolicySchema = z.object({
+  policy: z.enum([
+    "quiet_presence",
+    "warm_companion",
+    "deep_empathy",
+    "playful_flirt",
+    "calm_boundary",
+    "relationship_repair",
+    "gentle_clarify",
+    "practical_support",
+    "roleplay_flow",
+    "memory_ack",
+  ]),
+  sentenceBudget: z.object({
+    min: z.number().int().min(1).max(8),
+    max: z.number().int().min(1).max(8),
+  }),
+  rhythm: z.enum(["still", "soft", "natural", "lively", "focused"]),
+  openingMove: z.enum([
+    "acknowledge",
+    "comfort",
+    "mirror",
+    "apologize",
+    "play",
+    "answer",
+    "clarify",
+    "set_boundary",
+  ]),
+  allowedMoves: z
+    .array(
+      z.enum([
+        "validate_feeling",
+        "mirror_emotion",
+        "offer_presence",
+        "ask_one_question",
+        "give_one_suggestion",
+        "give_two_suggestions",
+        "light_tease",
+        "use_pet_name",
+        "repair_misunderstanding",
+        "continue_roleplay",
+        "acknowledge_memory",
+        "set_soft_boundary",
+      ]),
+    )
+    .max(6),
+  forbiddenMoves: z
+    .array(
+      z.enum([
+        "lecture",
+        "over_explain",
+        "multiple_questions",
+        "premature_advice",
+        "intense_flirt",
+        "diagnose_user",
+        "take_sides_aggressively",
+        "pressure_to_disclose",
+        "promise_real_world_action",
+        "expose_internal_labels",
+      ]),
+    )
+    .max(8),
+  questionLimit: z.number().int().min(0).max(2),
+  adviceLimit: z.number().int().min(0).max(3),
+  intimacyLevel: z.enum(["low", "medium", "high"]),
+  styleGuidance: z.string().trim().max(700),
+});
+
 export type ConversationSafety = z.infer<typeof ConversationSafetySchema>;
 export type CompanionIntentPrimary = z.infer<
   typeof CompanionIntentPrimarySchema
@@ -157,3 +225,4 @@ export type CompanionIntentPrimary = z.infer<
 export type ConversationIntent = z.infer<typeof ConversationIntentSchema>;
 export type ConversationEmotion = z.infer<typeof ConversationEmotionSchema>;
 export type EmotionRoute = z.infer<typeof EmotionRouteSchema>;
+export type ReplyPolicy = z.infer<typeof ReplyPolicySchema>;
