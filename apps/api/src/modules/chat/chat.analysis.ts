@@ -2,10 +2,12 @@ import {
   ConversationEmotionSchema,
   ConversationIntentSchema,
   ConversationSafetySchema,
+  ReplyPolicySchema,
   type ConversationEmotion,
   type ConversationIntent,
   type ConversationSafety,
   type EmotionRoute,
+  type ReplyPolicy,
 } from "@repo/contracts";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
@@ -75,6 +77,27 @@ const fallbackEmotionRoute: EmotionRoute = {
   shouldUsePetName: false,
   shouldMirrorEmotion: false,
   routeGuidance: "先温和承接，再用一个轻问题确认用户想继续聊什么。",
+};
+
+const fallbackReplyPolicy: ReplyPolicy = {
+  policy: "gentle_clarify",
+  sentenceBudget: { min: 1, max: 3 },
+  rhythm: "soft",
+  openingMove: "acknowledge",
+  allowedMoves: ["validate_feeling", "ask_one_question"],
+  forbiddenMoves: [
+    "lecture",
+    "over_explain",
+    "multiple_questions",
+    "premature_advice",
+    "diagnose_user",
+    "expose_internal_labels",
+  ],
+  questionLimit: 1,
+  adviceLimit: 0,
+  intimacyLevel: "medium",
+  styleGuidance:
+    "先轻轻接住用户，再只问一个低压力问题；不要讲大道理，不要连续追问。",
 };
 
 const conversationSafetyPrompt = ChatPromptTemplate.fromMessages([
@@ -207,6 +230,7 @@ const ConversationUnderstandingState = Annotation.Root({
   intent: Annotation<ConversationIntent | null>(),
   emotion: Annotation<ConversationEmotion | null>(),
   route: Annotation<EmotionRoute | null>(),
+  replyPolicy: Annotation<ReplyPolicy | null>(),
   signal: Annotation<AbortSignal | undefined>(),
 });
 
@@ -662,6 +686,274 @@ function buildEmotionRoute(params: {
   return route;
 }
 
+function sentenceBudgetForRoute(
+  route: EmotionRoute,
+): ReplyPolicy["sentenceBudget"] {
+  switch (route.responseLength) {
+    case "very_short":
+      return { min: 1, max: 2 };
+    case "short":
+      return { min: 1, max: 3 };
+    case "medium":
+      return { min: 2, max: 5 };
+    default:
+      return { min: 3, max: 7 };
+  }
+}
+
+function buildReplyPolicy(params: {
+  safety: ConversationSafety;
+  intent: ConversationIntent | null;
+  emotion: ConversationEmotion | null;
+  route: EmotionRoute | null;
+}): ReplyPolicy {
+  const { safety } = params;
+
+  if (!params.intent && !params.emotion && !params.route) {
+    return { ...fallbackReplyPolicy };
+  }
+
+  const route = params.route ?? fallbackEmotionRoute;
+  const emotion = params.emotion ?? fallbackEmotion;
+  const intent = params.intent;
+
+  const sentenceBudget = sentenceBudgetForRoute(route);
+
+  let policy: ReplyPolicy["policy"] = "warm_companion";
+  let rhythm: ReplyPolicy["rhythm"] = "natural";
+  let openingMove: ReplyPolicy["openingMove"] = "acknowledge";
+  let allowedMoves: ReplyPolicy["allowedMoves"] = ["validate_feeling"];
+  let forbiddenMoves: ReplyPolicy["forbiddenMoves"] = [
+    "lecture",
+    "over_explain",
+    "expose_internal_labels",
+  ];
+  let questionLimit = route.shouldAskQuestion ? 1 : 0;
+  let adviceLimit = route.shouldGiveAdvice ? 1 : 0;
+  let intimacyLevel: ReplyPolicy["intimacyLevel"] = "medium";
+  let styleGuidance = route.routeGuidance;
+
+  switch (route.route) {
+    case "quiet_presence": {
+      policy = "quiet_presence";
+      rhythm = "still";
+      openingMove = "comfort";
+      allowedMoves = ["validate_feeling", "offer_presence"];
+      forbiddenMoves = [
+        "lecture",
+        "over_explain",
+        "multiple_questions",
+        "premature_advice",
+        "pressure_to_disclose",
+        "expose_internal_labels",
+      ];
+      questionLimit = 0;
+      adviceLimit = 0;
+      intimacyLevel = "medium";
+      styleGuidance = `${route.routeGuidance} 像安静坐在用户旁边一样回复，允许留白，不要努力把话题撑满。`;
+      break;
+    }
+    case "warm_comfort": {
+      policy = "warm_companion";
+      rhythm = "soft";
+      openingMove = "comfort";
+      allowedMoves = ["validate_feeling", "mirror_emotion", "offer_presence"];
+      forbiddenMoves = [
+        "lecture",
+        "over_explain",
+        "multiple_questions",
+        "premature_advice",
+        "diagnose_user",
+        "expose_internal_labels",
+      ];
+      adviceLimit = 0;
+      styleGuidance = `${route.routeGuidance} 先陪伴，再轻轻延续，不要急着解决问题。`;
+      break;
+    }
+    case "deep_comfort": {
+      policy = "deep_empathy";
+      rhythm = "soft";
+      openingMove = "mirror";
+      allowedMoves = [
+        "validate_feeling",
+        "mirror_emotion",
+        "offer_presence",
+        "ask_one_question",
+      ];
+      forbiddenMoves = [
+        "lecture",
+        "over_explain",
+        "multiple_questions",
+        "premature_advice",
+        "diagnose_user",
+        "pressure_to_disclose",
+        "expose_internal_labels",
+      ];
+      questionLimit = route.shouldAskQuestion ? 1 : 0;
+      adviceLimit = 0;
+      intimacyLevel = "medium";
+      styleGuidance = `${route.routeGuidance} 情绪承接要比建议更重要，语言可以更认真但不要沉重。`;
+      break;
+    }
+    case "playful_flirt": {
+      policy = "playful_flirt";
+      rhythm = "lively";
+      openingMove = "play";
+      allowedMoves = [
+        "mirror_emotion",
+        "light_tease",
+        ...(route.shouldUsePetName
+          ? (["use_pet_name"] as ReplyPolicy["allowedMoves"])
+          : []),
+      ];
+      forbiddenMoves = [
+        "lecture",
+        "over_explain",
+        "intense_flirt",
+        "multiple_questions",
+        "expose_internal_labels",
+      ];
+      questionLimit =
+        (intent?.replyExpectation.shouldAskQuestion ?? route.shouldAskQuestion)
+          ? 1
+          : 0;
+      adviceLimit = 0;
+      intimacyLevel = "high";
+      styleGuidance = `${route.routeGuidance} 表达可以甜一点、轻一点，但不要露骨，不要油腻。`;
+      break;
+    }
+    case "calm_deescalation": {
+      policy = "calm_boundary";
+      rhythm = "focused";
+      openingMove =
+        safety.boundaryAction === "soft_boundary"
+          ? "set_boundary"
+          : "acknowledge";
+      allowedMoves = ["validate_feeling", "set_soft_boundary"];
+      forbiddenMoves = [
+        "lecture",
+        "over_explain",
+        "multiple_questions",
+        "take_sides_aggressively",
+        "premature_advice",
+        "expose_internal_labels",
+      ];
+      questionLimit = 0;
+      adviceLimit = 0;
+      intimacyLevel = "low";
+      styleGuidance = `${route.routeGuidance} 语气要稳，不刺激用户，不站队扩大冲突。`;
+      break;
+    }
+    case "relationship_repair": {
+      policy = "relationship_repair";
+      rhythm = "soft";
+      openingMove = "apologize";
+      allowedMoves = [
+        "validate_feeling",
+        "repair_misunderstanding",
+        "ask_one_question",
+      ];
+      forbiddenMoves = [
+        "lecture",
+        "over_explain",
+        "multiple_questions",
+        "take_sides_aggressively",
+        "expose_internal_labels",
+      ];
+      questionLimit = 1;
+      adviceLimit = 0;
+      intimacyLevel = "medium";
+      styleGuidance = `${route.routeGuidance} 先修复用户体验，不要急着证明自己对。`;
+      break;
+    }
+    case "practical_support": {
+      policy = "practical_support";
+      rhythm = "focused";
+      openingMove = emotion.needsComfort ? "comfort" : "answer";
+      allowedMoves = [
+        "validate_feeling",
+        route.shouldGiveAdvice ? "give_two_suggestions" : "give_one_suggestion",
+      ];
+      forbiddenMoves = [
+        "lecture",
+        "over_explain",
+        "multiple_questions",
+        "diagnose_user",
+        "expose_internal_labels",
+      ];
+      questionLimit = route.shouldAskQuestion ? 1 : 0;
+      adviceLimit = emotion.needsComfort ? 1 : 2;
+      intimacyLevel = "medium";
+      styleGuidance = `${route.routeGuidance} 建议要具体、少而可做，保持亲密朋友口吻。`;
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (
+    intent?.primary === "memory_update" ||
+    intent?.primary === "preference_setting"
+  ) {
+    policy = "memory_ack";
+    rhythm = "soft";
+    openingMove = "acknowledge";
+    allowedMoves = ["acknowledge_memory"];
+    forbiddenMoves = [
+      "lecture",
+      "over_explain",
+      "multiple_questions",
+      "premature_advice",
+      "expose_internal_labels",
+    ];
+    questionLimit = 0;
+    adviceLimit = 0;
+    intimacyLevel = "medium";
+    sentenceBudget.min = 1;
+    sentenceBudget.max = Math.min(sentenceBudget.max, 2);
+    styleGuidance = "简短确认已经理解这条信息或偏好，不要展开成长篇解释。";
+  }
+
+  if (safety.boundaryAction !== "continue") {
+    forbiddenMoves = [
+      ...forbiddenMoves,
+      "intense_flirt",
+      "promise_real_world_action",
+    ];
+    intimacyLevel = "low";
+  }
+
+  if (emotion.intensity >= 0.75 && emotion.valence === "negative") {
+    forbiddenMoves = [...forbiddenMoves, "intense_flirt", "premature_advice"];
+    rhythm = rhythm === "lively" ? "soft" : rhythm;
+  }
+
+  if (!route.shouldAskQuestion) {
+    forbiddenMoves = [...forbiddenMoves, "multiple_questions"];
+    questionLimit = 0;
+  }
+
+  if (!route.shouldGiveAdvice) {
+    forbiddenMoves = [...forbiddenMoves, "premature_advice"];
+    adviceLimit = 0;
+  }
+
+  forbiddenMoves = [...new Set(forbiddenMoves)];
+
+  return ReplyPolicySchema.parse({
+    policy,
+    sentenceBudget,
+    rhythm,
+    openingMove,
+    allowedMoves,
+    forbiddenMoves,
+    questionLimit,
+    adviceLimit,
+    intimacyLevel,
+    styleGuidance,
+  });
+}
+
 async function invokeConversationEmotionAnalysis(params: {
   method: StructuredOutputMethod;
   providerConfig: ChatProviderConfig;
@@ -812,6 +1104,19 @@ function routeEmotionNode(state: typeof ConversationUnderstandingState.State) {
   };
 }
 
+function buildReplyPolicyNode(
+  state: typeof ConversationUnderstandingState.State,
+) {
+  return {
+    replyPolicy: buildReplyPolicy({
+      safety: state.safety,
+      intent: state.intent,
+      emotion: state.emotion,
+      route: state.route,
+    }),
+  };
+}
+
 const conversationUnderstandingGraph = new StateGraph(
   ConversationUnderstandingState,
 )
@@ -819,17 +1124,20 @@ const conversationUnderstandingGraph = new StateGraph(
   .addNode("classifyIntent", classifyIntentNode)
   .addNode("detectEmotion", detectEmotionNode)
   .addNode("routeEmotion", routeEmotionNode)
+  .addNode("buildReplyPolicy", buildReplyPolicyNode)
   .addEdge(START, "normalizeInput")
   .addEdge("normalizeInput", "classifyIntent")
   .addEdge("classifyIntent", "detectEmotion")
   .addEdge("detectEmotion", "routeEmotion")
-  .addEdge("routeEmotion", END)
+  .addEdge("routeEmotion", "buildReplyPolicy")
+  .addEdge("buildReplyPolicy", END)
   .compile();
 
 export interface ConversationUnderstanding {
   intent: ConversationIntent;
   emotion: ConversationEmotion;
   route: EmotionRoute;
+  replyPolicy: ReplyPolicy;
 }
 
 export async function analyzeConversationUnderstanding(params: {
@@ -870,8 +1178,11 @@ export async function analyzeConversationUnderstanding(params: {
     const route =
       result.route ??
       buildEmotionRoute({ safety: params.safety, intent, emotion });
+    const replyPolicy =
+      result.replyPolicy ??
+      buildReplyPolicy({ safety: params.safety, intent, emotion, route });
 
-    return { intent, emotion, route };
+    return { intent, emotion, route, replyPolicy };
   } catch (error) {
     console.warn("LangGraph conversation understanding failed", error);
     const intent = normalizeConversationIntent(fallbackIntent, params.safety);
@@ -880,7 +1191,13 @@ export async function analyzeConversationUnderstanding(params: {
       params.safety,
     );
     const route = buildEmotionRoute({ safety: params.safety, intent, emotion });
-    return { intent, emotion, route };
+    const replyPolicy = buildReplyPolicy({
+      safety: params.safety,
+      intent,
+      emotion,
+      route,
+    });
+    return { intent, emotion, route, replyPolicy };
   }
 }
 
@@ -978,17 +1295,48 @@ export function getEmotionRouteSystemInstruction(params: {
     .join("\n");
 }
 
+export function getReplyPolicySystemInstruction(
+  replyPolicy: ReplyPolicy | null,
+) {
+  if (!replyPolicy) {
+    return "";
+  }
+
+  return [
+    "本轮回复策略：",
+    `- 策略：${replyPolicy.policy}`,
+    `- 句数范围：${replyPolicy.sentenceBudget.min} 到 ${replyPolicy.sentenceBudget.max} 句`,
+    `- 节奏：${replyPolicy.rhythm}`,
+    `- 开场动作：${replyPolicy.openingMove}`,
+    `- 亲密度：${replyPolicy.intimacyLevel}`,
+    `- 追问上限：${replyPolicy.questionLimit}`,
+    `- 建议上限：${replyPolicy.adviceLimit}`,
+    replyPolicy.allowedMoves.length > 0
+      ? `- 允许动作：${replyPolicy.allowedMoves.join("、")}`
+      : "",
+    replyPolicy.forbiddenMoves.length > 0
+      ? `- 禁止动作：${replyPolicy.forbiddenMoves.join("、")}`
+      : "",
+    `- 风格指导：${replyPolicy.styleGuidance}`,
+    "这不是固定话术模板；请自然表达，但必须遵守以上策略约束，不要暴露策略名称或内部标签。",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function buildConversationAnalysisMetadata(params: {
   safety: ConversationSafety;
   intent: ConversationIntent | null;
   emotion: ConversationEmotion | null;
   route: EmotionRoute | null;
+  replyPolicy: ReplyPolicy | null;
 }) {
   return JSON.stringify({
-    analysisVersion: "conversation-understanding-v1",
+    analysisVersion: "conversation-understanding-v2",
     safety: params.safety,
     intent: params.intent,
     emotion: params.emotion,
     route: params.route,
+    replyPolicy: params.replyPolicy,
   });
 }

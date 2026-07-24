@@ -7,6 +7,7 @@ import {
   type ConversationIntent,
   type ConversationSafety,
   type EmotionRoute,
+  type ReplyPolicy,
   type UpdateCompanionMemoryRequest,
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
@@ -21,6 +22,7 @@ import {
   buildBoundaryResponse,
   getEmotionRouteSystemInstruction,
   getIntentSystemInstruction,
+  getReplyPolicySystemInstruction,
   getSafetySystemInstruction,
   buildConversationAnalysisMetadata,
 } from "./chat.analysis";
@@ -58,6 +60,7 @@ export interface PreparedCompanionChat {
     conversationId: string;
     previousSummary: string | null;
     recentMessages: Array<{ content: string; role: "assistant" | "user" }>;
+    replyPolicy: ReplyPolicy | null;
     sourceUserMessageId: string;
     userId: string;
     userText: string;
@@ -269,6 +272,7 @@ export async function prepareCompanionChat(input: {
   const intent = understanding?.intent ?? null;
   const emotion = understanding?.emotion ?? null;
   const route = understanding?.route ?? null;
+  const replyPolicy = understanding?.replyPolicy ?? null;
 
   const sourceUserMessageId = uuidv7();
   const nowMs = Date.now();
@@ -281,6 +285,7 @@ export async function prepareCompanionChat(input: {
     metadataJson: buildConversationAnalysisMetadata({
       emotion,
       intent,
+      replyPolicy,
       route,
       safety,
     }),
@@ -295,6 +300,7 @@ export async function prepareCompanionChat(input: {
         emotion,
         intent,
         memories: activeMemories,
+        replyPolicy,
         route,
         safety,
         summary: conversation.summary,
@@ -317,6 +323,7 @@ export async function prepareCompanionChat(input: {
       conversationId: conversation.id,
       previousSummary: conversation.summary,
       recentMessages,
+      replyPolicy,
       sourceUserMessageId,
       userId: input.userId,
       userText: latestUserText,
@@ -378,6 +385,7 @@ function buildSystemPrompt(input: {
   emotion: ConversationEmotion | null;
   intent: ConversationIntent | null;
   memories: Array<{ content: string; importance: number; type: string }>;
+  replyPolicy: ReplyPolicy | null;
   route: EmotionRoute | null;
   safety: ConversationSafety;
   summary: string | null;
@@ -390,6 +398,7 @@ function buildSystemPrompt(input: {
       emotion: input.emotion,
       route: input.route,
     }),
+    getReplyPolicySystemInstruction(input.replyPolicy),
     input.memories.length > 0
       ? [
           "以下是用户的长期记忆，请优先尊重：",
