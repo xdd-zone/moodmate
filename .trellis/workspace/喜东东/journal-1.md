@@ -965,3 +965,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 29: 情绪路由 LangGraph（章49）
+
+**Date**: 2026-07-24
+**Task**: 情绪路由 LangGraph（章49）
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+移植课程章49：新增 companion_profiles 前置表(迁移0010)、情绪识别与路由 contracts schema、chat.analysis 情绪链路(detectEmotion/routeEmotion, LangGraph 扩到 normalizeInput->classifyIntent->detectEmotion->routeEmotion)、service 接线与 v1 metadata(conversation-understanding-v1)。quality gate 三项对本次改动全过，spec 已写回，任务已归档。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7fd1e18` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
