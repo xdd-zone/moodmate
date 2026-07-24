@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "聊天理解链路的落地规范：LangGraph 节点、结构化输出兜底、分层约定"}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "api backend 层入口与开发前检查清单"}
+{"file": ".trellis/spec/contracts/shared/companion-chat.md", "reason": "companion-analysis 契约字段与导出约定"}
+{"file": ".trellis/spec/web/frontend/companion-chat.md", "reason": "web 单聊页结构与展示约定，用于头部关系阶段展示"}
