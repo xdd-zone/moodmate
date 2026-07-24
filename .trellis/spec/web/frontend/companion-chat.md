@@ -17,6 +17,7 @@ getCompanionConversationMessages(cursor, options?): Promise<CompanionConversatio
 getCompanionMemories(options?): Promise<CompanionMemoriesResponse>;
 updateCompanionMemory(memoryId, input, options?): Promise<UpdateCompanionMemoryResponse>;
 deleteCompanionMemory(memoryId, options?): Promise<DeleteCompanionMemoryResponse>;
+submitCompanionMessageFeedback(messageId, input, options?): Promise<SubmitCompanionMessageFeedbackResponse>;
 ```
 
 AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BASE_URL}/rpc/chat/companion`。
@@ -40,6 +41,7 @@ AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BAS
 - 记忆管理放在设置的“记忆”区域，展示类型、内容、重要度、状态、更新时间和可空来源消息。
 - 记忆编辑、启停和删除成功后使 `companionChatKeys.memories()` 失效；删除前必须二次确认。
 - HTTP 客户端的 PATCH 带 JSON 请求体；DELETE 不发送请求体，两者沿用认证刷新和统一响应解析。
+- 反馈按钮（点赞/点踩）只挂在 `historicalAssistantMessageIdSet` 内的持久化 assistant 消息气泡下，避开流式临时 ID；按钮带 `aria-label`/`aria-pressed`，按 `feedback.rating` 显示选中态。提交走 `submitCompanionMessageFeedback` mutation，成功后本地即时更新选中态并使会话 query 失效回显。
 
 ## 4. 校验与错误矩阵
 
@@ -71,6 +73,7 @@ AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BAS
 - 历史检查：加载、失败、空历史、有历史、加载更早和没有更多历史。
 - 分页检查：旧消息插入头部、ID 去重、顺序从旧到新，历史 assistant 不重新逐字播放。
 - 记忆检查：加载、空数据、编辑、启用、停用、删除确认、来源为空和请求失败。
+- 反馈检查：按钮只在持久化 assistant 消息展示、点赞切点踩即时更新选中态、刷新后回显、流式临时消息不出现按钮、aria 标注可访问。
 - 逐字检查：中文、emoji、内容替换、大块文本和减少动态效果。
 - 布局检查：Latte、Mocha、移动端导航、桌面对话主区、记忆表单、输入框和错误操作不重叠。
 

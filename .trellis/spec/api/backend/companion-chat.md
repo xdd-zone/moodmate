@@ -13,6 +13,7 @@ POST /rpc/chat/companion
 GET /rpc/chat/companion/memories
 PATCH /rpc/chat/companion/memories/:memoryId
 DELETE /rpc/chat/companion/memories/:memoryId
+POST /rpc/chat/companion/messages/:messageId/feedback
 
 Authorization: Bearer <web access token>
 ```
@@ -31,6 +32,7 @@ Authorization: Bearer <web access token>
 - assistant 文本一边流式返回一边累积；正常结束后保存完整结果，更新 1600 字符滚动摘要和会话计数。
 - 长期记忆写入走「候选判断闸门 + LLM 抽取器」两段式（详见第 9 节）；LLM 全失败时退回正则兜底，单轮最多写入 2 条，读取最多 50 条启用记忆做完全相同内容去重。记忆写入失败只记录日志。
 - 记忆查询不返回 `deleted`；PATCH 只允许修改未删除且属于当前用户的记忆；DELETE 把状态改为 `deleted`。
+- 用户反馈闭环：点赞/点踩挂在 assistant 消息上，一条消息一条反馈，历史回显并注入下一轮 prompt（详见第 10 节）。
 - 请求级 `llmConfig` 优先；未提供时读取平台 `DEEPSEEK_*`。
 - `DEEPSEEK_API_KEY` 可选且敏感；`DEEPSEEK_BASE_URL` 默认 `https://api.deepseek.com`；`DEEPSEEK_MODEL` 默认 `deepseek-v4-flash`。
 - 平台请求发送 `thinking: { type: "disabled" }`；用户 Provider 只发送标准 `model`、`messages` 和 `stream`。
@@ -47,6 +49,7 @@ Authorization: Bearer <web access token>
 | `conversationId` 不是当前默认会话 | `COMMON.INVALID_REQUEST`      | 400        |
 | 所有 part 都没有非空文本          | `COMMON.INVALID_REQUEST`      | 400        |
 | 记忆不存在、属于其他用户或已删除  | `COMMON.NOT_FOUND`            | 404        |
+| 反馈目标消息非当前用户的已完成 assistant 消息 | `COMMON.NOT_FOUND`  | 404        |
 | D1 未绑定或未应用迁移             | `SYSTEM.DATABASE_UNAVAILABLE` | 503        |
 | 平台 Key 缺失                     | `SYSTEM.INTERNAL_ERROR`       | 503        |
 | 上游连接失败或 HTTP 失败          | `SYSTEM.INTERNAL_ERROR`       | 503        |
@@ -195,3 +198,28 @@ Fast reject（`shouldSkipMemoryCandidateFast`，本地无 LLM，命中即终判 
 Prompt 契约：候选判断和抽取器两个 prompt 的 system 段都显式列出字段名、类型、枚举值，并要求「不要输出多余字段、解释文字或 markdown 代码块」，理由同第 8 节末尾（jsonMode 缺字段契约会导致模型自创字段名、Zod parse 失败全程走兜底）。
 
 不新增表、不新增迁移、不改 contract；候选判断是运行时决策，不落审计表。
+
+## 10. 用户反馈闭环（点赞 / 点踩，迁移 0011）
+
+用户对 assistant 回复的显式偏好持久化、历史回显、并注入下一轮 system prompt 做偏好校准。表 `companion_message_feedbacks`（迁移 0011），schema 变量 `companionMessageFeedbacks`，推断类型 `CompanionMessageFeedbackRecord`。
+
+表结构：`id` / `user_id` / `conversation_id` / `message_id` 均 FK `ON DELETE CASCADE`，`rating`（check：positive / negative）、`reason`（nullable）、`note`（nullable）、`created_at_ms` / `updated_at_ms`。唯一索引 `companion_message_feedbacks_user_message_unique(user_id, message_id)`——moodmate 单伴侣模型，反馈唯一键是 `(user_id, message_id)`，无 agentId 维度。
+
+Contract（`companion-chat.contract.ts`，经 `index.ts` 手动 re-export）：
+
+- `CompanionMessageFeedbackRatingSchema` = positive / negative。
+- `CompanionMessageFeedbackReasonSchema` = good_tone / helpful / warm / remembered_context / bad_tone / too_long / too_cold / too_pushy / wrong_memory / unsafe / other。
+- `CompanionMessageFeedbackSchema` = `{ rating, reason: nullable, note: nullable, updatedAtMs }`。
+- `CompanionConversationMessageSchema` 追加 `feedback: CompanionMessageFeedbackSchema.nullable()`，故会话与历史消息响应自动带上，前端历史回显无需额外结构。
+- 提交请求 `SubmitCompanionMessageFeedbackRequestSchema` = `{ rating, reason?: nullable, note?: nullable(trim, max 500) }`；响应 `SubmitCompanionMessageFeedbackResponseSchema` = `{ feedback }`。
+
+提交端点 `POST /rpc/chat/companion/messages/:messageId/feedback`（`requireWebAccess` + messageId uuid 校验 + json 校验）：
+
+- `findCompanionAssistantMessageForFeedback(userId, messageId)` 用 WHERE 强制 role=assistant && status=completed && userId 匹配；不满足 -> `AppError(COMMON.NOT_FOUND, 404)`，不落库。
+- `upsertCompanionMessageFeedback` 先查后 update/insert，切换 rating 时保留 `createdAtMs`，同一 `(user_id, message_id)` 始终一条记录。
+
+历史回显：`listCompanionConversationMessages` left join `companion_message_feedbacks`（`messageId + userId`），presenter 组装 feedback，`reason` 走 `safeParse` 收口未知值为 null。left join 用 try/catch 容错——未跑 0011 迁移的环境退回无反馈列表，历史接口不整体崩。
+
+Prompt 注入：`prepareCompanionChat` 读最近 5 条反馈（`listRecentCompanionMessageFeedbacks`，按 updatedAtMs desc），`getFeedbackSystemInstruction` 生成指令，`buildSystemPrompt` 在 `getReplyPolicySystemInstruction` 之后、记忆列表之前 join（`.filter(Boolean).join` 风格，空指令自动省略）。指令必须含「不要在回复中提到评分、点赞、点踩或反馈记录」，只做偏好校准，不绕过安全边界 / 意图 / 回复策略。反馈读取 `.catch()` 失败时跳过，不阻断回复。
+
+web：只对 `historicalAssistantMessageIdSet` 中的持久化 assistant 消息展示点赞 / 点踩按钮（避开流式临时 ID），带 `aria-label` / `aria-pressed`；提交成功后本地即时反映选中态并 invalidate 会话 query 回显。
