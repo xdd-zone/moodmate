@@ -57,6 +57,32 @@ export type {
   UpdateCompanionMemoryResponse,
 } from "./chat/companion-chat.contract";
 export {
+  CompanionCareEventSchema,
+  CompanionCareEventStatusSchema,
+  CompanionCareEventsResponseSchema,
+  CompanionCareFrequencySchema,
+  CompanionCarePlanResponseSchema,
+  CompanionCarePlanSchema,
+  CompanionCareSceneSchema,
+  CompanionCareToneSchema,
+  GenerateCompanionCareEventRequestSchema,
+  GenerateCompanionCareEventResponseSchema,
+  UpsertCompanionCarePlanRequestSchema,
+} from "./chat/companion-care.contract";
+export type {
+  CompanionCareEvent,
+  CompanionCareEventStatus,
+  CompanionCareEventsResponse,
+  CompanionCareFrequency,
+  CompanionCarePlan,
+  CompanionCarePlanResponse,
+  CompanionCareScene,
+  CompanionCareTone,
+  GenerateCompanionCareEventRequest,
+  GenerateCompanionCareEventResponse,
+  UpsertCompanionCarePlanRequest,
+} from "./chat/companion-care.contract";
+export {
   CompanionIntentPrimarySchema,
   ConversationEmotionSchema,
   ConversationIntentSchema,

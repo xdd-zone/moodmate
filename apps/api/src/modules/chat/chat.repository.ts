@@ -1,9 +1,11 @@
-import { and, desc, eq, ne, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql, type SQL } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { createD1Client } from "@/infra/db/d1";
 
 import {
+  companionCareEvents,
+  companionCarePlans,
   companionConversationMessages,
   companionConversations,
   companionMemories,
@@ -387,4 +389,220 @@ export async function listRecentCompanionMessageFeedbacks(input: {
     .where(eq(companionMessageFeedbacks.userId, input.userId))
     .orderBy(desc(companionMessageFeedbacks.updatedAtMs))
     .limit(input.limit);
+}
+
+const CARE_SCENE_WHITELIST = new Set([
+  "morning",
+  "night",
+  "long_absence",
+  "stress_support",
+  "relationship_warmup",
+  "anniversary",
+]);
+
+export interface CompanionCarePlanRow {
+  id: string;
+  enabled: boolean;
+  frequency: "custom" | "daily" | "weekly";
+  preferredTime: string | null;
+  scenes: string[];
+  tone: "gentle" | "intimate" | "light";
+  customPrompt: string | null;
+  nextRunAtMs: number | null;
+  createdAtMs: number;
+  updatedAtMs: number;
+}
+
+function parseCareScenes(scenesJson: string): string[] {
+  try {
+    const parsed = JSON.parse(scenesJson);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(
+      (scene): scene is string =>
+        typeof scene === "string" && CARE_SCENE_WHITELIST.has(scene),
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function findCompanionCarePlan(input: {
+  database: D1Database | undefined;
+  userId: string;
+}): Promise<CompanionCarePlanRow | null> {
+  const db = createD1Client(input.database);
+
+  const rows = await db
+    .select()
+    .from(companionCarePlans)
+    .where(eq(companionCarePlans.userId, input.userId))
+    .limit(1);
+
+  const row = rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    createdAtMs: row.createdAtMs,
+    customPrompt: row.customPrompt,
+    enabled: row.enabled === 1,
+    frequency: row.frequency,
+    id: row.id,
+    nextRunAtMs: row.nextRunAtMs,
+    preferredTime: row.preferredTime,
+    scenes: parseCareScenes(row.scenesJson),
+    tone: row.tone,
+    updatedAtMs: row.updatedAtMs,
+  };
+}
+
+export async function upsertCompanionCarePlan(input: {
+  customPrompt: string | null;
+  database: D1Database | undefined;
+  enabled: boolean;
+  frequency: "custom" | "daily" | "weekly";
+  nextRunAtMs: number | null;
+  nowMs: number;
+  preferredTime: string | null;
+  scenes: string[];
+  tone: "gentle" | "intimate" | "light";
+  userId: string;
+}): Promise<string> {
+  const db = createD1Client(input.database);
+
+  const existing = await db
+    .select({ id: companionCarePlans.id })
+    .from(companionCarePlans)
+    .where(eq(companionCarePlans.userId, input.userId))
+    .limit(1);
+
+  if (existing[0]) {
+    await db
+      .update(companionCarePlans)
+      .set({
+        customPrompt: input.customPrompt,
+        enabled: input.enabled ? 1 : 0,
+        frequency: input.frequency,
+        nextRunAtMs: input.nextRunAtMs,
+        preferredTime: input.preferredTime,
+        scenesJson: JSON.stringify(input.scenes),
+        tone: input.tone,
+        updatedAtMs: input.nowMs,
+      })
+      .where(eq(companionCarePlans.id, existing[0].id));
+
+    return existing[0].id;
+  }
+
+  const id = uuidv7();
+
+  await db.insert(companionCarePlans).values({
+    createdAtMs: input.nowMs,
+    customPrompt: input.customPrompt,
+    enabled: input.enabled ? 1 : 0,
+    frequency: input.frequency,
+    id,
+    nextRunAtMs: input.nextRunAtMs,
+    preferredTime: input.preferredTime,
+    scenesJson: JSON.stringify(input.scenes),
+    tone: input.tone,
+    updatedAtMs: input.nowMs,
+    userId: input.userId,
+  });
+
+  return id;
+}
+
+export async function insertCompanionCareEvent(input: {
+  carePlanId: string | null;
+  conversationId: string;
+  database: D1Database | undefined;
+  message: string;
+  messageId: string;
+  metadataJson?: string | null;
+  nowMs: number;
+  scene: string;
+  userId: string;
+}): Promise<string> {
+  const db = createD1Client(input.database);
+  const id = uuidv7();
+
+  await db.insert(companionCareEvents).values({
+    carePlanId: input.carePlanId,
+    conversationId: input.conversationId,
+    generatedAtMs: input.nowMs,
+    id,
+    message: input.message,
+    messageId: input.messageId,
+    metadataJson: input.metadataJson ?? null,
+    readAtMs: null,
+    scene: input.scene,
+    status: "generated",
+    userId: input.userId,
+  });
+
+  return id;
+}
+
+export async function listCompanionCareEvents(input: {
+  database: D1Database | undefined;
+  limit: number;
+  userId: string;
+}) {
+  const db = createD1Client(input.database);
+
+  return db
+    .select()
+    .from(companionCareEvents)
+    .where(eq(companionCareEvents.userId, input.userId))
+    .orderBy(
+      desc(companionCareEvents.generatedAtMs),
+      desc(companionCareEvents.id),
+    )
+    .limit(input.limit);
+}
+
+export async function markCompanionCareEventsRead(input: {
+  database: D1Database | undefined;
+  nowMs: number;
+  userId: string;
+}): Promise<void> {
+  const db = createD1Client(input.database);
+
+  await db
+    .update(companionCareEvents)
+    .set({ readAtMs: input.nowMs, status: "read" })
+    .where(
+      and(
+        eq(companionCareEvents.userId, input.userId),
+        eq(companionCareEvents.status, "generated"),
+        isNull(companionCareEvents.readAtMs),
+      ),
+    );
+}
+
+export async function countUnreadCareEvents(input: {
+  database: D1Database | undefined;
+  userId: string;
+}): Promise<number> {
+  const db = createD1Client(input.database);
+
+  const rows = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(companionCareEvents)
+    .where(
+      and(
+        eq(companionCareEvents.userId, input.userId),
+        eq(companionCareEvents.status, "generated"),
+        isNull(companionCareEvents.readAtMs),
+      ),
+    );
+
+  return Number(rows[0]?.count ?? 0);
 }

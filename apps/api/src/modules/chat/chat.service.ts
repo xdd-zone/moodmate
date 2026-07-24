@@ -1,6 +1,11 @@
 import {
   BizCode,
   CompanionMessageFeedbackReasonSchema,
+  type CompanionCareEvent,
+  type CompanionCareFrequency,
+  type CompanionCarePlan,
+  type CompanionCareScene,
+  type CompanionCareTone,
   type CompanionChatLlmConfig,
   type CompanionChatMessage,
   type CompanionMemory,
@@ -13,6 +18,7 @@ import {
   type ReplyPolicy,
   type SubmitCompanionMessageFeedbackRequest,
   type UpdateCompanionMemoryRequest,
+  type UpsertCompanionCarePlanRequest,
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
 
@@ -36,17 +42,24 @@ import {
   toAssistantReplyQualityMetadata,
 } from "./chat.analysis";
 import {
+  countUnreadCareEvents,
   findCompanionAssistantMessageForFeedback,
+  findCompanionCarePlan,
   getCompanionProfile,
   getOrCreateCompanionConversation,
+  insertCompanionCareEvent,
   insertCompanionConversationMessage,
   insertCompanionMemory,
   listActiveCompanionMemories,
+  listCompanionCareEvents,
   listCompanionConversationMessages,
   listCompanionMemories,
   listRecentCompanionMessageFeedbacks,
+  markCompanionCareEventsRead,
   updateCompanionMemory as updateStoredCompanionMemory,
+  upsertCompanionCarePlan,
   upsertCompanionMessageFeedback,
+  type CompanionCarePlanRow,
 } from "./chat.repository";
 import {
   presentCompanionConversationMessage,
@@ -103,6 +116,29 @@ export async function getCompanionConversation(input: {
   userId: string;
 }) {
   const conversation = await requireCompanionConversation(input);
+
+  // 主动关怀是增强能力：未读统计与已读标记独立 try/catch，新表不可用不能拖垮会话主链路。
+  let hasUnreadCareEvent = false;
+  try {
+    const unreadCount = await countUnreadCareEvents({
+      database: input.bindings.DB,
+      userId: input.userId,
+    });
+    hasUnreadCareEvent = unreadCount > 0;
+  } catch (error) {
+    console.warn("读取未读关怀事件失败，按无未读处理", { error });
+  }
+
+  try {
+    await markCompanionCareEventsRead({
+      database: input.bindings.DB,
+      nowMs: Date.now(),
+      userId: input.userId,
+    });
+  } catch (error) {
+    console.warn("标记关怀事件已读失败，跳过", { error });
+  }
+
   const messages = await listCompanionConversationMessages({
     conversationId: conversation.id,
     database: input.bindings.DB,
@@ -112,6 +148,7 @@ export async function getCompanionConversation(input: {
 
   return {
     conversationId: conversation.id,
+    hasUnreadCareEvent,
     messageCount: conversation.messageCount,
     messages: messages.map(presentCompanionConversationMessage),
     nextCursor: getOldestMessageCursor(
@@ -247,6 +284,294 @@ export async function submitCompanionMessageFeedback(input: {
       rating: record.rating,
       reason: reason.success ? reason.data : null,
       updatedAtMs: record.updatedAtMs,
+    },
+  };
+}
+
+const CARE_DEFAULT_PLAN = {
+  customPrompt: null,
+  enabled: false,
+  frequency: "daily" as const,
+  preferredTime: "21:30",
+  scenes: ["long_absence", "night"] as CompanionCareScene[],
+  tone: "gentle" as const,
+};
+
+const CARE_EVENTS_LIST_LIMIT = 20;
+
+const CARE_TONE_PREFIX: Record<CompanionCareTone, string> = {
+  gentle: "嘿",
+  intimate: "想你了",
+  light: "嗨",
+};
+
+const CARE_SCENE_TEMPLATES: Record<CompanionCareScene, string> = {
+  anniversary: "今天像是一个值得被记住的小节点，想陪你把这一刻轻轻收好。",
+  long_absence: "你有一会儿没来了。我没有催你，只是想确认一下你还好不好。",
+  morning: "早呀。今天不用一下子把自己推得太紧，先把眼前这一小步走好就可以。",
+  night: "今晚先把那些没处理完的事放一放吧，能好好休息，也是一件很重要的事。",
+  relationship_warmup: "刚才想到你，想留一句话在这里：慢慢来，我会认真听你说。",
+  stress_support:
+    "如果今天压力有点满，先深呼吸一下，我可以陪你把事情拆小一点。",
+};
+
+function getCareTonePrefix(tone: CompanionCareTone): string {
+  return CARE_TONE_PREFIX[tone];
+}
+
+function buildProactiveCareMessage(input: {
+  customPrompt: string | null;
+  scene: CompanionCareScene;
+  tone: CompanionCareTone;
+}): string {
+  const prefix = getCareTonePrefix(input.tone);
+  const custom = input.customPrompt?.trim();
+
+  if (custom) {
+    return `${prefix}。${custom}`.slice(0, 1000);
+  }
+
+  return `${prefix}，${CARE_SCENE_TEMPLATES[input.scene]}`;
+}
+
+function calculateNextCareRunAtMs(input: {
+  enabled: boolean;
+  frequency: CompanionCareFrequency;
+  nowMs: number;
+  preferredTime: string | null;
+}): number | null {
+  if (!input.enabled) {
+    return null;
+  }
+
+  const next = new Date(input.nowMs);
+
+  if (input.preferredTime) {
+    const [hourText, minuteText] = input.preferredTime.split(":");
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+
+    if (Number.isFinite(hour) && Number.isFinite(minute)) {
+      next.setHours(
+        Math.min(23, Math.max(0, hour)),
+        Math.min(59, Math.max(0, minute)),
+        0,
+        0,
+      );
+    }
+  }
+
+  if (next.getTime() <= input.nowMs) {
+    next.setDate(next.getDate() + (input.frequency === "weekly" ? 7 : 1));
+  }
+
+  return next.getTime();
+}
+
+function presentCompanionCarePlan(
+  plan: CompanionCarePlanRow,
+): CompanionCarePlan {
+  return {
+    createdAtMs: plan.createdAtMs,
+    customPrompt: plan.customPrompt,
+    enabled: plan.enabled,
+    frequency: plan.frequency,
+    id: plan.id,
+    nextRunAtMs: plan.nextRunAtMs,
+    preferredTime: plan.preferredTime,
+    scenes: normalizeCareScenes(plan.scenes),
+    tone: plan.tone,
+    updatedAtMs: plan.updatedAtMs,
+  };
+}
+
+function normalizeCareScenes(scenes: string[]): CompanionCareScene[] {
+  const filtered = scenes.filter((scene): scene is CompanionCareScene =>
+    isCareScene(scene),
+  );
+
+  return filtered.length > 0 ? filtered : [...CARE_DEFAULT_PLAN.scenes];
+}
+
+const CARE_SCENE_VALUES: readonly CompanionCareScene[] = [
+  "morning",
+  "night",
+  "long_absence",
+  "stress_support",
+  "relationship_warmup",
+  "anniversary",
+];
+
+function isCareScene(value: string): value is CompanionCareScene {
+  return (CARE_SCENE_VALUES as readonly string[]).includes(value);
+}
+
+export async function getCompanionCarePlan(input: {
+  bindings: ApiBindings;
+  userId: string;
+}): Promise<{ plan: CompanionCarePlan }> {
+  const existing = await findCompanionCarePlan({
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+
+  if (existing) {
+    return { plan: presentCompanionCarePlan(existing) };
+  }
+
+  const nowMs = Date.now();
+  await upsertCompanionCarePlan({
+    customPrompt: CARE_DEFAULT_PLAN.customPrompt,
+    database: input.bindings.DB,
+    enabled: CARE_DEFAULT_PLAN.enabled,
+    frequency: CARE_DEFAULT_PLAN.frequency,
+    nextRunAtMs: null,
+    nowMs,
+    preferredTime: CARE_DEFAULT_PLAN.preferredTime,
+    scenes: [...CARE_DEFAULT_PLAN.scenes],
+    tone: CARE_DEFAULT_PLAN.tone,
+    userId: input.userId,
+  });
+
+  const created = await findCompanionCarePlan({
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+
+  if (!created) {
+    throw new AppError(
+      BizCode.SYSTEM_DATABASE_UNAVAILABLE,
+      "无法读取关怀计划，请确认 D1 已完成最新迁移",
+      503,
+    );
+  }
+
+  return { plan: presentCompanionCarePlan(created) };
+}
+
+export async function updateCompanionCarePlan(input: {
+  bindings: ApiBindings;
+  payload: UpsertCompanionCarePlanRequest;
+  userId: string;
+}): Promise<{ plan: CompanionCarePlan }> {
+  const nowMs = Date.now();
+  const preferredTime = input.payload.preferredTime?.trim() || null;
+  const nextRunAtMs = calculateNextCareRunAtMs({
+    enabled: input.payload.enabled,
+    frequency: input.payload.frequency,
+    nowMs,
+    preferredTime,
+  });
+
+  await upsertCompanionCarePlan({
+    customPrompt: input.payload.customPrompt?.trim() || null,
+    database: input.bindings.DB,
+    enabled: input.payload.enabled,
+    frequency: input.payload.frequency,
+    nextRunAtMs,
+    nowMs,
+    preferredTime,
+    scenes: input.payload.scenes,
+    tone: input.payload.tone,
+    userId: input.userId,
+  });
+
+  const plan = await findCompanionCarePlan({
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+
+  if (!plan) {
+    throw new AppError(
+      BizCode.SYSTEM_DATABASE_UNAVAILABLE,
+      "无法读取关怀计划，请确认 D1 已完成最新迁移",
+      503,
+    );
+  }
+
+  return { plan: presentCompanionCarePlan(plan) };
+}
+
+export async function listCompanionCareEventsForUser(input: {
+  bindings: ApiBindings;
+  userId: string;
+}): Promise<{ items: CompanionCareEvent[] }> {
+  const events = await listCompanionCareEvents({
+    database: input.bindings.DB,
+    limit: CARE_EVENTS_LIST_LIMIT,
+    userId: input.userId,
+  });
+
+  return {
+    items: events.map((event) => ({
+      generatedAtMs: event.generatedAtMs,
+      id: event.id,
+      message: event.message,
+      messageId: event.messageId,
+      readAtMs: event.readAtMs,
+      scene: isCareScene(event.scene) ? event.scene : "long_absence",
+      status: event.status,
+    })),
+  };
+}
+
+export async function generateCompanionCareEvent(input: {
+  bindings: ApiBindings;
+  scene?: CompanionCareScene;
+  userId: string;
+}): Promise<{ event: CompanionCareEvent }> {
+  const { plan } = await getCompanionCarePlan(input);
+  const scene = input.scene ?? plan.scenes[0] ?? "long_absence";
+  const conversation = await requireCompanionConversation(input);
+
+  const message = buildProactiveCareMessage({
+    customPrompt: plan.customPrompt,
+    scene,
+    tone: plan.tone,
+  });
+
+  const nowMs = Date.now();
+  const messageId = uuidv7();
+
+  await insertCompanionConversationMessage({
+    content: message,
+    conversationId: conversation.id,
+    database: input.bindings.DB,
+    id: messageId,
+    metadataJson: JSON.stringify({
+      scene,
+      source: "proactive_care",
+      tone: plan.tone,
+    }),
+    nowMs,
+    role: "assistant",
+    userId: input.userId,
+  });
+
+  const eventId = await insertCompanionCareEvent({
+    carePlanId: plan.id,
+    conversationId: conversation.id,
+    database: input.bindings.DB,
+    message,
+    messageId,
+    metadataJson: JSON.stringify({
+      frequency: plan.frequency,
+      preferredTime: plan.preferredTime,
+    }),
+    nowMs,
+    scene,
+    userId: input.userId,
+  });
+
+  return {
+    event: {
+      generatedAtMs: nowMs,
+      id: eventId,
+      message,
+      messageId,
+      readAtMs: null,
+      scene,
+      status: "generated",
     },
   };
 }

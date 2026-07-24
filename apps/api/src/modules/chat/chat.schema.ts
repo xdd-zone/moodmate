@@ -180,6 +180,89 @@ export const companionMessageFeedbacks = sqliteTable(
   ],
 );
 
+export const companionCarePlans = sqliteTable(
+  "companion_care_plans",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    enabled: integer("enabled").notNull(),
+    frequency: text("frequency", {
+      enum: ["daily", "weekly", "custom"],
+    }).notNull(),
+    preferredTime: text("preferred_time"),
+    scenesJson: text("scenes_json").notNull(),
+    tone: text("tone", { enum: ["light", "gentle", "intimate"] }).notNull(),
+    customPrompt: text("custom_prompt"),
+    nextRunAtMs: integer("next_run_at_ms"),
+    createdAtMs: integer("created_at_ms").notNull(),
+    updatedAtMs: integer("updated_at_ms").notNull(),
+  },
+  (table) => [
+    unique("companion_care_plans_user_unique").on(table.userId),
+    index("companion_care_plans_enabled_next_run_idx").on(
+      table.enabled,
+      table.nextRunAtMs,
+    ),
+    check(
+      "companion_care_plans_frequency_check",
+      sql`${table.frequency} IN ('daily', 'weekly', 'custom')`,
+    ),
+    check(
+      "companion_care_plans_tone_check",
+      sql`${table.tone} IN ('light', 'gentle', 'intimate')`,
+    ),
+    check(
+      "companion_care_plans_timestamps_check",
+      sql`${table.updatedAtMs} >= ${table.createdAtMs}`,
+    ),
+  ],
+);
+
+export const companionCareEvents = sqliteTable(
+  "companion_care_events",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    carePlanId: text("care_plan_id").references(() => companionCarePlans.id, {
+      onDelete: "set null",
+    }),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => companionConversations.id, { onDelete: "cascade" }),
+    messageId: text("message_id")
+      .notNull()
+      .references(() => companionConversationMessages.id, {
+        onDelete: "cascade",
+      }),
+    scene: text("scene").notNull(),
+    status: text("status", { enum: ["generated", "read"] }).notNull(),
+    message: text("message").notNull(),
+    metadataJson: text("metadata_json"),
+    generatedAtMs: integer("generated_at_ms").notNull(),
+    readAtMs: integer("read_at_ms"),
+  },
+  (table) => [
+    index("companion_care_events_user_generated_idx").on(
+      table.userId,
+      table.generatedAtMs,
+    ),
+    index("companion_care_events_message_idx").on(table.messageId),
+    index("companion_care_events_user_status_read_idx").on(
+      table.userId,
+      table.status,
+      table.readAtMs,
+    ),
+    check(
+      "companion_care_events_status_check",
+      sql`${table.status} IN ('generated', 'read')`,
+    ),
+  ],
+);
+
 export type CompanionConversationRecord =
   typeof companionConversations.$inferSelect;
 export type CompanionConversationMessageRecord =
@@ -188,3 +271,5 @@ export type CompanionMemoryRecord = typeof companionMemories.$inferSelect;
 export type CompanionProfileRecord = typeof companionProfiles.$inferSelect;
 export type CompanionMessageFeedbackRecord =
   typeof companionMessageFeedbacks.$inferSelect;
+export type CompanionCarePlanRecord = typeof companionCarePlans.$inferSelect;
+export type CompanionCareEventRecord = typeof companionCareEvents.$inferSelect;

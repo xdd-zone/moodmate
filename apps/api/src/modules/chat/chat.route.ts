@@ -1,15 +1,20 @@
 import { zValidator } from "@hono/zod-validator";
 import {
   BizCode,
+  CompanionCareEventsResponseSchema,
+  CompanionCarePlanResponseSchema,
   CompanionChatRequestSchema,
   CompanionConversationMessagesResponseSchema,
   CompanionConversationResponseSchema,
   CompanionMemoriesResponseSchema,
   DeleteCompanionMemoryResponseSchema,
+  GenerateCompanionCareEventRequestSchema,
+  GenerateCompanionCareEventResponseSchema,
   SubmitCompanionMessageFeedbackRequestSchema,
   SubmitCompanionMessageFeedbackResponseSchema,
   UpdateCompanionMemoryRequestSchema,
   UpdateCompanionMemoryResponseSchema,
+  UpsertCompanionCarePlanRequestSchema,
   buildSuccess,
 } from "@repo/contracts";
 import { Hono } from "hono";
@@ -23,12 +28,16 @@ import { createMeta } from "@/shared/meta";
 import { createCompanionTextStream } from "./chat.provider";
 import {
   deleteCompanionMemory,
+  generateCompanionCareEvent,
+  getCompanionCarePlan,
   getCompanionConversation,
   getCompanionConversationMessages,
   getCompanionMemories,
+  listCompanionCareEventsForUser,
   prepareCompanionChat,
   saveCompanionAssistantTurn,
   submitCompanionMessageFeedback,
+  updateCompanionCarePlan,
   updateCompanionMemory,
 } from "./chat.service";
 
@@ -144,6 +153,60 @@ export function createChatRoute() {
           userId: c.var.webSession.userId,
         });
         const data = SubmitCompanionMessageFeedbackResponseSchema.parse(result);
+
+        return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+      },
+    )
+    .get("/rpc/chat/companion/care-plan", requireWebAccess, async (c) => {
+      const result = await getCompanionCarePlan({
+        bindings: c.env,
+        userId: c.var.webSession.userId,
+      });
+      const data = CompanionCarePlanResponseSchema.parse(result);
+
+      return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+    })
+    .patch(
+      "/rpc/chat/companion/care-plan",
+      requireWebAccess,
+      zValidator("json", UpsertCompanionCarePlanRequestSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("关怀计划内容无效", result.error.issues);
+      }),
+      async (c) => {
+        const result = await updateCompanionCarePlan({
+          bindings: c.env,
+          payload: c.req.valid("json"),
+          userId: c.var.webSession.userId,
+        });
+        const data = CompanionCarePlanResponseSchema.parse(result);
+
+        return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+      },
+    )
+    .get("/rpc/chat/companion/care-events", requireWebAccess, async (c) => {
+      const result = await listCompanionCareEventsForUser({
+        bindings: c.env,
+        userId: c.var.webSession.userId,
+      });
+      const data = CompanionCareEventsResponseSchema.parse(result);
+
+      return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+    })
+    .post(
+      "/rpc/chat/companion/care-events/generate",
+      requireWebAccess,
+      zValidator("json", GenerateCompanionCareEventRequestSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("生成关怀请求无效", result.error.issues);
+      }),
+      async (c) => {
+        const result = await generateCompanionCareEvent({
+          bindings: c.env,
+          scene: c.req.valid("json").scene,
+          userId: c.var.webSession.userId,
+        });
+        const data = GenerateCompanionCareEventResponseSchema.parse(result);
 
         return c.json(buildSuccess(data, createMeta(c.var.requestId)));
       },

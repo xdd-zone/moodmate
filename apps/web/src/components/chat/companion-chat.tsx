@@ -14,6 +14,7 @@ import {
   Bot,
   Brain,
   ChevronLeft,
+  Heart,
   History,
   LoaderCircle,
   MessageCircle,
@@ -34,6 +35,7 @@ import {
 import { clearClientSession } from "@/src/auth/client-session";
 import {
   AppearancePanel,
+  CarePanel,
   GeneralPanel,
   MemoryPanel,
   ProfilePanel,
@@ -45,7 +47,7 @@ import { ChatComposer } from "./chat-composer";
 import { ChatConversation } from "./chat-conversation";
 
 type AppMode = "chat" | "settings";
-type SettingsSection = "profile" | "general" | "memory" | "appearance";
+type SettingsSection = "profile" | "general" | "memory" | "care" | "appearance";
 
 const AGENT_NAME = "MoodMate";
 const AGENT_SUBTITLE = "你的 AI 伴侣";
@@ -81,11 +83,13 @@ const settingsMenu: SettingsMenuEntry[] = [
   { icon: UserRound, label: "个人资料", section: "profile" },
   { icon: SlidersHorizontal, label: "General", section: "general" },
   { icon: Brain, label: "记忆", section: "memory" },
+  { icon: Heart, label: "主动关怀", section: "care" },
   { icon: Palette, label: "Appearance", section: "appearance" },
 ];
 
 const settingsTitle: Record<SettingsSection, string> = {
   appearance: "Appearance",
+  care: "主动关怀",
   general: "General",
   memory: "记忆",
   profile: "个人资料",
@@ -181,6 +185,10 @@ function CompanionChatAppInner({
   >(() => collectFeedback(serverConversation.messages));
   const feedbackMutation = useMutation(
     submitCompanionMessageFeedbackMutationOptions(queryClient),
+  );
+  // hasUnreadCareEvent 是打开会话前的快照：服务端已在本次读取时标记已读，前端据此做一次性提示。
+  const [hasUnreadCareEvent, setHasUnreadCareEvent] = useState(
+    serverConversation.hasUnreadCareEvent,
   );
 
   function handleSubmitFeedback(
@@ -322,7 +330,11 @@ function CompanionChatAppInner({
                 onClick={() => {
                   setSettingsSection(entry.section);
                   setMobileDetailOpen(true);
+                  if (entry.section === "care") {
+                    setHasUnreadCareEvent(false);
+                  }
                 }}
+                showBadge={entry.section === "care" && hasUnreadCareEvent}
               />
             ))}
           </nav>
@@ -340,6 +352,7 @@ function CompanionChatAppInner({
           />
           <SidebarModeButton
             active={mode === "settings"}
+            hasBadge={hasUnreadCareEvent}
             icon={Settings2}
             label="设置"
             onClick={() => {
@@ -555,6 +568,7 @@ function SettingsMode({
         ) : null}
         {section === "general" ? <GeneralPanel /> : null}
         {section === "memory" ? <MemoryPanel /> : null}
+        {section === "care" ? <CarePanel /> : null}
         {section === "appearance" ? <AppearancePanel /> : null}
       </div>
     </>
@@ -696,11 +710,13 @@ function SettingsMenuItem({
   icon: Icon,
   label,
   onClick,
+  showBadge = false,
 }: {
   active: boolean;
   icon: typeof MessageCircle;
   label: string;
   onClick: () => void;
+  showBadge?: boolean;
 }) {
   return (
     <button
@@ -715,17 +731,25 @@ function SettingsMenuItem({
     >
       <Icon aria-hidden="true" className="size-5 shrink-0" />
       <span className="truncate">{label}</span>
+      {showBadge ? (
+        <span
+          aria-label="有未读关怀"
+          className="ml-auto size-2 shrink-0 rounded-full bg-primary"
+        />
+      ) : null}
     </button>
   );
 }
 
 function SidebarModeButton({
   active,
+  hasBadge = false,
   icon: Icon,
   label,
   onClick,
 }: {
   active: boolean;
+  hasBadge?: boolean;
   icon: typeof MessageCircle;
   label: string;
   onClick: () => void;
@@ -734,7 +758,7 @@ function SidebarModeButton({
     <button
       aria-current={active ? "page" : undefined}
       aria-label={label}
-      className={`grid size-10 place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+      className={`relative grid size-10 place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus ${
         active
           ? "bg-primary-subtle text-primary-strong"
           : "text-muted hover:bg-surface-muted hover:text-foreground"
@@ -744,6 +768,12 @@ function SidebarModeButton({
       type="button"
     >
       <Icon aria-hidden="true" className="size-5" />
+      {hasBadge ? (
+        <span
+          aria-hidden="true"
+          className="absolute right-1.5 top-1.5 size-2 rounded-full bg-danger"
+        />
+      ) : null}
     </button>
   );
 }

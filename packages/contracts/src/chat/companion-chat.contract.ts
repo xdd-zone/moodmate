@@ -77,6 +77,7 @@ export const CompanionConversationResponseSchema = z.object({
   messageCount: z.number().int().nonnegative(),
   messages: z.array(CompanionConversationMessageSchema),
   nextCursor: z.string().nullable(),
+  hasUnreadCareEvent: z.boolean().default(false),
 });
 
 export const CompanionConversationMessagesResponseSchema = z.object({

@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-修改固定伴侣会话、聊天历史、长期记忆、会话前置分析（安全边界 / 意图 / 情绪 / 路由）、companion 档案、平台 DeepSeek 配置、OpenAI-compatible Chat Completions 请求或 SSE 转纯文本流时使用本规范。实现位于 `apps/api/src/modules/chat/`，数据库迁移位于 `apps/api/migrations/`。
+修改固定伴侣会话、聊天历史、长期记忆、会话前置分析（安全边界 / 意图 / 情绪 / 路由）、用户反馈闭环、主动关怀、companion 档案、平台 DeepSeek 配置、OpenAI-compatible Chat Completions 请求或 SSE 转纯文本流时使用本规范。实现位于 `apps/api/src/modules/chat/`，数据库迁移位于 `apps/api/migrations/`。
 
 ## 2. 公开签名
 
@@ -14,6 +14,10 @@ GET /rpc/chat/companion/memories
 PATCH /rpc/chat/companion/memories/:memoryId
 DELETE /rpc/chat/companion/memories/:memoryId
 POST /rpc/chat/companion/messages/:messageId/feedback
+GET /rpc/chat/companion/care-plan
+PATCH /rpc/chat/companion/care-plan
+GET /rpc/chat/companion/care-events
+POST /rpc/chat/companion/care-events/generate
 
 Authorization: Bearer <web access token>
 ```
@@ -42,19 +46,19 @@ Authorization: Bearer <web access token>
 
 ## 4. 校验与错误矩阵
 
-| 条件                              | 错误码                        | HTTP       |
-| --------------------------------- | ----------------------------- | ---------- |
-| 缺少或无效 Web access token       | 现有 `AUTH.*`                 | 401        |
-| 请求 schema 或历史游标无效        | `COMMON.INVALID_REQUEST`      | 400        |
-| `conversationId` 不是当前默认会话 | `COMMON.INVALID_REQUEST`      | 400        |
-| 所有 part 都没有非空文本          | `COMMON.INVALID_REQUEST`      | 400        |
-| 记忆不存在、属于其他用户或已删除  | `COMMON.NOT_FOUND`            | 404        |
-| 反馈目标消息非当前用户的已完成 assistant 消息 | `COMMON.NOT_FOUND`  | 404        |
-| D1 未绑定或未应用迁移             | `SYSTEM.DATABASE_UNAVAILABLE` | 503        |
-| 平台 Key 缺失                     | `SYSTEM.INTERNAL_ERROR`       | 503        |
-| 上游连接失败或 HTTP 失败          | `SYSTEM.INTERNAL_ERROR`       | 503        |
-| 上游响应头超时                    | `SYSTEM.UPSTREAM_TIMEOUT`     | 504        |
-| SSE JSON 损坏或没有文本           | 终止纯文本流                  | 200 后断流 |
+| 条件                                          | 错误码                        | HTTP       |
+| --------------------------------------------- | ----------------------------- | ---------- |
+| 缺少或无效 Web access token                   | 现有 `AUTH.*`                 | 401        |
+| 请求 schema 或历史游标无效                    | `COMMON.INVALID_REQUEST`      | 400        |
+| `conversationId` 不是当前默认会话             | `COMMON.INVALID_REQUEST`      | 400        |
+| 所有 part 都没有非空文本                      | `COMMON.INVALID_REQUEST`      | 400        |
+| 记忆不存在、属于其他用户或已删除              | `COMMON.NOT_FOUND`            | 404        |
+| 反馈目标消息非当前用户的已完成 assistant 消息 | `COMMON.NOT_FOUND`            | 404        |
+| D1 未绑定或未应用迁移                         | `SYSTEM.DATABASE_UNAVAILABLE` | 503        |
+| 平台 Key 缺失                                 | `SYSTEM.INTERNAL_ERROR`       | 503        |
+| 上游连接失败或 HTTP 失败                      | `SYSTEM.INTERNAL_ERROR`       | 503        |
+| 上游响应头超时                                | `SYSTEM.UPSTREAM_TIMEOUT`     | 504        |
+| SSE JSON 损坏或没有文本                       | 终止纯文本流                  | 200 后断流 |
 
 服务端日志只记录上游状态码，不记录 API Key、Authorization、请求正文或上游响应正文。
 
@@ -212,6 +216,38 @@ Contract（`companion-chat.contract.ts`，经 `index.ts` 手动 re-export）：
 - `CompanionMessageFeedbackSchema` = `{ rating, reason: nullable, note: nullable, updatedAtMs }`。
 - `CompanionConversationMessageSchema` 追加 `feedback: CompanionMessageFeedbackSchema.nullable()`，故会话与历史消息响应自动带上，前端历史回显无需额外结构。
 - 提交请求 `SubmitCompanionMessageFeedbackRequestSchema` = `{ rating, reason?: nullable, note?: nullable(trim, max 500) }`；响应 `SubmitCompanionMessageFeedbackResponseSchema` = `{ feedback }`。
+
+## 11. 主动关怀系统（规则模板，迁移 0012）
+
+伴侣可按用户配置的关怀计划手动生成一条关怀消息，写入真实聊天历史并记录未读/已读。MVP 用规则模板生成文案，不接 LLM、不接 Cron。两表 `companion_care_plans` / `companion_care_events`（迁移 0012），schema 变量 `companionCarePlans` / `companionCareEvents`，推断类型 `CompanionCarePlanRecord` / `CompanionCareEventRecord`。
+
+表结构：
+
+- `companion_care_plans`（每用户唯一）：`enabled` 存 0/1，`frequency`（check：daily / weekly / custom）、`preferred_time`（nullable，如 "21:30"）、`scenes_json`（JSON 数组，无 enum 约束，读出要白名单清洗）、`tone`（check：light / gentle / intimate）、`custom_prompt`（nullable）、`next_run_at_ms`（nullable，留给 Cron）。唯一索引 `companion_care_plans_user_unique(user_id)`；索引 `(enabled, next_run_at_ms)` 留给 Cron 扫描。
+- `companion_care_events`：`care_plan_id` FK `ON DELETE SET NULL`，`conversation_id` / `message_id` FK `ON DELETE CASCADE`，`scene`、`status`（check：generated / read）、`message`（关怀文案副本）、`metadata_json`（nullable）、`generated_at_ms`、`read_at_ms`（nullable）。索引 `(user_id, generated_at_ms)` 列最近事件、`(message_id)` 反查、`(user_id, status, read_at_ms)` 未读扫描。
+
+Contract（`companion-care.contract.ts`，经 `index.ts` 手动 re-export）：
+
+- scene enum = morning / night / long_absence / stress_support / relationship_warmup / anniversary；frequency enum = daily / weekly / custom；tone enum = light / gentle / intimate；event status = generated / read。
+- `CompanionCarePlanSchema`、`UpsertCompanionCarePlanRequestSchema`（scenes min 1 max 6）、`CompanionCareEventSchema`、`GenerateCompanionCareEventRequestSchema`（scene 可选）及三个响应 schema。
+- `CompanionConversationResponseSchema` 追加 `hasUnreadCareEvent: z.boolean().default(false)`，供聊天入口显示轻量未读提示；与反馈闭环的 `feedback` 字段不同字段、不冲突。
+
+四个端点（均 `requireWebAccess`，per-user，静态路径放在动态 `/memories/:memoryId` 之外无冲突）：
+
+- `GET /rpc/chat/companion/care-plan`：`getCompanionCarePlan`，查不到用默认值 upsert 后返回（默认 enabled=false / daily / 21:30 / scenes=[long_absence, night] / gentle）。
+- `PATCH /rpc/chat/companion/care-plan`：`updateCompanionCarePlan`，先 `calculateNextCareRunAtMs`（未开启返回 null；按 preferredTime 设时分，已过则 +1 天或 weekly +7 天）再 upsert。CORS allowMethods 需含 PATCH（现有配置已含）。
+- `GET /rpc/chat/companion/care-events`：`listCompanionCareEventsForUser`，按 generated_at_ms desc，上限 20 条。
+- `POST /rpc/chat/companion/care-events/generate`：`generateCompanionCareEvent`。
+
+生成编排（`generateCompanionCareEvent`）：查/建计划 -> 选 scene（入参 > 计划首个 scene > long_absence）-> `requireCompanionConversation` 取/建会话 -> `buildProactiveCareMessage`（规则模板：tone 定前缀，customPrompt 优先，否则按 scene 取模板）-> `insertCompanionConversationMessage`（role=assistant，metadata `source: "proactive_care"` / scene / tone；已用 db.batch 原子更会话 messageCount/lastMessageAtMs，无需再单独更统计）-> `insertCompanionCareEvent`（status=generated）-> 返回 event。
+
+未读闭环（`getCompanionConversation` 改造，唯一碰核心链路处）：读历史前先 `countUnreadCareEvents` 得 `hasUnreadCareEvent`，再 `markCompanionCareEventsRead`（generated 且 read_at_ms IS NULL -> read + now），再读历史。顺序是「先统计后标记」，让响应能带上「本次打开前有未读」。两步都各自 try/catch，失败按无未读处理、不抛——主动关怀是增强能力，新表不可用不能拖垮会话主链路。
+
+repository `parseCareScenes` 用 `CARE_SCENE_WHITELIST` 过滤 scenes_json；service `normalizeCareScenes` 再过一次并在空时回默认，`isCareScene` 收口未知 scene 为 long_absence。
+
+web：设置面板新增 `CarePanel`（`SettingsSection` 加 "care"、菜单加项、`settingsTitle.care`、渲染分支）——配置开关/频率/时间/场景多选/语气/自定义文案 + 保存 + 手动生成 + 最近记录列表；保存 invalidate care-plan，生成额外 invalidate 会话 query 让关怀消息进入聊天历史。入口未读提示读会话响应 `hasUnreadCareEvent`（打开前快照），在设置切换按钮与 care 菜单项上显示小圆点，进入 care section 后清除。
+
+MVP 边界：不接 Cron（仅算存 next_run_at_ms）、不接 LLM 文案（接入时外层流程不变，只替换 `buildProactiveCareMessage`）、不做外部通知、不做审计表。
 
 提交端点 `POST /rpc/chat/companion/messages/:messageId/feedback`（`requireWebAccess` + messageId uuid 校验 + json 校验）：
 

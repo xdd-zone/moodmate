@@ -1,12 +1,17 @@
 import {
+  CompanionCareEventsResponseSchema,
+  CompanionCarePlanResponseSchema,
   CompanionConversationMessagesResponseSchema,
   CompanionConversationResponseSchema,
   CompanionMemoriesResponseSchema,
   DeleteCompanionMemoryResponseSchema,
+  GenerateCompanionCareEventResponseSchema,
   SubmitCompanionMessageFeedbackResponseSchema,
   UpdateCompanionMemoryResponseSchema,
+  type GenerateCompanionCareEventRequest,
   type SubmitCompanionMessageFeedbackRequest,
   type UpdateCompanionMemoryRequest,
+  type UpsertCompanionCarePlanRequest,
 } from "@repo/contracts";
 
 import { http, type HttpRequestOptions } from "@/src/lib/http";
@@ -71,6 +76,46 @@ export function submitCompanionMessageFeedback(
     `/rpc/chat/companion/messages/${encodeURIComponent(messageId)}/feedback`,
     input,
     SubmitCompanionMessageFeedbackResponseSchema,
+    options,
+  );
+}
+
+export function getCompanionCarePlan(options?: HttpRequestOptions) {
+  return http.get(
+    "/rpc/chat/companion/care-plan",
+    CompanionCarePlanResponseSchema,
+    options,
+  );
+}
+
+export function updateCompanionCarePlan(
+  input: UpsertCompanionCarePlanRequest,
+  options?: HttpRequestOptions,
+) {
+  return http.patch(
+    "/rpc/chat/companion/care-plan",
+    input,
+    CompanionCarePlanResponseSchema,
+    options,
+  );
+}
+
+export function getCompanionCareEvents(options?: HttpRequestOptions) {
+  return http.get(
+    "/rpc/chat/companion/care-events",
+    CompanionCareEventsResponseSchema,
+    options,
+  );
+}
+
+export function generateCompanionCareEvent(
+  input: GenerateCompanionCareEventRequest,
+  options?: HttpRequestOptions,
+) {
+  return http.post(
+    "/rpc/chat/companion/care-events/generate",
+    input,
+    GenerateCompanionCareEventResponseSchema,
     options,
   );
 }
