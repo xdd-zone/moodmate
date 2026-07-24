@@ -1,0 +1,30 @@
+{
+  "id": "companion-chat-care-suite",
+  "name": "companion-chat-care-suite",
+  "title": "陪伴聊天增强三件套",
+  "description": "",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": "admin",
+  "priority": "P2",
+  "creator": "喜东东",
+  "assignee": "喜东东",
+  "createdAt": "2026-07-24",
+  "completedAt": "2026-07-25",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-24-companion-memory-candidate",
+    "07-24-companion-feedback-loop",
+    "07-24-companion-proactive-care"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
