@@ -96,8 +96,8 @@ await db
 
 `POST /rpc/chat/companion` 在回复生成前，先在 service 里跑结构化分析链路，实现位于 `chat.analysis.ts`：
 
-- 安全边界判断 `analyzeConversationSafety` 先执行；安全通过后调用 `analyzeConversationUnderstanding` 跑完整理解图，返回 `{ intent, emotion, route, replyPolicy }`。
-- LangGraph 图结构：`normalizeInput -> classifyIntent -> detectEmotion -> routeEmotion -> buildReplyPolicy -> END`。intent、emotion 走 LLM 结构化输出；route、replyPolicy 是纯代码规则（`buildEmotionRoute` / `buildReplyPolicy`），不调 LLM。
+- 安全边界判断 `analyzeConversationSafety` 先执行；安全通过后调用 `analyzeConversationUnderstanding` 跑完整理解图，返回 `{ intent, emotion, relationshipStage, route, replyPolicy }`。入参含 `conversationSummary`、`messageCount`（service 从会话记录取）。
+- LangGraph 图结构：`normalizeInput -> classifyIntent -> detectEmotion -> analyzeRelationshipStage -> routeEmotion -> buildReplyPolicy -> END`。intent、emotion、relationshipStage 走 LLM 结构化输出；route、replyPolicy 是纯代码规则（`buildEmotionRoute` / `buildReplyPolicy`），不调 LLM。关系阶段放在情绪识别之后、情绪路由之前，既用意图和情绪做输入，又影响后续 route 和 policy。
 - LLM 步骤都用当前 `providerConfig`（请求级 `llmConfig` 或平台 DeepSeek），走 `@langchain/openai` 的 `ChatOpenAI` + `withStructuredOutput`，`temperature: 0`。
 - 结构化输出按 `functionCalling -> jsonSchema -> jsonMode` 顺序重试；全部失败用保守 `fallbackSafety` / `fallbackEmotion`，不回退关键词规则。图整体 catch 时三层兜底：intent、emotion 归一化 fallback，route 由 `buildEmotionRoute` 从兜底 intent/emotion 推。
 - 分析 schema（`ConversationSafetySchema`、`ConversationIntentSchema`、`ConversationEmotionSchema`、`EmotionRouteSchema`、`ReplyPolicySchema`）定义在 `@repo/contracts`，service 和 analysis 都从 contracts 导入，不在 API 侧重复定义。
@@ -105,22 +105,32 @@ await db
 情绪归一化与路由（代码治理层，不调 LLM）：
 
 - `normalizeConversationEmotion(emotion, safety)`：去重去空 `secondaryEmotions` 并 slice(0,3)；`self_harm` / `crisis` 收紧为严肃策略（intensity≥0.85、negative、needsComfort/needsDeescalation=true、serious）；`emotional_dependency` 把 playful/light 收到 warm；强负面（intensity≥0.7 且 negative）置 needsComfort；高激活 angry/hurt 置 needsDeescalation。
-- `buildEmotionRoute({ safety, intent, emotion })` 分支顺序固定，必须照此顺序：`soft_boundary` 强制 `calm_deescalation`（提前 return，安全优先）-> needsDeescalation/angry -> conversation_repair/agent_feedback -> romantic_flirt/affectionate -> relationship_advice/analyze_situation（先安抚再建议）-> needsComfort/negative（tired 或 companionship_presence 走 `quiet_presence`）-> 默认 `light_companion`。
+- `buildEmotionRoute({ safety, intent, emotion, relationshipStage })` 先跑 `computeBaseEmotionRoute`（原分支顺序固定，必须照此：`soft_boundary` 强制 `calm_deescalation`（提前 return，安全优先）-> needsDeescalation/angry -> conversation_repair/agent_feedback -> romantic_flirt/affectionate -> relationship_advice/analyze_situation（先安抚再建议）-> needsComfort/negative（tired 或 companionship_presence 走 `quiet_presence`）-> 默认 `light_companion`），再叠加关系阶段强制修正。
+- 关系阶段修正（`relationshipStage` 为 null 时全跳过，兼容未接入路径）：`repairing` 或 pacing=`repair_first` 强制 `relationship_repair`；`boundary_sensitive`/`dependency_watch` 或 boundaryMode=`firm` 强制 `calm_deescalation`；base 算出 `playful_flirt` 但 stage=`new_connection` 或 intimacyPermission=`low` 时降到 `light_companion`。改路线时同步换 `routeGuidance`。
 
 Reply Policy（代码治理层，不调 LLM，接在 route 之后）：
 
-- `buildReplyPolicy({ safety, intent, emotion, route })` 把 `EmotionRoute` 转成本轮可执行回复策略（policy / sentenceBudget / rhythm / openingMove / allowedMoves / forbiddenMoves / questionLimit / adviceLimit / intimacyLevel / styleGuidance）。执行顺序固定：三者全空返回 `fallbackReplyPolicy` -> `route ?? fallbackEmotionRoute`、`emotion ?? fallbackEmotion` -> `sentenceBudgetForRoute(route)` 定句数 -> 初始默认 -> `switch(route.route)` 覆盖 7 个分支 -> memory_ack 覆盖 -> 4 条二次修正 -> `forbiddenMoves` 去重 -> `ReplyPolicySchema.parse`。
+- `buildReplyPolicy({ safety, intent, emotion, route, relationshipStage })` 把 `EmotionRoute` 转成本轮可执行回复策略（policy / sentenceBudget / rhythm / openingMove / allowedMoves / forbiddenMoves / questionLimit / adviceLimit / intimacyLevel / styleGuidance）。执行顺序固定：三者全空返回 `fallbackReplyPolicy` -> `route ?? fallbackEmotionRoute`、`emotion ?? fallbackEmotion` -> `sentenceBudgetForRoute(route)` 定句数 -> 初始默认 -> `switch(route.route)` 覆盖 7 个分支 -> memory_ack 覆盖 -> 4 条二次修正 -> 关系阶段修正 -> `forbiddenMoves` 去重 -> `ReplyPolicySchema.parse`。
+- 关系阶段修正（`relationshipStage` 为 null 时跳过）：intimacyPermission=`low` 置 intimacyLevel=low 并禁 `intense_flirt`；pacing=`slow_down` 收 rhythm=soft、禁 `premature_advice`/`pressure_to_disclose`/`intense_flirt`、questionLimit 与 adviceLimit 压到 1、句数上限压到 3；pacing=`repair_first` 切 `relationship_repair`、openingMove=apologize、禁 `intense_flirt`/`take_sides_aggressively`/`over_explain`、adviceLimit=0、句数上限压到 3。去重在此之后仍生效。
 - `sentenceBudgetForRoute(route)`：responseLength 四路映射（very_short 1-2 / short 1-3 / medium 2-5 / long 3-7）。
 - switch 只覆盖 7 个 route（quiet_presence / warm_comfort / deep_comfort / playful_flirt / calm_deescalation / relationship_repair / practical_support）；`light_companion` / `gentle_clarification` 无 case，落初始默认（warm_companion）。
 - `memory_update` / `preference_setting` 意图在 switch 后强制覆盖为 `memory_ack`，句数压到 `min=1`、`max=Math.min(max, 2)`。
 - 4 条二次修正 push forbidden：safety 非 `continue` 降亲密度并禁 `intense_flirt` / `promise_real_world_action`；强负面（intensity≥0.75 且 negative）禁 `intense_flirt` / `premature_advice` 并把 lively 降 soft；不追问置 `questionLimit=0`；不建议置 `adviceLimit=0`。
 - 陷阱：各分支叠加二次修正 push 后 `forbiddenMoves` 可能越 `.max(8)`，parse 前必须 `[...new Set(forbiddenMoves)]` 去重。课程原文直接 push 不去重，是相对课程的稳健处理，不改语义。
 
+关系阶段（`analyzeRelationshipStage` 节点，情绪之后、路由之前）：
+
+- `analyzeRelationshipStageWithLangChain` 结合 messageCount、会话摘要、最近对话、记忆、safety、intent、emotion 判断关系阶段，走 `withStructuredOutput` + 三种 method 兜底，全失败走 `heuristicRelationshipStage` 启发式兜底，两条路径都再过 `normalizeRelationshipStage`。
+- `heuristicRelationshipStage`：`memoryScore`(记忆重要度和，上限 20) + `historyScore`(min(70, floor(messageCount\*1.6))) + `warmthScore`(seeking_closeness/affectionate 记 10，warming_up/playful 记 6) 算 closenessScore，按阈值从高到低分档：`messageCount>=80 && closeness>=75` close_bond；`>=36 && >=58` trusted_companion；`>=16 && >=38` comfortable_chat；`>=6` warming_up；否则 new_connection。
+- `normalizeRelationshipStage(stage, { safety, intent, emotion, messageCount })` 三条产品规则按顺序执行：messageCount<6 且不在 boundary_sensitive/dependency_watch/repairing 时拉回 new_connection；`emotional_dependency` 或 relationshipSignal `dependency_risk` 切 dependency_watch；conversation_repair / conflict / feeling_hurt / hurt / disappointed 切 repairing。末尾 `ConversationRelationshipStageSchema.parse`。启发式和 LLM 两条路径都要过这层。
+- 关系阶段对 route / policy 的具体修正见上面 `buildEmotionRoute` / `buildReplyPolicy` 两节。
+- 关系阶段是每轮动态结果，写进消息 metadata，不新增独立表、不做 D1 迁移；复用 `companionConversations.summary` 和 `messageCount` 作分析器入参。
+
 分流与落库：
 
-- 用户消息落库前完成安全分析，safety + intent + emotion + route + replyPolicy 通过 `buildConversationAnalysisMetadata`（`analysisVersion: conversation-understanding-v2`）写入 `metadata_json`。
-- `boundaryAction` 为 `refuse` / `crisis_support` 时，`buildBoundaryResponse` 直接返回固定文本流，不调用上游模型；assistant 消息仍完整落库。存在 boundaryResponse 时不进理解链路，intent/emotion/route/replyPolicy 全为 null。
-- `caution` / `redirect` / `soft_boundary` 时，`getSafetySystemInstruction`、`getIntentSystemInstruction`、`getEmotionRouteSystemInstruction` 和 `getReplyPolicySystemInstruction` 把策略注入 system prompt，顺序为安全、意图、情绪路由、Reply Policy、长期记忆、会话摘要。情绪路由和 Reply Policy 指令末句都要求不暴露内部标签。
+- 用户消息落库前完成安全分析，safety + intent + emotion + relationshipStage + route + replyPolicy 通过 `buildConversationAnalysisMetadata`（`analysisVersion: conversation-understanding-v3`）写入 `metadata_json`。字段顺序：safety / intent / emotion / relationshipStage / route / replyPolicy。v2 是「含 replyPolicy、不含 relationshipStage」的旧字段集，加 relationshipStage 后字段集变化，故升 v3。
+- `boundaryAction` 为 `refuse` / `crisis_support` 时，`buildBoundaryResponse` 直接返回固定文本流，不调用上游模型；assistant 消息仍完整落库。存在 boundaryResponse 时不进理解链路，intent/emotion/relationshipStage/route/replyPolicy 全为 null。
+- `caution` / `redirect` / `soft_boundary` 时，`getSafetySystemInstruction`、`getIntentSystemInstruction`、`getEmotionRouteSystemInstruction`、`getRelationshipStageSystemInstruction` 和 `getReplyPolicySystemInstruction` 把策略注入 system prompt，顺序为安全、意图、情绪路由、关系阶段、Reply Policy、长期记忆、会话摘要（关系阶段影响 route，指令排在 route 之后、policy 之前）。情绪路由、关系阶段和 Reply Policy 指令末句都要求不暴露内部标签。
 - `replyPolicy` 随理解结果挂到 `PreparedCompanionChat['turn']` 上并透传到 assistant 落库，供 Reply Quality Guard 质检使用。
 - 记忆抽取受 `safety.allowMemoryExtraction` 门控；为 false 时 `saveCompanionAssistantTurn` 跳过 `saveCandidateMemories`。
 

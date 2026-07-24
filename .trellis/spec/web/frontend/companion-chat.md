@@ -36,6 +36,7 @@ AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BAS
 - assistant 完整文本保留在 AI SDK messages，可见文本使用 `Array.from()` 每 18ms 推进一个 Unicode 字符。
 - `prefers-reduced-motion: reduce` 时直接显示完整文本。
 - 一轮正常结束后使会话 query 失效，用当前 AI SDK 消息更新会话预览，不因 query 刷新清空聊天。
+- 聊天页头部副标题按 `serverConversation.messageCount` 经 `getRelationshipStageLabel` 映射成关系阶段名（>=80 亲密连结、>=36 稳定信任、>=16 舒适陪伴、>=6 升温熟悉、否则 初识破冰）。只展示阶段名，不展示分数或信任等级；真正影响回复的关系阶段以后端 LangGraph 判断为准。
 - 记忆管理放在设置的“记忆”区域，展示类型、内容、重要度、状态、更新时间和可空来源消息。
 - 记忆编辑、启停和删除成功后使 `companionChatKeys.memories()` 失效；删除前必须二次确认。
 - HTTP 客户端的 PATCH 带 JSON 请求体；DELETE 不发送请求体，两者沿用认证刷新和统一响应解析。
