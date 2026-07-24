@@ -1,0 +1,4 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "API 后端分层与开发前/完成检查清单，候选判断改动落在 service/analysis 层"}
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "伴侣聊天会话历史、长期记忆、Prompt 与流式落库规范，候选判断与抽取器直接改这里"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "候选判断结果在 service 内跨函数流转，避免层边界数据错配"}
