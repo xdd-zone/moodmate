@@ -29,7 +29,7 @@ Authorization: Bearer <web access token>
 - 发送前读取最近 18 条服务端消息和最多 12 条启用记忆，再保存本轮用户消息。
 - prompt 顺序是系统规则、长期记忆、会话摘要、最近消息、本轮用户输入；本轮输入不得重复加入。
 - assistant 文本一边流式返回一边累积；正常结束后保存完整结果，更新 1600 字符滚动摘要和会话计数。
-- 规则记忆单轮最多写入 2 条，读取最多 50 条启用记忆做完全相同内容去重。记忆写入失败只记录日志。
+- 长期记忆写入走「候选判断闸门 + LLM 抽取器」两段式（详见第 9 节）；LLM 全失败时退回正则兜底，单轮最多写入 2 条，读取最多 50 条启用记忆做完全相同内容去重。记忆写入失败只记录日志。
 - 记忆查询不返回 `deleted`；PATCH 只允许修改未删除且属于当前用户的记忆；DELETE 把状态改为 `deleted`。
 - 请求级 `llmConfig` 优先；未提供时读取平台 `DEEPSEEK_*`。
 - `DEEPSEEK_API_KEY` 可选且敏感；`DEEPSEEK_BASE_URL` 默认 `https://api.deepseek.com`；`DEEPSEEK_MODEL` 默认 `deepseek-v4-flash`。
@@ -132,7 +132,7 @@ Reply Policy（代码治理层，不调 LLM，接在 route 之后）：
 - `boundaryAction` 为 `refuse` / `crisis_support` 时，`buildBoundaryResponse` 直接返回固定文本流，不调用上游模型；assistant 消息仍完整落库。存在 boundaryResponse 时不进理解链路，intent/emotion/relationshipStage/route/replyPolicy 全为 null。
 - `caution` / `redirect` / `soft_boundary` 时，`getSafetySystemInstruction`、`getIntentSystemInstruction`、`getEmotionRouteSystemInstruction`、`getRelationshipStageSystemInstruction` 和 `getReplyPolicySystemInstruction` 把策略注入 system prompt，顺序为安全、意图、情绪路由、关系阶段、Reply Policy、长期记忆、会话摘要（关系阶段影响 route，指令排在 route 之后、policy 之前）。情绪路由、关系阶段和 Reply Policy 指令末句都要求不暴露内部标签。
 - `replyPolicy` 随理解结果挂到 `PreparedCompanionChat['turn']` 上并透传到 assistant 落库，供 Reply Quality Guard 质检使用。
-- 记忆抽取受 `safety.allowMemoryExtraction` 门控；为 false 时 `saveCompanionAssistantTurn` 跳过 `saveCandidateMemories`。
+- 记忆抽取受 `safety.allowMemoryExtraction` 门控；为 false 时 `saveCompanionAssistantTurn` 跳过 `saveCandidateMemories`。安全允许后的候选判断 + 抽取两段式见第 9 节。
 
 Reply Quality Guard（回复后质检，纯代码，不调 LLM）：
 
@@ -153,3 +153,45 @@ companion 档案前置基础：
 - 三个 LLM 分析 prompt（safety / intent / emotion）的 system 段必须显式列出 JSON 字段名、类型和允许的枚举值，并要求「只返回 JSON、不要 markdown 代码块或多余文字」。
 - 原因：DeepSeek 官方模型（`deepseek-v4-flash`）是推理模型，`functionCalling` / `jsonSchema` 在三方中转或部分场景会失败，最终落到 `jsonMode`；`jsonMode` 不会把 schema 结构喂给模型，缺字段契约时模型会自创字段名（如 `safety` / `intent` / `emotion`），导致 Zod parse 失败并全程走兜底。
 - 判定功能是否真正生效：查用户消息 `metadata_json`，真实结果的 `reason` / `emotionalCue` 是贴合内容的具体文案且 `confidence` 高；兜底恒为 `caution` / `other` / `unclear` / `0.3`、emotion 恒为 `neutral` + 固定 cue 文案。
+
+## 9. 长期记忆候选判断 + 抽取器（两段式，安全边界之后）
+
+`saveCompanionAssistantTurn` 在 `if (!allowMemoryExtraction) return` 之后调 `saveCandidateMemories`，把原正则启发式抽取升级为「候选判断闸门 -> LLM 抽取器 -> content 去重 -> 入库」。实现在 `chat.analysis.ts`（候选判断器 + 抽取器）和 `chat.service.ts`（串联）。两个内部 Zod schema（`CompanionMemoryCandidateSchema` / `CompanionExtractedMemorySchema`）只在 API 侧定义，不进 `@repo/contracts`。
+
+数据流（`saveCandidateMemories`）：
+
+- `listActiveCompanionMemories` 取已有记忆，供 fast reject / 判断 prompt / content 去重复用。
+- `judgeCompanionMemoryCandidate({ providerConfig, userText, assistantText, existingMemories, summary })`：先 `shouldSkipMemoryCandidateFast`（命中即返回终判），未命中走 `judgeMemoryCandidateWithLangChain`。
+- `candidate.shouldExtract === false` -> `console.info` 记 category / confidence / reason 后 return，不写记忆。
+- 通过 -> `extractCompanionMemoriesWithLangChain({ candidate, ... })`；返回 `null`（LLM 全失败）时退回既有正则 `extractCandidateMemories(userText)`。
+- 抽取结果按 `normalizeStoredMessage` 规范化后与 existing 做 content 去重，`insertCompanionMemory` 入库。
+- 全程被既有 try/catch 包裹，任意异常只 `console.error`，不影响 assistant 落库与用户可见回复。
+
+providerConfig 传递：挂到 `PreparedCompanionChat['turn'].providerConfig`（`prepareCompanionChat` 产出时写入），`saveCompanionAssistantTurn` 从 `input.turn.providerConfig` 读取，不在保存链路重复 `resolveProviderConfig`（避免额外解密）。
+
+候选判断 schema（`CompanionMemoryCandidateSchema`）：`shouldExtract: boolean`、`confidence: 0-1`、`category`（preference / boundary / relationship_goal / conversation_style / important_fact / identity_profile / temporary_emotion / small_talk / assistant_generated / duplicate / unsafe / unclear）、`stability`（stable / likely_stable / temporary / unclear）、`importance: int 0-5`、`reason: <=300`、`candidateFacts: string[] <=3`。
+
+抽取器 schema（`CompanionExtractedMemorySchema`）：`memories` 数组（`<=3`），每项 `content: 1-500`、`type`（`MEMORY_CANDIDATE_TYPE` = 偏好 / 边界 / 关系目标 / 对话风格 / 重要事实）、`importance: int 1-5`。type 用固定中文枚举收口，和现有数据里的中文类型一致，不引入新枚举列。
+
+Fast reject（`shouldSkipMemoryCandidateFast`，本地无 LLM，命中即终判 shouldExtract=false）五类：
+
+1. userText / assistantText 为空 -> unclear。
+2. userText 长度 < 6 且不含 `MEMORY_CANDIDATE_SIGNAL_PATTERN` 信号 -> small_talk。
+3. 命中 `MEMORY_CANDIDATE_CONFIRMATION_PATTERN`（好 / 嗯 / 哈哈 / 谢谢 / 晚安 / ok 等确认语）且无信号 -> small_talk。
+4. `normalizeStoredMessage(userText)` 与任一 existingMemory.content 规范化后相等 -> duplicate。
+5. 命中 `MEMORY_CANDIDATE_SENSITIVE_PATTERN`（密码 / 验证码 / 身份证 / 银行卡 / token / secret / 密钥 等）-> unsafe。
+
+正规化闸门（`normalizeMemoryCandidate`，LLM 返回后强制约束）：
+
+- category ∈ {small_talk, temporary_emotion, assistant_generated, duplicate, unsafe} -> shouldExtract=false。
+- stability === "temporary" 或 importance <= 0 -> shouldExtract=false。
+- confidence < 0.55 且 importance < 4 -> shouldExtract=false。
+
+双层兜底：
+
+- 候选判断 LLM 三方法（`STRUCTURED_OUTPUT_METHODS`）全失败 -> `buildFallbackMemoryCandidate`：仅 `MEMORY_CANDIDATE_SIGNAL_PATTERN` 命中才 shouldExtract=true，否则退回 `fallbackMemoryCandidate`（shouldExtract=false）；结果仍过 `normalizeMemoryCandidate`。
+- 抽取器 LLM 全失败 -> 返回 `null`，service 用 `extracted ?? extractCandidateMemories(userText)` 退回正则，保证不空转。
+
+Prompt 契约：候选判断和抽取器两个 prompt 的 system 段都显式列出字段名、类型、枚举值，并要求「不要输出多余字段、解释文字或 markdown 代码块」，理由同第 8 节末尾（jsonMode 缺字段契约会导致模型自创字段名、Zod parse 失败全程走兜底）。
+
+不新增表、不新增迁移、不改 contract；候选判断是运行时决策，不落审计表。
