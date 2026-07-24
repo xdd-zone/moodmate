@@ -48,6 +48,22 @@ type SettingsSection = "profile" | "general" | "memory" | "appearance";
 const AGENT_NAME = "MoodMate";
 const AGENT_SUBTITLE = "你的 AI 伴侣";
 
+function getRelationshipStageLabel(messageCount: number) {
+  if (messageCount >= 80) {
+    return "亲密连结";
+  }
+  if (messageCount >= 36) {
+    return "稳定信任";
+  }
+  if (messageCount >= 16) {
+    return "舒适陪伴";
+  }
+  if (messageCount >= 6) {
+    return "升温熟悉";
+  }
+  return "初识破冰";
+}
+
 interface CompanionChatAppProps {
   profile: WebUserProfile;
   session: WebSession;
@@ -312,6 +328,7 @@ function CompanionChatAppInner({
             draft={draft}
             error={error}
             isSending={isSending}
+            messageCount={serverConversation.messageCount}
             historicalAssistantMessageIds={historicalAssistantMessageIds}
             historyLoadError={historyLoadError}
             isLoadingMoreHistory={isLoadingMoreHistory}
@@ -348,6 +365,7 @@ function ChatMode({
   historyLoadError,
   isSending,
   isLoadingMoreHistory,
+  messageCount,
   messages,
   onBack,
   onDraftChange,
@@ -364,6 +382,7 @@ function ChatMode({
   historyLoadError: boolean;
   isSending: boolean;
   isLoadingMoreHistory: boolean;
+  messageCount: number;
   messages: UIMessage[];
   onBack: () => void;
   onDraftChange: (value: string) => void;
@@ -376,7 +395,7 @@ function ChatMode({
     <>
       <DetailHeader
         onBack={onBack}
-        subtitle={AGENT_SUBTITLE}
+        subtitle={getRelationshipStageLabel(messageCount)}
         title={AGENT_NAME}
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-strong">
