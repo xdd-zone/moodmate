@@ -48,13 +48,17 @@ export type {
 } from "./chat/companion-chat.contract";
 export {
   CompanionIntentPrimarySchema,
+  ConversationEmotionSchema,
   ConversationIntentSchema,
   ConversationSafetySchema,
+  EmotionRouteSchema,
 } from "./chat/companion-analysis.contract";
 export type {
   CompanionIntentPrimary,
+  ConversationEmotion,
   ConversationIntent,
   ConversationSafety,
+  EmotionRoute,
 } from "./chat/companion-analysis.contract";
 export {
   AdminDefaultAvatarCurrentResponseSchema,
