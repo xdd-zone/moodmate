@@ -1,0 +1,7 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "新增反馈表/API/repository，遵循 route-service-repository 分层"}
+{"file": ".trellis/spec/api/backend/d1.md", "reason": "新增 companion_message_feedbacks 表，需按迁移规范新增迁移文件"}
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "反馈注入下一轮 system prompt、历史消息回显反馈状态"}
+{"file": ".trellis/spec/contracts/shared/contract-guidelines.md", "reason": "新增反馈 contract：Zod schema、类型推导与 index.ts 导出"}
+{"file": ".trellis/spec/web/frontend/companion-chat.md", "reason": "反馈按钮挂在历史 assistant 气泡，复用历史消息 ID 判断"}
+{"file": ".trellis/spec/web/frontend/http-query-guidelines.md", "reason": "反馈提交与历史回显的 typed HTTP 与 query 缓存"}
