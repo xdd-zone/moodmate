@@ -91,9 +91,7 @@ export function LlmConfigsPage() {
   }
 
   function handleDelete(config: LlmConfigItem) {
-    if (
-      !window.confirm(`删除模型配置“${config.name}”？该操作不可恢复。`)
-    ) {
+    if (!window.confirm(`删除模型配置“${config.name}”？该操作不可恢复。`)) {
       return;
     }
     deleteMutation.mutate(config.id);
@@ -453,7 +451,11 @@ function ConfigDrawer({
 
     const trimmedApiKey = form.apiKey.trim();
 
-    if (!form.baseURL.trim() || !form.model.trim() || !form.providerName.trim()) {
+    if (
+      !form.baseURL.trim() ||
+      !form.model.trim() ||
+      !form.providerName.trim()
+    ) {
       setFormError("测试前请填写 Provider、Base URL 和 Model。");
       return;
     }
@@ -571,9 +573,7 @@ function ConfigDrawer({
                 id="configApiKey"
                 maxLength={400}
                 onChange={(event) => updateField("apiKey", event.target.value)}
-                placeholder={
-                  isEdit ? "留空则沿用已保存的 Key" : "输入 API Key"
-                }
+                placeholder={isEdit ? "留空则沿用已保存的 Key" : "输入 API Key"}
                 type="password"
                 value={form.apiKey}
               />

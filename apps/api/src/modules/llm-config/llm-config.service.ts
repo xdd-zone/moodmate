@@ -12,11 +12,7 @@ import { AppError } from "@/shared/app-error";
 import { getApiEnv } from "@/shared/env";
 import type { ApiBindings } from "@/shared/hono-env";
 
-import {
-  apiKeyLast4,
-  decryptApiKey,
-  encryptApiKey,
-} from "./llm-config.crypto";
+import { apiKeyLast4, decryptApiKey, encryptApiKey } from "./llm-config.crypto";
 import { presentLlmConfig } from "./llm-config.presenter";
 import {
   activateLlmConfig,

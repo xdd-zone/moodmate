@@ -55,7 +55,11 @@ export function activateAdminLlmConfig(id: string) {
 
 export function deleteAdminLlmConfig(id: string) {
   return withAdminSessionRecovery(() =>
-    http.post(`/api/llm-configs/${id}/delete`, {}, LlmConfigDeleteResponseSchema),
+    http.post(
+      `/api/llm-configs/${id}/delete`,
+      {},
+      LlmConfigDeleteResponseSchema,
+    ),
   );
 }
 

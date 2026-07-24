@@ -1,9 +1,6 @@
 import { BizCode, LlmConfigCreateRequestSchema } from "@repo/contracts";
 
-import {
-  createLlmConfig,
-  listLlmConfigs,
-} from "@/src/server/llm-configs/api";
+import { createLlmConfig, listLlmConfigs } from "@/src/server/llm-configs/api";
 import {
   failureResponse,
   jsonResponse,
