@@ -1,11 +1,13 @@
 import {
   ConversationEmotionSchema,
   ConversationIntentSchema,
+  ConversationRelationshipStageSchema,
   ConversationSafetySchema,
   ReplyPolicySchema,
   ReplyQualityGuardSchema,
   type ConversationEmotion,
   type ConversationIntent,
+  type ConversationRelationshipStage,
   type ConversationSafety,
   type EmotionRoute,
   type ReplyPolicy,
@@ -100,6 +102,19 @@ const fallbackReplyPolicy: ReplyPolicy = {
   intimacyLevel: "medium",
   styleGuidance:
     "先轻轻接住用户，再只问一个低压力问题；不要讲大道理，不要连续追问。",
+};
+
+const fallbackRelationshipStage: ConversationRelationshipStage = {
+  stage: "new_connection",
+  displayName: "初识破冰",
+  closenessScore: 20,
+  trustLevel: "low",
+  stability: "new",
+  boundaryMode: "warm",
+  intimacyPermission: "low",
+  pacing: "hold",
+  riskSignals: [],
+  relationshipGuidance: "关系刚开始，保持自然友好，慢一点推进，不急于靠近。",
 };
 
 const conversationSafetyPrompt = ChatPromptTemplate.fromMessages([
@@ -220,6 +235,59 @@ const conversationEmotionPrompt = ChatPromptTemplate.fromMessages([
   ],
 ]);
 
+const conversationRelationshipStagePrompt = ChatPromptTemplate.fromMessages([
+  [
+    "system",
+    [
+      "你是 MoodMate AI 电子伴侣聊天产品的关系阶段判断器。",
+      "你的任务不是回复用户，而是结合消息数量、会话摘要、最近对话、长期记忆、安全边界、意图和情绪，判断当前用户与伴侣的关系阶段、亲密边界和推进节奏，为回复模型提供隐性节奏控制。",
+      "重要原则：历史很少（消息数量少）时，即使本轮语气亲密，也不要判定为深度亲密或亲密连结；关系要靠积累，不能一步到位。",
+      "出现误会、失望、冷淡、疏远、边界测试或过度依赖的信号时，优先判定 repairing / boundary_sensitive / dependency_watch，而不是继续推进亲密。",
+      "只返回一个 JSON 对象，包含且仅包含以下字段，不要输出多余字段、解释文字或 markdown 代码块：",
+      "- stage: 字符串，取 new_connection / warming_up / comfortable_chat / trusted_companion / close_bond / repairing / boundary_sensitive / dependency_watch 之一",
+      "- displayName: 字符串，1 到 80 字的中文阶段名（如 初识破冰 / 升温熟悉 / 舒适陪伴 / 稳定信任 / 亲密连结 / 修复期 / 边界敏感 / 依赖观察）",
+      "- closenessScore: 整数，0 到 100 的亲近度评分",
+      "- trustLevel: 字符串，取 low / medium / high 之一",
+      "- stability: 字符串，取 new / warming / stable / deepening / fragile / repairing 之一",
+      "- boundaryMode: 字符串，取 open / warm / careful / firm 之一",
+      "- intimacyPermission: 字符串，取 low / medium / high 之一，表示当前允许的亲密表达上限",
+      "- pacing: 字符串，取 slow_down / hold / advance_gently / repair_first 之一，表示推进节奏",
+      "- riskSignals: 字符串数组，最多 5 个，取 low_history / dependency_risk / boundary_testing / conflict / pulling_away / sexual_boundary / emotional_volatility，可为空数组 []",
+      "- relationshipGuidance: 字符串，简述本轮关系节奏的处理方式，不超过 300 字",
+    ].join("\n"),
+  ],
+  [
+    "human",
+    [
+      "伴侣名称：{agentName}",
+      "伴侣边界：{agentGuardrails}",
+      "",
+      "消息数量：{messageCount}",
+      "",
+      "会话摘要：",
+      "{conversationSummary}",
+      "",
+      "安全边界判断：",
+      "{safety}",
+      "",
+      "意图判断：",
+      "{intent}",
+      "",
+      "情绪识别：",
+      "{emotion}",
+      "",
+      "长期记忆：",
+      "{activeMemories}",
+      "",
+      "最近对话：",
+      "{recentMessages}",
+      "",
+      "本轮用户输入：",
+      "{userText}",
+    ].join("\n"),
+  ],
+]);
+
 const ConversationUnderstandingState = Annotation.Root({
   providerConfig: Annotation<ChatProviderConfig>(),
   safety: Annotation<ConversationSafety>(),
@@ -228,9 +296,12 @@ const ConversationUnderstandingState = Annotation.Root({
   userText: Annotation<string>(),
   agentName: Annotation<string>(),
   agentGuardrails: Annotation<string | null>(),
+  conversationSummary: Annotation<string | null>(),
+  messageCount: Annotation<number>(),
   normalizedInput: Annotation<string>(),
   intent: Annotation<ConversationIntent | null>(),
   emotion: Annotation<ConversationEmotion | null>(),
+  relationshipStage: Annotation<ConversationRelationshipStage | null>(),
   route: Annotation<EmotionRoute | null>(),
   replyPolicy: Annotation<ReplyPolicy | null>(),
   signal: Annotation<AbortSignal | undefined>(),
@@ -302,6 +373,21 @@ function formatIntentForPrompt(intent: ConversationIntent) {
     `关系信号：${intent.relationshipSignal}`,
     `回复期待：深度 ${intent.replyExpectation.depth}，温度 ${intent.replyExpectation.warmth}，直接程度 ${intent.replyExpectation.directness}`,
     `回复指导：${intent.promptGuidance}`,
+  ].join("\n");
+}
+
+function formatEmotionForPrompt(emotion: ConversationEmotion) {
+  return [
+    `主要情绪：${emotion.primaryEmotion}`,
+    emotion.secondaryEmotions.length > 0
+      ? `次要情绪：${emotion.secondaryEmotions.join("、")}`
+      : "次要情绪：无",
+    `情绪强度：${emotion.intensity.toFixed(2)}`,
+    `情绪极性：${emotion.valence}`,
+    `激活程度：${emotion.arousal}`,
+    `是否需要安抚：${emotion.needsComfort ? "是" : "否"}`,
+    `是否需要降温：${emotion.needsDeescalation ? "是" : "否"}`,
+    `情绪线索：${emotion.emotionalCue}`,
   ].join("\n");
 }
 
@@ -577,7 +663,7 @@ function normalizeConversationEmotion(
   return next;
 }
 
-function buildEmotionRoute(params: {
+function computeBaseEmotionRoute(params: {
   safety: ConversationSafety;
   intent: ConversationIntent | null;
   emotion: ConversationEmotion | null;
@@ -688,6 +774,69 @@ function buildEmotionRoute(params: {
   return route;
 }
 
+function buildEmotionRoute(params: {
+  safety: ConversationSafety;
+  intent: ConversationIntent | null;
+  emotion: ConversationEmotion | null;
+  relationshipStage: ConversationRelationshipStage | null;
+}): EmotionRoute {
+  const route = computeBaseEmotionRoute({
+    safety: params.safety,
+    intent: params.intent,
+    emotion: params.emotion,
+  });
+
+  const { relationshipStage } = params;
+
+  if (!relationshipStage) {
+    return route;
+  }
+
+  if (
+    relationshipStage.stage === "repairing" ||
+    relationshipStage.pacing === "repair_first"
+  ) {
+    route.route = "relationship_repair";
+    route.responseLength = "short";
+    route.shouldAskQuestion = true;
+    route.shouldGiveAdvice = false;
+    route.shouldMirrorEmotion = true;
+    route.routeGuidance =
+      "关系正处于修复期，先诚恳承接对方的失落或误会，修复关系，再用一个温和的问题确认对方感受。";
+    return route;
+  }
+
+  if (
+    relationshipStage.stage === "boundary_sensitive" ||
+    relationshipStage.stage === "dependency_watch" ||
+    relationshipStage.boundaryMode === "firm"
+  ) {
+    route.route = "calm_deescalation";
+    route.responseLength = "short";
+    route.shouldAskQuestion = false;
+    route.shouldGiveAdvice = false;
+    route.shouldUsePetName = false;
+    route.routeGuidance =
+      "当前关系边界敏感，先温和降温、稳住边界，不追问、不给建议、不用昵称，让对话回到舒适区间。";
+    return route;
+  }
+
+  if (
+    route.route === "playful_flirt" &&
+    (relationshipStage.stage === "new_connection" ||
+      relationshipStage.intimacyPermission === "low")
+  ) {
+    route.route = "light_companion";
+    route.responseLength = "short";
+    route.shouldUsePetName = false;
+    route.routeGuidance =
+      "关系还在早期，亲密度不宜过高，轻松自然地延续话题、保持友好陪伴，不要用昵称或过度暧昧。";
+    return route;
+  }
+
+  return route;
+}
+
 function sentenceBudgetForRoute(
   route: EmotionRoute,
 ): ReplyPolicy["sentenceBudget"] {
@@ -708,8 +857,9 @@ function buildReplyPolicy(params: {
   intent: ConversationIntent | null;
   emotion: ConversationEmotion | null;
   route: EmotionRoute | null;
+  relationshipStage: ConversationRelationshipStage | null;
 }): ReplyPolicy {
-  const { safety } = params;
+  const { safety, relationshipStage } = params;
 
   if (!params.intent && !params.emotion && !params.route) {
     return { ...fallbackReplyPolicy };
@@ -940,6 +1090,40 @@ function buildReplyPolicy(params: {
     adviceLimit = 0;
   }
 
+  if (relationshipStage) {
+    if (relationshipStage.intimacyPermission === "low") {
+      intimacyLevel = "low";
+      forbiddenMoves = [...forbiddenMoves, "intense_flirt"];
+    }
+
+    if (relationshipStage.pacing === "slow_down") {
+      rhythm = "soft";
+      forbiddenMoves = [
+        ...forbiddenMoves,
+        "premature_advice",
+        "pressure_to_disclose",
+        "intense_flirt",
+      ];
+      questionLimit = Math.min(questionLimit, 1);
+      adviceLimit = Math.min(adviceLimit, 1);
+      sentenceBudget.max = Math.min(sentenceBudget.max, 3);
+    }
+
+    if (relationshipStage.pacing === "repair_first") {
+      policy = "relationship_repair";
+      rhythm = "soft";
+      openingMove = "apologize";
+      forbiddenMoves = [
+        ...forbiddenMoves,
+        "intense_flirt",
+        "take_sides_aggressively",
+        "over_explain",
+      ];
+      adviceLimit = 0;
+      sentenceBudget.max = Math.min(sentenceBudget.max, 3);
+    }
+  }
+
   forbiddenMoves = [...new Set(forbiddenMoves)];
 
   return ReplyPolicySchema.parse({
@@ -1024,6 +1208,263 @@ async function detectConversationEmotionWithLangChain(params: {
   return normalizeConversationEmotion(fallbackEmotion, params.safety);
 }
 
+function heuristicRelationshipStage(params: {
+  messageCount: number;
+  activeMemories: AnalysisMemory[];
+  intent: ConversationIntent | null;
+  emotion: ConversationEmotion | null;
+}): ConversationRelationshipStage {
+  const { messageCount, activeMemories, intent, emotion } = params;
+
+  const memoryScore = Math.min(
+    20,
+    activeMemories.reduce((total, memory) => total + memory.importance, 0),
+  );
+  const historyScore = Math.min(70, Math.floor(messageCount * 1.6));
+  const warmthScore =
+    intent?.relationshipSignal === "seeking_closeness" ||
+    emotion?.primaryEmotion === "affectionate"
+      ? 10
+      : intent?.relationshipSignal === "warming_up" ||
+          emotion?.primaryEmotion === "playful"
+        ? 6
+        : 0;
+  const closenessScore = Math.min(
+    100,
+    memoryScore + historyScore + warmthScore,
+  );
+
+  if (messageCount >= 80 && closenessScore >= 75) {
+    return {
+      stage: "close_bond",
+      displayName: "亲密连结",
+      closenessScore,
+      trustLevel: "high",
+      stability: "deepening",
+      boundaryMode: "open",
+      intimacyPermission: "high",
+      pacing: "advance_gently",
+      riskSignals: [],
+      relationshipGuidance:
+        "关系已经很亲密，可以自然表达在意和惦记，但仍要尊重对方节奏，不越界。",
+    };
+  }
+
+  if (messageCount >= 36 && closenessScore >= 58) {
+    return {
+      stage: "trusted_companion",
+      displayName: "稳定信任",
+      closenessScore,
+      trustLevel: "high",
+      stability: "stable",
+      boundaryMode: "warm",
+      intimacyPermission: "medium",
+      pacing: "advance_gently",
+      riskSignals: [],
+      relationshipGuidance:
+        "彼此已经比较熟悉信任，可以更放松地陪伴和分享，但保持真诚，不刻意升温。",
+    };
+  }
+
+  if (messageCount >= 16 && closenessScore >= 38) {
+    return {
+      stage: "comfortable_chat",
+      displayName: "舒适陪伴",
+      closenessScore,
+      trustLevel: "medium",
+      stability: "stable",
+      boundaryMode: "warm",
+      intimacyPermission: "medium",
+      pacing: "hold",
+      riskSignals: [],
+      relationshipGuidance:
+        "聊得比较自在了，保持轻松真诚的陪伴，慢慢加深了解，不急于亲密。",
+    };
+  }
+
+  if (messageCount >= 6) {
+    return {
+      stage: "warming_up",
+      displayName: "升温熟悉",
+      closenessScore,
+      trustLevel: "low",
+      stability: "warming",
+      boundaryMode: "warm",
+      intimacyPermission: "low",
+      pacing: "hold",
+      riskSignals: [],
+      relationshipGuidance:
+        "刚开始熟悉起来，保持友好自然的节奏，多倾听少推进，不急着靠近。",
+    };
+  }
+
+  return {
+    stage: "new_connection",
+    displayName: "初识破冰",
+    closenessScore: Math.min(closenessScore, 35),
+    trustLevel: "low",
+    stability: "new",
+    boundaryMode: "warm",
+    intimacyPermission: "low",
+    pacing: "hold",
+    riskSignals: messageCount < 6 ? ["low_history"] : [],
+    relationshipGuidance: "关系刚开始，保持自然友好，慢一点推进，不急于靠近。",
+  };
+}
+
+function normalizeRelationshipStage(
+  stage: ConversationRelationshipStage,
+  context: {
+    safety: ConversationSafety;
+    intent: ConversationIntent | null;
+    emotion: ConversationEmotion | null;
+    messageCount: number;
+  },
+): ConversationRelationshipStage {
+  const next: ConversationRelationshipStage = {
+    ...stage,
+    riskSignals: [...stage.riskSignals],
+  };
+  const { safety, intent, emotion, messageCount } = context;
+
+  if (
+    messageCount < 6 &&
+    next.stage !== "boundary_sensitive" &&
+    next.stage !== "dependency_watch" &&
+    next.stage !== "repairing"
+  ) {
+    next.stage = "new_connection";
+    next.displayName = "初识破冰";
+    next.closenessScore = Math.min(next.closenessScore, 35);
+    next.trustLevel = "low";
+    next.stability = "new";
+    next.intimacyPermission = "low";
+    next.pacing = "hold";
+  }
+
+  if (
+    safety.category === "emotional_dependency" ||
+    intent?.relationshipSignal === "dependency_risk"
+  ) {
+    next.stage = "dependency_watch";
+    next.displayName = "依赖观察";
+    next.boundaryMode = "careful";
+    next.intimacyPermission = "low";
+    next.pacing = "slow_down";
+  }
+
+  if (
+    intent?.primary === "conversation_repair" ||
+    intent?.relationshipSignal === "conflict" ||
+    intent?.relationshipSignal === "feeling_hurt" ||
+    emotion?.primaryEmotion === "hurt" ||
+    emotion?.primaryEmotion === "disappointed"
+  ) {
+    next.stage = "repairing";
+    next.displayName = "修复期";
+    next.pacing = "repair_first";
+  }
+
+  return ConversationRelationshipStageSchema.parse(next);
+}
+
+async function invokeRelationshipStageAnalysis(params: {
+  method: StructuredOutputMethod;
+  providerConfig: ChatProviderConfig;
+  agentName: string;
+  agentGuardrails: string | null;
+  messageCount: number;
+  conversationSummary: string | null;
+  safety: ConversationSafety;
+  intent: ConversationIntent | null;
+  emotion: ConversationEmotion | null;
+  activeMemories: AnalysisMemory[];
+  recentMessages: AnalysisRecentMessage[];
+  userText: string;
+  signal?: AbortSignal;
+}) {
+  const model = buildLangChainChatModel(params.providerConfig);
+  const structuredModel = model.withStructuredOutput(
+    ConversationRelationshipStageSchema,
+    {
+      name: "conversation_relationship_stage_analysis",
+      method: params.method,
+    },
+  );
+  const chain = conversationRelationshipStagePrompt.pipe(structuredModel);
+
+  const result = await chain.invoke(
+    {
+      agentName: params.agentName,
+      agentGuardrails: params.agentGuardrails ?? "暂无",
+      messageCount: String(params.messageCount),
+      conversationSummary: params.conversationSummary?.trim() || "暂无",
+      safety: formatSafetyForPrompt(params.safety),
+      intent: params.intent
+        ? formatIntentForPrompt(params.intent)
+        : "暂无意图判断",
+      emotion: params.emotion
+        ? formatEmotionForPrompt(params.emotion)
+        : "暂无情绪判断",
+      activeMemories: formatExistingMemories(params.activeMemories),
+      recentMessages: formatRecentMessages(params.recentMessages),
+      userText: params.userText,
+    },
+    params.signal ? { signal: params.signal } : undefined,
+  );
+
+  return normalizeRelationshipStage(
+    ConversationRelationshipStageSchema.parse(result),
+    {
+      safety: params.safety,
+      intent: params.intent,
+      emotion: params.emotion,
+      messageCount: params.messageCount,
+    },
+  );
+}
+
+async function analyzeRelationshipStageWithLangChain(params: {
+  providerConfig: ChatProviderConfig;
+  agentName: string;
+  agentGuardrails: string | null;
+  messageCount: number;
+  conversationSummary: string | null;
+  safety: ConversationSafety;
+  intent: ConversationIntent | null;
+  emotion: ConversationEmotion | null;
+  activeMemories: AnalysisMemory[];
+  recentMessages: AnalysisRecentMessage[];
+  userText: string;
+  signal?: AbortSignal;
+}): Promise<ConversationRelationshipStage> {
+  let lastError: unknown = null;
+
+  for (const method of STRUCTURED_OUTPUT_METHODS) {
+    try {
+      return await invokeRelationshipStageAnalysis({ ...params, method });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.warn("LangChain relationship stage analysis failed", lastError);
+  return normalizeRelationshipStage(
+    heuristicRelationshipStage({
+      messageCount: params.messageCount,
+      activeMemories: params.activeMemories,
+      intent: params.intent,
+      emotion: params.emotion,
+    }),
+    {
+      safety: params.safety,
+      intent: params.intent,
+      emotion: params.emotion,
+      messageCount: params.messageCount,
+    },
+  );
+}
+
 function normalizeIntentInputNode(
   state: typeof ConversationUnderstandingState.State,
 ) {
@@ -1096,12 +1537,37 @@ async function detectEmotionNode(
   };
 }
 
+async function analyzeRelationshipStageNode(
+  state: typeof ConversationUnderstandingState.State,
+) {
+  const userText =
+    state.normalizedInput || normalizeStoredMessage(state.userText);
+
+  return {
+    relationshipStage: await analyzeRelationshipStageWithLangChain({
+      providerConfig: state.providerConfig,
+      agentName: state.agentName,
+      agentGuardrails: state.agentGuardrails,
+      messageCount: state.messageCount,
+      conversationSummary: state.conversationSummary,
+      safety: state.safety,
+      intent: state.intent,
+      emotion: state.emotion,
+      activeMemories: state.activeMemories,
+      recentMessages: state.recentMessages,
+      userText,
+      signal: state.signal,
+    }),
+  };
+}
+
 function routeEmotionNode(state: typeof ConversationUnderstandingState.State) {
   return {
     route: buildEmotionRoute({
       safety: state.safety,
       intent: state.intent,
       emotion: state.emotion,
+      relationshipStage: state.relationshipStage,
     }),
   };
 }
@@ -1115,6 +1581,7 @@ function buildReplyPolicyNode(
       intent: state.intent,
       emotion: state.emotion,
       route: state.route,
+      relationshipStage: state.relationshipStage,
     }),
   };
 }
@@ -1125,12 +1592,14 @@ const conversationUnderstandingGraph = new StateGraph(
   .addNode("normalizeInput", normalizeIntentInputNode)
   .addNode("classifyIntent", classifyIntentNode)
   .addNode("detectEmotion", detectEmotionNode)
+  .addNode("analyzeRelationshipStage", analyzeRelationshipStageNode)
   .addNode("routeEmotion", routeEmotionNode)
   .addNode("buildReplyPolicy", buildReplyPolicyNode)
   .addEdge(START, "normalizeInput")
   .addEdge("normalizeInput", "classifyIntent")
   .addEdge("classifyIntent", "detectEmotion")
-  .addEdge("detectEmotion", "routeEmotion")
+  .addEdge("detectEmotion", "analyzeRelationshipStage")
+  .addEdge("analyzeRelationshipStage", "routeEmotion")
   .addEdge("routeEmotion", "buildReplyPolicy")
   .addEdge("buildReplyPolicy", END)
   .compile();
@@ -1138,6 +1607,7 @@ const conversationUnderstandingGraph = new StateGraph(
 export interface ConversationUnderstanding {
   intent: ConversationIntent;
   emotion: ConversationEmotion;
+  relationshipStage: ConversationRelationshipStage;
   route: EmotionRoute;
   replyPolicy: ReplyPolicy;
 }
@@ -1149,6 +1619,8 @@ export async function analyzeConversationUnderstanding(params: {
   agentGuardrails: string | null;
   activeMemories: AnalysisMemory[];
   recentMessages: AnalysisRecentMessage[];
+  conversationSummary: string | null;
+  messageCount: number;
   userText: string;
   signal: AbortSignal;
 }): Promise<ConversationUnderstanding> {
@@ -1161,10 +1633,13 @@ export async function analyzeConversationUnderstanding(params: {
         agentGuardrails: params.agentGuardrails,
         activeMemories: params.activeMemories,
         recentMessages: params.recentMessages,
+        conversationSummary: params.conversationSummary,
+        messageCount: params.messageCount,
         userText: params.userText,
         normalizedInput: "",
         intent: null,
         emotion: null,
+        relationshipStage: null,
         route: null,
         signal: params.signal,
       },
@@ -1177,14 +1652,33 @@ export async function analyzeConversationUnderstanding(params: {
     const emotion =
       result.emotion ??
       normalizeConversationEmotion(fallbackEmotion, params.safety);
+    const relationshipStage =
+      result.relationshipStage ??
+      normalizeRelationshipStage(fallbackRelationshipStage, {
+        safety: params.safety,
+        intent,
+        emotion,
+        messageCount: params.messageCount,
+      });
     const route =
       result.route ??
-      buildEmotionRoute({ safety: params.safety, intent, emotion });
+      buildEmotionRoute({
+        safety: params.safety,
+        intent,
+        emotion,
+        relationshipStage,
+      });
     const replyPolicy =
       result.replyPolicy ??
-      buildReplyPolicy({ safety: params.safety, intent, emotion, route });
+      buildReplyPolicy({
+        safety: params.safety,
+        intent,
+        emotion,
+        route,
+        relationshipStage,
+      });
 
-    return { intent, emotion, route, replyPolicy };
+    return { intent, emotion, relationshipStage, route, replyPolicy };
   } catch (error) {
     console.warn("LangGraph conversation understanding failed", error);
     const intent = normalizeConversationIntent(fallbackIntent, params.safety);
@@ -1192,14 +1686,29 @@ export async function analyzeConversationUnderstanding(params: {
       fallbackEmotion,
       params.safety,
     );
-    const route = buildEmotionRoute({ safety: params.safety, intent, emotion });
+    const relationshipStage = normalizeRelationshipStage(
+      fallbackRelationshipStage,
+      {
+        safety: params.safety,
+        intent,
+        emotion,
+        messageCount: params.messageCount,
+      },
+    );
+    const route = buildEmotionRoute({
+      safety: params.safety,
+      intent,
+      emotion,
+      relationshipStage,
+    });
     const replyPolicy = buildReplyPolicy({
       safety: params.safety,
       intent,
       emotion,
       route,
+      relationshipStage,
     });
-    return { intent, emotion, route, replyPolicy };
+    return { intent, emotion, relationshipStage, route, replyPolicy };
   }
 }
 
@@ -1326,18 +1835,46 @@ export function getReplyPolicySystemInstruction(
     .join("\n");
 }
 
+export function getRelationshipStageSystemInstruction(
+  relationshipStage: ConversationRelationshipStage | null,
+) {
+  if (!relationshipStage) {
+    return "";
+  }
+
+  return [
+    "本轮关系阶段：",
+    `- 阶段：${relationshipStage.displayName}（${relationshipStage.stage}）`,
+    `- 亲近度：${relationshipStage.closenessScore}/100`,
+    `- 信任等级：${relationshipStage.trustLevel}`,
+    `- 稳定性：${relationshipStage.stability}`,
+    `- 边界模式：${relationshipStage.boundaryMode}`,
+    `- 允许亲密度：${relationshipStage.intimacyPermission}`,
+    `- 推进节奏：${relationshipStage.pacing}`,
+    relationshipStage.riskSignals.length > 0
+      ? `- 风险信号：${relationshipStage.riskSignals.join("、")}`
+      : "",
+    `- 关系指导：${relationshipStage.relationshipGuidance}`,
+    "请把关系阶段作为隐性节奏控制：不要在回复中暴露阶段名称、分数或内部标签。",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function buildConversationAnalysisMetadata(params: {
   safety: ConversationSafety;
   intent: ConversationIntent | null;
   emotion: ConversationEmotion | null;
+  relationshipStage: ConversationRelationshipStage | null;
   route: EmotionRoute | null;
   replyPolicy: ReplyPolicy | null;
 }) {
   return JSON.stringify({
-    analysisVersion: "conversation-understanding-v2",
+    analysisVersion: "conversation-understanding-v3",
     safety: params.safety,
     intent: params.intent,
     emotion: params.emotion,
+    relationshipStage: params.relationshipStage,
     route: params.route,
     replyPolicy: params.replyPolicy,
   });

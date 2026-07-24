@@ -5,6 +5,7 @@ import {
   type CompanionMemory,
   type ConversationEmotion,
   type ConversationIntent,
+  type ConversationRelationshipStage,
   type ConversationSafety,
   type EmotionRoute,
   type ReplyPolicy,
@@ -22,6 +23,7 @@ import {
   buildBoundaryResponse,
   getEmotionRouteSystemInstruction,
   getIntentSystemInstruction,
+  getRelationshipStageSystemInstruction,
   getReplyPolicySystemInstruction,
   getSafetySystemInstruction,
   buildConversationAnalysisMetadata,
@@ -264,6 +266,8 @@ export async function prepareCompanionChat(input: {
         activeMemories: analysisMemories,
         agentGuardrails,
         agentName,
+        conversationSummary: conversation.summary,
+        messageCount: conversation.messageCount,
         providerConfig,
         recentMessages: analysisRecentMessages,
         safety,
@@ -273,6 +277,7 @@ export async function prepareCompanionChat(input: {
 
   const intent = understanding?.intent ?? null;
   const emotion = understanding?.emotion ?? null;
+  const relationshipStage = understanding?.relationshipStage ?? null;
   const route = understanding?.route ?? null;
   const replyPolicy = understanding?.replyPolicy ?? null;
 
@@ -287,6 +292,7 @@ export async function prepareCompanionChat(input: {
     metadataJson: buildConversationAnalysisMetadata({
       emotion,
       intent,
+      relationshipStage,
       replyPolicy,
       route,
       safety,
@@ -302,6 +308,7 @@ export async function prepareCompanionChat(input: {
         emotion,
         intent,
         memories: activeMemories,
+        relationshipStage,
         replyPolicy,
         route,
         safety,
@@ -396,6 +403,7 @@ function buildSystemPrompt(input: {
   emotion: ConversationEmotion | null;
   intent: ConversationIntent | null;
   memories: Array<{ content: string; importance: number; type: string }>;
+  relationshipStage: ConversationRelationshipStage | null;
   replyPolicy: ReplyPolicy | null;
   route: EmotionRoute | null;
   safety: ConversationSafety;
@@ -409,6 +417,7 @@ function buildSystemPrompt(input: {
       emotion: input.emotion,
       route: input.route,
     }),
+    getRelationshipStageSystemInstruction(input.relationshipStage),
     getReplyPolicySystemInstruction(input.replyPolicy),
     input.memories.length > 0
       ? [
