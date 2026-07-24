@@ -1033,3 +1033,39 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 31: Reply Quality Guard 回复后质检落库
+
+**Date**: 2026-07-24
+**Task**: Reply Quality Guard 回复后质检落库
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+完成父任务 07-23-agent-chat-understanding 的第三个子任务 reply-quality-guard。新增 ReplyQualityGuardSchema 契约与类型并从 contracts 导出；在 chat.analysis.ts 实现纯代码质检 evaluateReplyQuality（句数、问句、建议、内部标签泄露、沉浸感破坏、forbidden moves 六类检测）与 toAssistantReplyQualityMetadata；chat.service.ts 在 assistant 落库前调用质检并写入 reply-quality-guard-v1 metadata。第一版只记录不拦截、不加 LLM 调用、无 D1 迁移。查本地 D1 验证 metadata 端到端写入正确：无违规回复 status=pass/score=1，记忆类意图下多问一句正确记 too_many_questions/warn。quality gate 三项全过。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b057e08` | (see git log) |
+| `23b2135` | (see git log) |
+| `b42a238` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

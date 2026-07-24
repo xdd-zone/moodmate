@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 30
+- **Total Sessions**: 31
 - **Last Active**: 2026-07-24
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1035 | Active |
+| `journal-1.md` | ~1071 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -30,6 +30,7 @@
 
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 31 | 2026-07-24 | Reply Quality Guard 回复后质检落库 | `b057e08`, `23b2135`, `b42a238` | `main` |
 | 30 | 2026-07-24 | Reply Policy 引擎（章50） | `fb8e9cf` | `main` |
 | 29 | 2026-07-24 | 情绪路由 LangGraph（章49） | `7fd1e18` | `main` |
 | 28 | 2026-07-23 | 收敛 LLM 配置到 admin | `31ba34a`, `9215a0e`, `caf6e3d`, `9053c44`, `1db3b85` | `main` |
