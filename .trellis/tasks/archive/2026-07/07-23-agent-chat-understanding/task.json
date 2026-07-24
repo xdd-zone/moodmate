@@ -1,0 +1,31 @@
+{
+  "id": "agent-chat-understanding",
+  "name": "agent-chat-understanding",
+  "title": "Agent 聊天理解链路：情绪路由到关系阶段",
+  "description": "移植课程章 49-52：在现有 safety + intent 链路上加情绪路由、Reply Policy、Reply Quality Guard、关系阶段四层。前置基础：新建最小 Agent 实体（name/persona/guardrails）为分析器提供 agentName/agentGuardrails 入参。含 4 个子任务。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": "api",
+  "priority": "P2",
+  "creator": "喜东东",
+  "assignee": "喜东东",
+  "createdAt": "2026-07-23",
+  "completedAt": "2026-07-24",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-23-emotion-routing",
+    "07-23-reply-policy",
+    "07-23-reply-quality-guard",
+    "07-23-relationship-stage"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
