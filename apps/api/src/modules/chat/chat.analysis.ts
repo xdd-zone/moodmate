@@ -16,6 +16,7 @@ import {
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
 
 import type { ChatProviderConfig } from "./chat.service";
 
@@ -2123,4 +2124,388 @@ export function toAssistantReplyQualityMetadata(params: {
     replyPolicy: params.replyPolicy,
     guard: params.guard,
   });
+}
+
+const MEMORY_CANDIDATE_TYPE = [
+  "偏好",
+  "边界",
+  "关系目标",
+  "对话风格",
+  "重要事实",
+] as const;
+
+const CompanionMemoryCandidateSchema = z.object({
+  shouldExtract: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  category: z.enum([
+    "preference",
+    "boundary",
+    "relationship_goal",
+    "conversation_style",
+    "important_fact",
+    "identity_profile",
+    "temporary_emotion",
+    "small_talk",
+    "assistant_generated",
+    "duplicate",
+    "unsafe",
+    "unclear",
+  ]),
+  stability: z.enum(["stable", "likely_stable", "temporary", "unclear"]),
+  importance: z.number().int().min(0).max(5),
+  reason: z.string().trim().max(300),
+  candidateFacts: z.array(z.string().trim().min(1).max(120)).max(3),
+});
+
+export type CompanionMemoryCandidate = z.infer<
+  typeof CompanionMemoryCandidateSchema
+>;
+
+const CompanionExtractedMemorySchema = z.object({
+  memories: z
+    .array(
+      z.object({
+        content: z.string().trim().min(1).max(500),
+        type: z.enum(MEMORY_CANDIDATE_TYPE),
+        importance: z.number().int().min(1).max(5),
+      }),
+    )
+    .max(3),
+});
+
+export type CompanionExtractedMemory = z.infer<
+  typeof CompanionExtractedMemorySchema
+>["memories"][number];
+
+const fallbackMemoryCandidate: CompanionMemoryCandidate = {
+  shouldExtract: false,
+  confidence: 0.3,
+  category: "unclear",
+  stability: "unclear",
+  importance: 0,
+  reason: "记忆候选判断暂时不可用，默认不进入抽取。",
+  candidateFacts: [],
+};
+
+const MEMORY_CANDIDATE_SIGNAL_PATTERN =
+  /记住|以后|别再|不要再|我喜欢|我不喜欢|我讨厌|我的边界|我的原则|我叫|我的名字|生日|工作是|职业是|我在做|我正在|我希望你|请你以后|习惯|偏好/;
+
+const MEMORY_CANDIDATE_CONFIRMATION_PATTERN =
+  /^(好+|嗯+|哦+|噢+|额+|啊+|哈+|呵+|嘿+|嘻+|ok|okay|好的|好呀|好吧|行|行吧|收到|明白|知道了|谢谢|多谢|感谢|晚安|早安|拜拜|再见|886|88|么么|嗯呐|哈哈哈?|嘿嘿|嘻嘻)[。！!？?~…、,，.\s]*$/i;
+
+const MEMORY_CANDIDATE_SENSITIVE_PATTERN =
+  /密码|口令|验证码|身份证|银行卡|信用卡|社保|手机号|电话号码|token|api\s*key|secret|密钥|私钥|access[\s_-]?key|cvv|\b\d{15,19}\b/i;
+
+const memoryCandidatePrompt = ChatPromptTemplate.fromMessages([
+  [
+    "system",
+    [
+      "你是 MoodMate AI 电子伴侣聊天产品的长期记忆候选判断器。",
+      "你的任务不是回复用户，也不是抽取最终记忆，而是判断本轮用户输入是否值得进入长期记忆抽取。",
+      "只有稳定、对长期陪伴有价值的信息才值得记忆：用户偏好、边界原则、关系目标、稳定的对话风格、重要个人事实。",
+      "一次性情绪、普通寒暄、临时状态、助手自己产出的内容、与已有记忆重复的信息、敏感凭证，都不值得记忆，shouldExtract 应为 false。",
+      "如果不确定，倾向于 shouldExtract=false，宁可漏记也不要污染长期记忆。",
+      "只返回一个 JSON 对象，包含且仅包含以下字段，不要输出多余字段、解释文字或 markdown 代码块：",
+      "- shouldExtract: 布尔值，是否值得进入长期记忆抽取",
+      "- confidence: 数字，0 到 1 之间的置信度",
+      "- category: 字符串，取 preference / boundary / relationship_goal / conversation_style / important_fact / identity_profile / temporary_emotion / small_talk / assistant_generated / duplicate / unsafe / unclear 之一",
+      "- stability: 字符串，取 stable / likely_stable / temporary / unclear 之一",
+      "- importance: 整数，0 到 5 的重要度，0 表示不值得记忆",
+      "- reason: 字符串，简述判断原因，不超过 300 字",
+      "- candidateFacts: 字符串数组，最多 3 条，提炼值得记忆的候选事实，可为空数组 []",
+    ].join("\n"),
+  ],
+  [
+    "human",
+    [
+      "已有长期记忆：",
+      "{existingMemories}",
+      "",
+      "会话摘要：",
+      "{conversationSummary}",
+      "",
+      "本轮用户输入：",
+      "{userText}",
+      "",
+      "本轮助手回复：",
+      "{assistantText}",
+    ].join("\n"),
+  ],
+]);
+
+const memoryExtractionPrompt = ChatPromptTemplate.fromMessages([
+  [
+    "system",
+    [
+      "你是 MoodMate AI 电子伴侣聊天产品的长期记忆抽取器。",
+      "你的任务是根据候选判断结论，从本轮用户输入中抽取稳定、可长期复用的记忆条目。",
+      "只抽取用户本人的稳定信息，不要抽取一次性情绪、临时状态或助手产出的内容。",
+      "content 用第三人称陈述句概括，简洁具体；不要照抄原话，不要包含敏感凭证。",
+      "type 必须取 偏好 / 边界 / 关系目标 / 对话风格 / 重要事实 之一；importance 取 1 到 5 的整数。",
+      "如果没有值得记忆的内容，返回空的 memories 数组。",
+      "只返回一个 JSON 对象，包含且仅包含 memories 字段，不要输出多余字段、解释文字或 markdown 代码块：",
+      "- memories: 数组，最多 3 条，每条含 content(字符串)、type(枚举)、importance(1 到 5 整数)",
+    ].join("\n"),
+  ],
+  [
+    "human",
+    [
+      "候选判断结论：",
+      "- 类别：{category}",
+      "- 稳定性：{stability}",
+      "- 重要度：{importance}",
+      "- 判断原因：{reason}",
+      "",
+      "候选事实：",
+      "{candidateFacts}",
+      "",
+      "已有长期记忆（避免重复）：",
+      "{existingMemories}",
+      "",
+      "本轮用户输入：",
+      "{userText}",
+    ].join("\n"),
+  ],
+]);
+
+function normalizeMemoryCandidate(
+  candidate: CompanionMemoryCandidate,
+): CompanionMemoryCandidate {
+  const next: CompanionMemoryCandidate = {
+    ...candidate,
+    reason: candidate.reason.trim() || fallbackMemoryCandidate.reason,
+    candidateFacts: Array.from(
+      new Set(
+        candidate.candidateFacts
+          .map((fact) => fact.trim())
+          .filter((fact) => fact.length > 0),
+      ),
+    ).slice(0, 3),
+  };
+
+  if (
+    next.category === "small_talk" ||
+    next.category === "temporary_emotion" ||
+    next.category === "assistant_generated" ||
+    next.category === "duplicate" ||
+    next.category === "unsafe"
+  ) {
+    next.shouldExtract = false;
+  }
+
+  if (next.stability === "temporary" || next.importance <= 0) {
+    next.shouldExtract = false;
+  }
+
+  if (next.confidence < 0.55 && next.importance < 4) {
+    next.shouldExtract = false;
+  }
+
+  return next;
+}
+
+function buildFallbackMemoryCandidate(
+  userText: string,
+): CompanionMemoryCandidate {
+  const normalized = normalizeStoredMessage(userText);
+  const matched = MEMORY_CANDIDATE_SIGNAL_PATTERN.test(normalized);
+
+  if (!matched) {
+    return { ...fallbackMemoryCandidate };
+  }
+
+  return {
+    shouldExtract: true,
+    confidence: 0.5,
+    category: "important_fact",
+    stability: "likely_stable",
+    importance: 4,
+    reason: "命中记忆信号关键词，采用关键词兜底判断进入抽取。",
+    candidateFacts: [normalized.slice(0, 120)],
+  };
+}
+
+type MemoryCandidateInput = {
+  userText: string;
+  assistantText: string;
+  existingContents: string[];
+};
+
+export function shouldSkipMemoryCandidateFast(
+  input: MemoryCandidateInput,
+): CompanionMemoryCandidate | null {
+  const userText = normalizeStoredMessage(input.userText);
+  const assistantText = normalizeStoredMessage(input.assistantText);
+
+  if (!userText || !assistantText) {
+    return {
+      ...fallbackMemoryCandidate,
+      reason: "用户输入或助手回复为空，跳过记忆候选判断。",
+    };
+  }
+
+  const hasSignal = MEMORY_CANDIDATE_SIGNAL_PATTERN.test(userText);
+
+  if (userText.length < 6 && !hasSignal) {
+    return {
+      ...fallbackMemoryCandidate,
+      category: "small_talk",
+      reason: "用户输入过短且无记忆信号，跳过记忆候选判断。",
+    };
+  }
+
+  if (MEMORY_CANDIDATE_CONFIRMATION_PATTERN.test(userText) && !hasSignal) {
+    return {
+      ...fallbackMemoryCandidate,
+      category: "small_talk",
+      reason: "命中常见寒暄或确认语，跳过记忆候选判断。",
+    };
+  }
+
+  const existingSet = new Set(
+    input.existingContents.map((content) => normalizeStoredMessage(content)),
+  );
+  if (existingSet.has(userText)) {
+    return {
+      ...fallbackMemoryCandidate,
+      category: "duplicate",
+      reason: "与已有记忆完全重复，跳过记忆候选判断。",
+    };
+  }
+
+  if (MEMORY_CANDIDATE_SENSITIVE_PATTERN.test(userText)) {
+    return {
+      ...fallbackMemoryCandidate,
+      category: "unsafe",
+      reason: "疑似敏感凭证，跳过记忆候选判断。",
+    };
+  }
+
+  return null;
+}
+
+async function invokeMemoryCandidateJudgement(params: {
+  method: StructuredOutputMethod;
+  providerConfig: ChatProviderConfig;
+  userText: string;
+  assistantText: string;
+  existingMemories: AnalysisMemory[];
+  conversationSummary: string | null;
+}) {
+  const model = buildLangChainChatModel(params.providerConfig);
+  const structuredModel = model.withStructuredOutput(
+    CompanionMemoryCandidateSchema,
+    {
+      name: "companion_memory_candidate_judgement",
+      method: params.method,
+    },
+  );
+  const chain = memoryCandidatePrompt.pipe(structuredModel);
+
+  const result = await chain.invoke({
+    existingMemories: formatExistingMemories(params.existingMemories),
+    conversationSummary: params.conversationSummary?.trim() || "暂无",
+    userText: params.userText,
+    assistantText: params.assistantText,
+  });
+
+  return normalizeMemoryCandidate(CompanionMemoryCandidateSchema.parse(result));
+}
+
+async function judgeMemoryCandidateWithLangChain(params: {
+  providerConfig: ChatProviderConfig;
+  userText: string;
+  assistantText: string;
+  existingMemories: AnalysisMemory[];
+  conversationSummary: string | null;
+}): Promise<CompanionMemoryCandidate> {
+  let lastError: unknown = null;
+
+  for (const method of STRUCTURED_OUTPUT_METHODS) {
+    try {
+      return await invokeMemoryCandidateJudgement({ ...params, method });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.warn("LangChain memory candidate judgement failed", lastError);
+  return normalizeMemoryCandidate(
+    buildFallbackMemoryCandidate(params.userText),
+  );
+}
+
+export async function judgeCompanionMemoryCandidate(params: {
+  providerConfig: ChatProviderConfig;
+  userText: string;
+  assistantText: string;
+  existingMemories: AnalysisMemory[];
+  conversationSummary: string | null;
+}): Promise<CompanionMemoryCandidate> {
+  const fastReject = shouldSkipMemoryCandidateFast({
+    userText: params.userText,
+    assistantText: params.assistantText,
+    existingContents: params.existingMemories.map((memory) => memory.content),
+  });
+
+  if (fastReject) {
+    return fastReject;
+  }
+
+  return judgeMemoryCandidateWithLangChain(params);
+}
+
+async function invokeMemoryExtraction(params: {
+  method: StructuredOutputMethod;
+  providerConfig: ChatProviderConfig;
+  candidate: CompanionMemoryCandidate;
+  userText: string;
+  existingMemories: AnalysisMemory[];
+}) {
+  const model = buildLangChainChatModel(params.providerConfig);
+  const structuredModel = model.withStructuredOutput(
+    CompanionExtractedMemorySchema,
+    {
+      name: "companion_memory_extraction",
+      method: params.method,
+    },
+  );
+  const chain = memoryExtractionPrompt.pipe(structuredModel);
+
+  const result = await chain.invoke({
+    category: params.candidate.category,
+    stability: params.candidate.stability,
+    importance: String(params.candidate.importance),
+    reason: params.candidate.reason,
+    candidateFacts:
+      params.candidate.candidateFacts.length > 0
+        ? params.candidate.candidateFacts
+            .map((fact, index) => `${index + 1}. ${fact}`)
+            .join("\n")
+        : "暂无",
+    existingMemories: formatExistingMemories(params.existingMemories),
+    userText: params.userText,
+  });
+
+  return CompanionExtractedMemorySchema.parse(result).memories;
+}
+
+export async function extractCompanionMemoriesWithLangChain(params: {
+  providerConfig: ChatProviderConfig;
+  candidate: CompanionMemoryCandidate;
+  userText: string;
+  existingMemories: AnalysisMemory[];
+}): Promise<CompanionExtractedMemory[] | null> {
+  let lastError: unknown = null;
+
+  for (const method of STRUCTURED_OUTPUT_METHODS) {
+    try {
+      return await invokeMemoryExtraction({ ...params, method });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.warn("LangChain memory extraction failed", lastError);
+  return null;
 }

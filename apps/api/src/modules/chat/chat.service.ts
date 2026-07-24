@@ -21,6 +21,7 @@ import {
   analyzeConversationSafety,
   analyzeConversationUnderstanding,
   buildBoundaryResponse,
+  extractCompanionMemoriesWithLangChain,
   getEmotionRouteSystemInstruction,
   getIntentSystemInstruction,
   getRelationshipStageSystemInstruction,
@@ -28,6 +29,7 @@ import {
   getSafetySystemInstruction,
   buildConversationAnalysisMetadata,
   evaluateReplyQuality,
+  judgeCompanionMemoryCandidate,
   toAssistantReplyQualityMetadata,
 } from "./chat.analysis";
 import {
@@ -63,6 +65,7 @@ export interface PreparedCompanionChat {
     allowMemoryExtraction: boolean;
     conversationId: string;
     previousSummary: string | null;
+    providerConfig: ChatProviderConfig;
     recentMessages: Array<{ content: string; role: "assistant" | "user" }>;
     replyPolicy: ReplyPolicy | null;
     sourceUserMessageId: string;
@@ -331,6 +334,7 @@ export async function prepareCompanionChat(input: {
       allowMemoryExtraction: safety.allowMemoryExtraction,
       conversationId: conversation.id,
       previousSummary: conversation.summary,
+      providerConfig,
       recentMessages,
       replyPolicy,
       sourceUserMessageId,
@@ -386,7 +390,10 @@ export async function saveCompanionAssistantTurn(input: {
 
   try {
     await saveCandidateMemories({
+      assistantText,
       bindings: input.bindings,
+      previousSummary: input.turn.previousSummary,
+      providerConfig: input.turn.providerConfig,
       sourceMessageId: input.turn.sourceUserMessageId,
       userId: input.turn.userId,
       userText: input.turn.userText,
@@ -556,33 +563,69 @@ function classifyMemoryType(text: string) {
 }
 
 async function saveCandidateMemories(input: {
+  assistantText: string;
   bindings: ApiBindings;
+  previousSummary: string | null;
+  providerConfig: ChatProviderConfig;
   sourceMessageId: string;
   userId: string;
   userText: string;
 }) {
-  const candidates = extractCandidateMemories(input.userText);
-
-  if (candidates.length === 0) {
-    return;
-  }
-
   const existingMemories = await listActiveCompanionMemories({
     database: input.bindings.DB,
     limit: COMPANION_MEMORY_DEDUPLICATION_LIMIT,
     userId: input.userId,
   });
+  const analysisMemories = existingMemories.map((memory) => ({
+    content: memory.content,
+    importance: memory.importance,
+    type: memory.type,
+  }));
+
+  const candidate = await judgeCompanionMemoryCandidate({
+    assistantText: input.assistantText,
+    conversationSummary: input.previousSummary,
+    existingMemories: analysisMemories,
+    providerConfig: input.providerConfig,
+    userText: input.userText,
+  });
+
+  if (!candidate.shouldExtract) {
+    console.info("跳过长期记忆抽取", {
+      category: candidate.category,
+      confidence: candidate.confidence,
+      reason: candidate.reason,
+      userId: input.userId,
+    });
+    return;
+  }
+
+  const extracted = await extractCompanionMemoriesWithLangChain({
+    candidate,
+    existingMemories: analysisMemories,
+    providerConfig: input.providerConfig,
+    userText: input.userText,
+  });
+
+  const candidates = extracted ?? extractCandidateMemories(input.userText);
+
+  if (candidates.length === 0) {
+    return;
+  }
+
   const existingContents = new Set(
     existingMemories.map((memory) => memory.content),
   );
 
   for (const memory of candidates.slice(0, COMPANION_MEMORY_EXTRACTION_LIMIT)) {
-    if (existingContents.has(memory.content)) {
+    const content = normalizeStoredMessage(memory.content);
+
+    if (!content || existingContents.has(content)) {
       continue;
     }
 
     await insertCompanionMemory({
-      content: memory.content,
+      content,
       database: input.bindings.DB,
       importance: memory.importance,
       nowMs: Date.now(),
@@ -590,7 +633,7 @@ async function saveCandidateMemories(input: {
       type: memory.type,
       userId: input.userId,
     });
-    existingContents.add(memory.content);
+    existingContents.add(content);
   }
 }
 
