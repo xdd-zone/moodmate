@@ -1,23 +1,46 @@
-import type {
-  CompanionConversationMessage,
-  CompanionMemory,
+import {
+  CompanionMessageFeedbackReasonSchema,
+  type CompanionConversationMessage,
+  type CompanionMemory,
+  type CompanionMessageFeedback,
 } from "@repo/contracts";
 
-import type {
-  CompanionConversationMessageRecord,
-  CompanionMemoryRecord,
-} from "./chat.schema";
+import type { CompanionConversationMessageWithFeedback } from "./chat.repository";
+import type { CompanionMemoryRecord } from "./chat.schema";
 
 export function presentCompanionConversationMessage(
-  message: CompanionConversationMessageRecord,
+  message: CompanionConversationMessageWithFeedback,
 ): CompanionConversationMessage {
   return {
     content: message.content,
     conversationId: message.conversationId,
     createdAtMs: message.createdAtMs,
+    feedback: presentCompanionMessageFeedback(message),
     id: message.id,
     role: message.role,
     status: message.status,
+  };
+}
+
+function presentCompanionMessageFeedback(message: {
+  feedbackNote: string | null;
+  feedbackRating: "negative" | "positive" | null;
+  feedbackReason: string | null;
+  feedbackUpdatedAtMs: number | null;
+}): CompanionMessageFeedback | null {
+  if (message.feedbackRating === null || message.feedbackUpdatedAtMs === null) {
+    return null;
+  }
+
+  const reason = CompanionMessageFeedbackReasonSchema.safeParse(
+    message.feedbackReason,
+  );
+
+  return {
+    note: message.feedbackNote,
+    rating: message.feedbackRating,
+    reason: reason.success ? reason.data : null,
+    updatedAtMs: message.feedbackUpdatedAtMs,
   };
 }
 

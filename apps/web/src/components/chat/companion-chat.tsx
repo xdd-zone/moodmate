@@ -3,11 +3,12 @@
 import { useChat } from "@ai-sdk/react";
 import type {
   CompanionConversationResponse,
+  CompanionMessageFeedbackRating,
   WebSession,
   WebUserProfile,
 } from "@repo/contracts";
 import { Button } from "@repo/ui/button";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TextStreamChatTransport, type UIMessage } from "ai";
 import {
   Bot,
@@ -28,6 +29,7 @@ import { getCompanionConversationMessages } from "@/src/api/chat.api";
 import {
   companionChatKeys,
   companionConversationQueryOptions,
+  submitCompanionMessageFeedbackMutationOptions,
 } from "@/src/api/chat.query";
 import { clearClientSession } from "@/src/auth/client-session";
 import {
@@ -174,6 +176,33 @@ function CompanionChatAppInner({
         .filter((message) => message.role === "assistant")
         .map((message) => message.id),
     );
+  const [feedbackByMessageId, setFeedbackByMessageId] = useState<
+    Record<string, CompanionMessageFeedbackRating>
+  >(() => collectFeedback(serverConversation.messages));
+  const feedbackMutation = useMutation(
+    submitCompanionMessageFeedbackMutationOptions(queryClient),
+  );
+
+  function handleSubmitFeedback(
+    messageId: string,
+    rating: CompanionMessageFeedbackRating,
+  ) {
+    if (feedbackMutation.isPending) {
+      return;
+    }
+
+    feedbackMutation.mutate(
+      { messageId, payload: { rating } },
+      {
+        onSuccess: (result) => {
+          setFeedbackByMessageId((current) => ({
+            ...current,
+            [messageId]: result.feedback.rating,
+          }));
+        },
+      },
+    );
+  }
 
   function handleSend() {
     const text = draft.trim();
@@ -210,6 +239,10 @@ function CompanionChatAppInner({
       setHistoricalAssistantMessageIds((current) => [
         ...new Set([...olderAssistantIds, ...current]),
       ]);
+      setFeedbackByMessageId((current) => ({
+        ...collectFeedback(result.messages),
+        ...current,
+      }));
       setMessages((current) => {
         const currentIds = new Set(current.map((message) => message.id));
         return [
@@ -327,6 +360,12 @@ function CompanionChatAppInner({
             clearError={clearError}
             draft={draft}
             error={error}
+            feedbackByMessageId={feedbackByMessageId}
+            feedbackPendingMessageId={
+              feedbackMutation.isPending
+                ? (feedbackMutation.variables?.messageId ?? null)
+                : null
+            }
             isSending={isSending}
             messageCount={serverConversation.messageCount}
             historicalAssistantMessageIds={historicalAssistantMessageIds}
@@ -338,6 +377,7 @@ function CompanionChatAppInner({
             onLoadMoreHistory={() => void loadMoreHistory()}
             onSend={handleSend}
             onStop={() => void stop()}
+            onSubmitFeedback={handleSubmitFeedback}
             status={status}
             hasMoreHistory={nextCursor !== null}
           />
@@ -360,6 +400,8 @@ function ChatMode({
   clearError,
   draft,
   error,
+  feedbackByMessageId,
+  feedbackPendingMessageId,
   hasMoreHistory,
   historicalAssistantMessageIds,
   historyLoadError,
@@ -372,11 +414,14 @@ function ChatMode({
   onLoadMoreHistory,
   onSend,
   onStop,
+  onSubmitFeedback,
   status,
 }: {
   clearError: () => void;
   draft: string;
   error: Error | undefined;
+  feedbackByMessageId: Record<string, CompanionMessageFeedbackRating>;
+  feedbackPendingMessageId: string | null;
   hasMoreHistory: boolean;
   historicalAssistantMessageIds: readonly string[];
   historyLoadError: boolean;
@@ -389,6 +434,10 @@ function ChatMode({
   onLoadMoreHistory: () => void;
   onSend: () => void;
   onStop: () => void;
+  onSubmitFeedback: (
+    messageId: string,
+    rating: CompanionMessageFeedbackRating,
+  ) => void;
   status: ReturnType<typeof useChat>["status"];
 }) {
   return (
@@ -441,8 +490,11 @@ function ChatMode({
         ) : null}
 
         <ChatConversation
+          feedbackByMessageId={feedbackByMessageId}
+          feedbackPendingMessageId={feedbackPendingMessageId}
           historicalAssistantMessageIds={historicalAssistantMessageIds}
           messages={messages}
+          onSubmitFeedback={onSubmitFeedback}
           status={status}
         />
 
@@ -517,6 +569,20 @@ function toUiMessage(
     parts: [{ text: message.content, type: "text" }],
     role: message.role,
   };
+}
+
+function collectFeedback(
+  messages: CompanionConversationResponse["messages"],
+): Record<string, CompanionMessageFeedbackRating> {
+  const ratings: Record<string, CompanionMessageFeedbackRating> = {};
+
+  for (const message of messages) {
+    if (message.feedback) {
+      ratings[message.id] = message.feedback.rating;
+    }
+  }
+
+  return ratings;
 }
 
 function ConversationLoadingState() {

@@ -143,9 +143,48 @@ export const companionProfiles = sqliteTable(
   ],
 );
 
+export const companionMessageFeedbacks = sqliteTable(
+  "companion_message_feedbacks",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => companionConversations.id, { onDelete: "cascade" }),
+    messageId: text("message_id")
+      .notNull()
+      .references(() => companionConversationMessages.id, {
+        onDelete: "cascade",
+      }),
+    rating: text("rating", { enum: ["positive", "negative"] }).notNull(),
+    reason: text("reason"),
+    note: text("note"),
+    createdAtMs: integer("created_at_ms").notNull(),
+    updatedAtMs: integer("updated_at_ms").notNull(),
+  },
+  (table) => [
+    unique("companion_message_feedbacks_user_message_unique").on(
+      table.userId,
+      table.messageId,
+    ),
+    check(
+      "companion_message_feedbacks_rating_check",
+      sql`${table.rating} IN ('positive', 'negative')`,
+    ),
+    check(
+      "companion_message_feedbacks_timestamps_check",
+      sql`${table.updatedAtMs} >= ${table.createdAtMs}`,
+    ),
+  ],
+);
+
 export type CompanionConversationRecord =
   typeof companionConversations.$inferSelect;
 export type CompanionConversationMessageRecord =
   typeof companionConversationMessages.$inferSelect;
 export type CompanionMemoryRecord = typeof companionMemories.$inferSelect;
 export type CompanionProfileRecord = typeof companionProfiles.$inferSelect;
+export type CompanionMessageFeedbackRecord =
+  typeof companionMessageFeedbacks.$inferSelect;

@@ -3,7 +3,9 @@ import {
   CompanionConversationResponseSchema,
   CompanionMemoriesResponseSchema,
   DeleteCompanionMemoryResponseSchema,
+  SubmitCompanionMessageFeedbackResponseSchema,
   UpdateCompanionMemoryResponseSchema,
+  type SubmitCompanionMessageFeedbackRequest,
   type UpdateCompanionMemoryRequest,
 } from "@repo/contracts";
 
@@ -56,6 +58,19 @@ export function deleteCompanionMemory(
   return http.delete(
     `/rpc/chat/companion/memories/${encodeURIComponent(memoryId)}`,
     DeleteCompanionMemoryResponseSchema,
+    options,
+  );
+}
+
+export function submitCompanionMessageFeedback(
+  messageId: string,
+  input: SubmitCompanionMessageFeedbackRequest,
+  options?: HttpRequestOptions,
+) {
+  return http.post(
+    `/rpc/chat/companion/messages/${encodeURIComponent(messageId)}/feedback`,
+    input,
+    SubmitCompanionMessageFeedbackResponseSchema,
     options,
   );
 }

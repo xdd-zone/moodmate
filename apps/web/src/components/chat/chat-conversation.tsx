@@ -1,14 +1,21 @@
 "use client";
 
+import type { CompanionMessageFeedbackRating } from "@repo/contracts";
 import type { ChatStatus, UIMessage } from "ai";
-import { Bot, LoaderCircle } from "lucide-react";
+import { Bot, LoaderCircle, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const TYPEWRITER_INTERVAL_MS = 18;
 
 interface ChatConversationProps {
+  feedbackByMessageId: Record<string, CompanionMessageFeedbackRating>;
+  feedbackPendingMessageId: string | null;
   historicalAssistantMessageIds: readonly string[];
   messages: UIMessage[];
+  onSubmitFeedback: (
+    messageId: string,
+    rating: CompanionMessageFeedbackRating,
+  ) => void;
   status: ChatStatus;
 }
 
@@ -38,8 +45,11 @@ function usePrefersReducedMotion(): boolean {
 }
 
 export function ChatConversation({
+  feedbackByMessageId,
+  feedbackPendingMessageId,
   historicalAssistantMessageIds,
   messages,
+  onSubmitFeedback,
   status,
 }: ChatConversationProps) {
   const reducedMotion = usePrefersReducedMotion();
@@ -192,6 +202,8 @@ export function ChatConversation({
             ? fullText
             : (visibleAssistantTextById[message.id] ??
               sliceUnicodeText(fullText, 1));
+          const canFeedback =
+            !isUser && historicalAssistantMessageIdSet.has(message.id);
 
           return (
             <div
@@ -202,27 +214,32 @@ export function ChatConversation({
               }
               key={message.id}
             >
-              {isUser ? null : (
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-strong">
-                  <Bot aria-hidden="true" className="size-4" />
-                </span>
+              {isUser ? (
+                <div className="min-w-0 whitespace-pre-wrap rounded-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
+                  {fullText}
+                </div>
+              ) : (
+                <>
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-strong">
+                    <Bot aria-hidden="true" className="size-4" />
+                  </span>
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="min-w-0 whitespace-pre-wrap rounded-md border border-border bg-surface px-4 py-3 text-sm leading-6">
+                      <span aria-hidden="true">{visibleText}</span>
+                      <span className="sr-only">{fullText}</span>
+                    </div>
+                    {canFeedback ? (
+                      <FeedbackControls
+                        disabled={feedbackPendingMessageId === message.id}
+                        onSubmitFeedback={(rating) =>
+                          onSubmitFeedback(message.id, rating)
+                        }
+                        rating={feedbackByMessageId[message.id] ?? null}
+                      />
+                    ) : null}
+                  </div>
+                </>
               )}
-              <div
-                className={
-                  isUser
-                    ? "min-w-0 whitespace-pre-wrap rounded-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground"
-                    : "min-w-0 whitespace-pre-wrap rounded-md border border-border bg-surface px-4 py-3 text-sm leading-6"
-                }
-              >
-                {isUser ? (
-                  fullText
-                ) : (
-                  <>
-                    <span aria-hidden="true">{visibleText}</span>
-                    <span className="sr-only">{fullText}</span>
-                  </>
-                )}
-              </div>
             </div>
           );
         })}
@@ -244,5 +261,66 @@ export function ChatConversation({
         <div ref={endRef} />
       </div>
     </div>
+  );
+}
+
+function FeedbackControls({
+  disabled,
+  onSubmitFeedback,
+  rating,
+}: {
+  disabled: boolean;
+  onSubmitFeedback: (rating: CompanionMessageFeedbackRating) => void;
+  rating: CompanionMessageFeedbackRating | null;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <FeedbackButton
+        active={rating === "positive"}
+        disabled={disabled}
+        icon={ThumbsUp}
+        label="喜欢这条回复"
+        onClick={() => onSubmitFeedback("positive")}
+      />
+      <FeedbackButton
+        active={rating === "negative"}
+        disabled={disabled}
+        icon={ThumbsDown}
+        label="不喜欢这条回复"
+        onClick={() => onSubmitFeedback("negative")}
+      />
+    </div>
+  );
+}
+
+function FeedbackButton({
+  active,
+  disabled,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  disabled: boolean;
+  icon: typeof ThumbsUp;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      aria-pressed={active}
+      className={`grid size-8 place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 ${
+        active
+          ? "bg-primary-subtle text-primary-strong"
+          : "text-muted hover:bg-surface-muted hover:text-foreground"
+      }`}
+      disabled={disabled}
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      <Icon aria-hidden="true" className="size-4" />
+    </button>
   );
 }

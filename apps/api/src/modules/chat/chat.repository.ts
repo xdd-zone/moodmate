@@ -7,7 +7,9 @@ import {
   companionConversationMessages,
   companionConversations,
   companionMemories,
+  companionMessageFeedbacks,
   companionProfiles,
+  type CompanionConversationMessageRecord,
 } from "./chat.schema";
 
 export async function getCompanionProfile(input: {
@@ -52,13 +54,20 @@ export async function getOrCreateCompanionConversation(input: {
   return rows[0] ?? null;
 }
 
+export interface CompanionConversationMessageWithFeedback extends CompanionConversationMessageRecord {
+  feedbackRating: "negative" | "positive" | null;
+  feedbackReason: string | null;
+  feedbackNote: string | null;
+  feedbackUpdatedAtMs: number | null;
+}
+
 export async function listCompanionConversationMessages(input: {
   beforeMs?: number;
   conversationId: string;
   database: D1Database | undefined;
   limit: number;
   userId: string;
-}) {
+}): Promise<CompanionConversationMessageWithFeedback[]> {
   const db = createD1Client(input.database);
   const conditions: SQL[] = [
     eq(companionConversationMessages.conversationId, input.conversationId),
@@ -71,17 +80,62 @@ export async function listCompanionConversationMessages(input: {
     );
   }
 
-  const rows = await db
-    .select()
-    .from(companionConversationMessages)
-    .where(and(...conditions))
-    .orderBy(
-      desc(companionConversationMessages.createdAtMs),
-      desc(companionConversationMessages.id),
-    )
-    .limit(input.limit);
+  try {
+    const rows = await db
+      .select({
+        content: companionConversationMessages.content,
+        conversationId: companionConversationMessages.conversationId,
+        createdAtMs: companionConversationMessages.createdAtMs,
+        feedbackNote: companionMessageFeedbacks.note,
+        feedbackRating: companionMessageFeedbacks.rating,
+        feedbackReason: companionMessageFeedbacks.reason,
+        feedbackUpdatedAtMs: companionMessageFeedbacks.updatedAtMs,
+        id: companionConversationMessages.id,
+        metadataJson: companionConversationMessages.metadataJson,
+        role: companionConversationMessages.role,
+        status: companionConversationMessages.status,
+        userId: companionConversationMessages.userId,
+      })
+      .from(companionConversationMessages)
+      .leftJoin(
+        companionMessageFeedbacks,
+        and(
+          eq(
+            companionMessageFeedbacks.messageId,
+            companionConversationMessages.id,
+          ),
+          eq(companionMessageFeedbacks.userId, input.userId),
+        ),
+      )
+      .where(and(...conditions))
+      .orderBy(
+        desc(companionConversationMessages.createdAtMs),
+        desc(companionConversationMessages.id),
+      )
+      .limit(input.limit);
 
-  return rows.reverse();
+    return rows.reverse();
+  } catch (error) {
+    console.error("读取消息反馈失败，退回无反馈消息列表", { error });
+
+    const rows = await db
+      .select()
+      .from(companionConversationMessages)
+      .where(and(...conditions))
+      .orderBy(
+        desc(companionConversationMessages.createdAtMs),
+        desc(companionConversationMessages.id),
+      )
+      .limit(input.limit);
+
+    return rows.reverse().map((message) => ({
+      ...message,
+      feedbackNote: null,
+      feedbackRating: null,
+      feedbackReason: null,
+      feedbackUpdatedAtMs: null,
+    }));
+  }
 }
 
 export async function insertCompanionConversationMessage(input: {
@@ -239,4 +293,98 @@ export async function updateCompanionMemory(input: {
     .returning();
 
   return rows[0] ?? null;
+}
+
+export async function findCompanionAssistantMessageForFeedback(input: {
+  database: D1Database | undefined;
+  messageId: string;
+  userId: string;
+}) {
+  const db = createD1Client(input.database);
+
+  const rows = await db
+    .select()
+    .from(companionConversationMessages)
+    .where(
+      and(
+        eq(companionConversationMessages.id, input.messageId),
+        eq(companionConversationMessages.userId, input.userId),
+        eq(companionConversationMessages.role, "assistant"),
+        eq(companionConversationMessages.status, "completed"),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function upsertCompanionMessageFeedback(input: {
+  conversationId: string;
+  database: D1Database | undefined;
+  messageId: string;
+  note: string | null;
+  nowMs: number;
+  rating: "negative" | "positive";
+  reason: string | null;
+  userId: string;
+}) {
+  const db = createD1Client(input.database);
+
+  const existing = await db
+    .select()
+    .from(companionMessageFeedbacks)
+    .where(
+      and(
+        eq(companionMessageFeedbacks.userId, input.userId),
+        eq(companionMessageFeedbacks.messageId, input.messageId),
+      ),
+    )
+    .limit(1);
+
+  if (existing[0]) {
+    const rows = await db
+      .update(companionMessageFeedbacks)
+      .set({
+        note: input.note,
+        rating: input.rating,
+        reason: input.reason,
+        updatedAtMs: input.nowMs,
+      })
+      .where(eq(companionMessageFeedbacks.id, existing[0].id))
+      .returning();
+
+    return rows[0] ?? existing[0];
+  }
+
+  const rows = await db
+    .insert(companionMessageFeedbacks)
+    .values({
+      conversationId: input.conversationId,
+      createdAtMs: input.nowMs,
+      id: uuidv7(),
+      messageId: input.messageId,
+      note: input.note,
+      rating: input.rating,
+      reason: input.reason,
+      updatedAtMs: input.nowMs,
+      userId: input.userId,
+    })
+    .returning();
+
+  return rows[0]!;
+}
+
+export async function listRecentCompanionMessageFeedbacks(input: {
+  database: D1Database | undefined;
+  limit: number;
+  userId: string;
+}) {
+  const db = createD1Client(input.database);
+
+  return db
+    .select()
+    .from(companionMessageFeedbacks)
+    .where(eq(companionMessageFeedbacks.userId, input.userId))
+    .orderBy(desc(companionMessageFeedbacks.updatedAtMs))
+    .limit(input.limit);
 }

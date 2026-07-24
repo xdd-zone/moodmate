@@ -34,6 +34,32 @@ export const CompanionConversationMessageRoleSchema = z.enum([
   "assistant",
 ]);
 
+export const CompanionMessageFeedbackRatingSchema = z.enum([
+  "positive",
+  "negative",
+]);
+
+export const CompanionMessageFeedbackReasonSchema = z.enum([
+  "good_tone",
+  "helpful",
+  "warm",
+  "remembered_context",
+  "bad_tone",
+  "too_long",
+  "too_cold",
+  "too_pushy",
+  "wrong_memory",
+  "unsafe",
+  "other",
+]);
+
+export const CompanionMessageFeedbackSchema = z.object({
+  rating: CompanionMessageFeedbackRatingSchema,
+  reason: CompanionMessageFeedbackReasonSchema.nullable(),
+  note: z.string().nullable(),
+  updatedAtMs: z.number().int().nonnegative(),
+});
+
 export const CompanionConversationMessageSchema = z.object({
   id: z.string().min(1),
   conversationId: z.string().min(1),
@@ -41,6 +67,7 @@ export const CompanionConversationMessageSchema = z.object({
   content: z.string(),
   status: z.enum(["completed", "failed"]),
   createdAtMs: z.number().int().nonnegative(),
+  feedback: CompanionMessageFeedbackSchema.nullable(),
 });
 
 export const CompanionConversationResponseSchema = z.object({
@@ -105,6 +132,16 @@ export const DeleteCompanionMemoryResponseSchema = z.object({
   success: z.literal(true),
 });
 
+export const SubmitCompanionMessageFeedbackRequestSchema = z.object({
+  rating: CompanionMessageFeedbackRatingSchema,
+  reason: CompanionMessageFeedbackReasonSchema.optional().nullable(),
+  note: z.string().trim().max(500).optional().nullable(),
+});
+
+export const SubmitCompanionMessageFeedbackResponseSchema = z.object({
+  feedback: CompanionMessageFeedbackSchema,
+});
+
 export type CompanionChatLlmConfig = z.infer<
   typeof CompanionChatLlmConfigSchema
 >;
@@ -135,4 +172,19 @@ export type UpdateCompanionMemoryResponse = z.infer<
 >;
 export type DeleteCompanionMemoryResponse = z.infer<
   typeof DeleteCompanionMemoryResponseSchema
+>;
+export type CompanionMessageFeedbackRating = z.infer<
+  typeof CompanionMessageFeedbackRatingSchema
+>;
+export type CompanionMessageFeedbackReason = z.infer<
+  typeof CompanionMessageFeedbackReasonSchema
+>;
+export type CompanionMessageFeedback = z.infer<
+  typeof CompanionMessageFeedbackSchema
+>;
+export type SubmitCompanionMessageFeedbackRequest = z.infer<
+  typeof SubmitCompanionMessageFeedbackRequestSchema
+>;
+export type SubmitCompanionMessageFeedbackResponse = z.infer<
+  typeof SubmitCompanionMessageFeedbackResponseSchema
 >;

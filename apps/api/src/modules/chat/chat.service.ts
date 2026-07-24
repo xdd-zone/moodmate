@@ -1,14 +1,17 @@
 import {
   BizCode,
+  CompanionMessageFeedbackReasonSchema,
   type CompanionChatLlmConfig,
   type CompanionChatMessage,
   type CompanionMemory,
+  type CompanionMessageFeedback,
   type ConversationEmotion,
   type ConversationIntent,
   type ConversationRelationshipStage,
   type ConversationSafety,
   type EmotionRoute,
   type ReplyPolicy,
+  type SubmitCompanionMessageFeedbackRequest,
   type UpdateCompanionMemoryRequest,
 } from "@repo/contracts";
 import { uuidv7 } from "uuidv7";
@@ -33,6 +36,7 @@ import {
   toAssistantReplyQualityMetadata,
 } from "./chat.analysis";
 import {
+  findCompanionAssistantMessageForFeedback,
   getCompanionProfile,
   getOrCreateCompanionConversation,
   insertCompanionConversationMessage,
@@ -40,7 +44,9 @@ import {
   listActiveCompanionMemories,
   listCompanionConversationMessages,
   listCompanionMemories,
+  listRecentCompanionMessageFeedbacks,
   updateCompanionMemory as updateStoredCompanionMemory,
+  upsertCompanionMessageFeedback,
 } from "./chat.repository";
 import {
   presentCompanionConversationMessage,
@@ -78,6 +84,7 @@ export const COMPANION_INITIAL_HISTORY_LIMIT = 40;
 
 const COMPANION_RECENT_MESSAGE_LIMIT = 18;
 const COMPANION_MEMORY_INJECTION_LIMIT = 12;
+const COMPANION_FEEDBACK_INJECTION_LIMIT = 5;
 const COMPANION_MEMORY_EXTRACTION_LIMIT = 2;
 const COMPANION_MEMORY_DEDUPLICATION_LIMIT = 50;
 const MEMORY_TRIGGER_PATTERN =
@@ -200,6 +207,50 @@ export async function deleteCompanionMemory(input: {
   return { success: true as const };
 }
 
+export async function submitCompanionMessageFeedback(input: {
+  bindings: ApiBindings;
+  messageId: string;
+  payload: SubmitCompanionMessageFeedbackRequest;
+  userId: string;
+}): Promise<{ feedback: CompanionMessageFeedback }> {
+  const message = await findCompanionAssistantMessageForFeedback({
+    database: input.bindings.DB,
+    messageId: input.messageId,
+    userId: input.userId,
+  });
+
+  if (!message) {
+    throw new AppError(
+      BizCode.COMMON_NOT_FOUND,
+      "没有找到可反馈的回复，刷新聊天记录后重试",
+      404,
+    );
+  }
+
+  const nowMs = Date.now();
+  const record = await upsertCompanionMessageFeedback({
+    conversationId: message.conversationId,
+    database: input.bindings.DB,
+    messageId: input.messageId,
+    note: input.payload.note ?? null,
+    nowMs,
+    rating: input.payload.rating,
+    reason: input.payload.reason ?? null,
+    userId: input.userId,
+  });
+
+  const reason = CompanionMessageFeedbackReasonSchema.safeParse(record.reason);
+
+  return {
+    feedback: {
+      note: record.note,
+      rating: record.rating,
+      reason: reason.success ? reason.data : null,
+      updatedAtMs: record.updatedAtMs,
+    },
+  };
+}
+
 export async function prepareCompanionChat(input: {
   bindings: ApiBindings;
   conversationId?: string;
@@ -223,23 +274,34 @@ export async function prepareCompanionChat(input: {
     throw new AppError(BizCode.COMMON_INVALID_REQUEST, "聊天内容不能为空", 400);
   }
 
-  const [recentMessages, activeMemories, profile] = await Promise.all([
-    listCompanionConversationMessages({
-      conversationId: conversation.id,
-      database: input.bindings.DB,
-      limit: COMPANION_RECENT_MESSAGE_LIMIT,
-      userId: input.userId,
-    }),
-    listActiveCompanionMemories({
-      database: input.bindings.DB,
-      limit: COMPANION_MEMORY_INJECTION_LIMIT,
-      userId: input.userId,
-    }),
-    getCompanionProfile({
-      database: input.bindings.DB,
-      userId: input.userId,
-    }),
-  ]);
+  const [recentMessages, activeMemories, profile, recentFeedbacks] =
+    await Promise.all([
+      listCompanionConversationMessages({
+        conversationId: conversation.id,
+        database: input.bindings.DB,
+        limit: COMPANION_RECENT_MESSAGE_LIMIT,
+        userId: input.userId,
+      }),
+      listActiveCompanionMemories({
+        database: input.bindings.DB,
+        limit: COMPANION_MEMORY_INJECTION_LIMIT,
+        userId: input.userId,
+      }),
+      getCompanionProfile({
+        database: input.bindings.DB,
+        userId: input.userId,
+      }),
+      listRecentCompanionMessageFeedbacks({
+        database: input.bindings.DB,
+        limit: COMPANION_FEEDBACK_INJECTION_LIMIT,
+        userId: input.userId,
+      }).catch((error: unknown) => {
+        console.error("读取最近反馈失败，跳过反馈注入", { error });
+        return [] as Awaited<
+          ReturnType<typeof listRecentCompanionMessageFeedbacks>
+        >;
+      }),
+    ]);
   const agentName = profile?.displayName?.trim() || "MoodMate";
   const agentGuardrails = profile?.guardrails?.trim() || null;
   const providerConfig = await resolveProviderConfig(input.bindings);
@@ -309,6 +371,7 @@ export async function prepareCompanionChat(input: {
     {
       content: buildSystemPrompt({
         emotion,
+        feedbacks: recentFeedbacks,
         intent,
         memories: activeMemories,
         relationshipStage,
@@ -408,6 +471,11 @@ export async function saveCompanionAssistantTurn(input: {
 
 function buildSystemPrompt(input: {
   emotion: ConversationEmotion | null;
+  feedbacks: Array<{
+    note: string | null;
+    rating: "negative" | "positive";
+    reason: string | null;
+  }>;
   intent: ConversationIntent | null;
   memories: Array<{ content: string; importance: number; type: string }>;
   relationshipStage: ConversationRelationshipStage | null;
@@ -426,6 +494,7 @@ function buildSystemPrompt(input: {
     }),
     getRelationshipStageSystemInstruction(input.relationshipStage),
     getReplyPolicySystemInstruction(input.replyPolicy),
+    getFeedbackSystemInstruction(input.feedbacks),
     input.memories.length > 0
       ? [
           "以下是用户的长期记忆，请优先尊重：",
@@ -439,6 +508,51 @@ function buildSystemPrompt(input: {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+const FEEDBACK_REASON_LABELS: Record<string, string> = {
+  bad_tone: "语气不好",
+  good_tone: "语气舒服",
+  helpful: "有帮助",
+  other: "其他",
+  remembered_context: "记得上下文",
+  too_cold: "太冷淡",
+  too_long: "太长",
+  too_pushy: "太急/太强势",
+  unsafe: "让人不适",
+  warm: "温暖",
+  wrong_memory: "记忆有误",
+};
+
+function getFeedbackSystemInstruction(
+  feedbacks: Array<{
+    note: string | null;
+    rating: "negative" | "positive";
+    reason: string | null;
+  }>,
+): string {
+  if (feedbacks.length === 0) {
+    return "";
+  }
+
+  const lines = feedbacks.map((feedback) => {
+    const tag = feedback.rating === "positive" ? "喜欢" : "不喜欢";
+    const reasonLabel =
+      feedback.reason && FEEDBACK_REASON_LABELS[feedback.reason]
+        ? FEEDBACK_REASON_LABELS[feedback.reason]
+        : null;
+    const note = feedback.note?.trim() || null;
+    const detail = [reasonLabel, note].filter(Boolean).join("，");
+
+    return detail ? `- ${tag}：${detail}` : `- ${tag}`;
+  });
+
+  return [
+    "近期用户对回复的反馈：",
+    ...lines,
+    "请把正向反馈视为用户偏好的风格，把负向反馈视为需要避免的问题，据此校准本轮语气与做法。",
+    "不要在回复中提到评分、点赞、点踩或反馈记录，保持自然对话。",
+  ].join("\n");
 }
 
 function buildConversationSummary(input: {

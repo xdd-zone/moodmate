@@ -6,6 +6,8 @@ import {
   CompanionConversationResponseSchema,
   CompanionMemoriesResponseSchema,
   DeleteCompanionMemoryResponseSchema,
+  SubmitCompanionMessageFeedbackRequestSchema,
+  SubmitCompanionMessageFeedbackResponseSchema,
   UpdateCompanionMemoryRequestSchema,
   UpdateCompanionMemoryResponseSchema,
   buildSuccess,
@@ -26,6 +28,7 @@ import {
   getCompanionMemories,
   prepareCompanionChat,
   saveCompanionAssistantTurn,
+  submitCompanionMessageFeedback,
   updateCompanionMemory,
 } from "./chat.service";
 
@@ -33,6 +36,7 @@ const companionMessageCursorSchema = z.object({
   cursor: z.coerce.number().int().nonnegative(),
 });
 const companionMemoryParamsSchema = z.object({ memoryId: z.uuid() });
+const companionFeedbackParamsSchema = z.object({ messageId: z.uuid() });
 
 function invalidRequest(message: string, details?: unknown) {
   return new AppError(BizCode.COMMON_INVALID_REQUEST, message, 400, details);
@@ -113,6 +117,33 @@ export function createChatRoute() {
           userId: c.var.webSession.userId,
         });
         const data = DeleteCompanionMemoryResponseSchema.parse(result);
+
+        return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+      },
+    )
+    .post(
+      "/rpc/chat/companion/messages/:messageId/feedback",
+      requireWebAccess,
+      zValidator("param", companionFeedbackParamsSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("消息 ID 无效", result.error.issues);
+      }),
+      zValidator(
+        "json",
+        SubmitCompanionMessageFeedbackRequestSchema,
+        (result) => {
+          if (result.success) return;
+          throw invalidRequest("反馈内容无效", result.error.issues);
+        },
+      ),
+      async (c) => {
+        const result = await submitCompanionMessageFeedback({
+          bindings: c.env,
+          messageId: c.req.valid("param").messageId,
+          payload: c.req.valid("json"),
+          userId: c.var.webSession.userId,
+        });
+        const data = SubmitCompanionMessageFeedbackResponseSchema.parse(result);
 
         return c.json(buildSuccess(data, createMeta(c.var.requestId)));
       },
