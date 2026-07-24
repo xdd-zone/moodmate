@@ -860,7 +860,6 @@
 
 - None - task complete
 
-
 ## Session 26: 实现 Agent 记忆系统
 
 **Date**: 2026-07-23
@@ -878,8 +877,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `2049232` | (see git log) |
 
 ### Testing
@@ -893,7 +892,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 27: Agent 聊天安全边界与意图识别
 
@@ -912,8 +910,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `3610a58` | (see git log) |
 
 ### Testing
@@ -928,7 +926,6 @@
 
 - None - task complete
 
-
 ## Session 28: 收敛 LLM 配置到 admin
 
 **Date**: 2026-07-23
@@ -938,7 +935,7 @@
 
 ### Summary
 
-移除 web 端浏览器本地 LLM 配置，把大模型配置收敛到 admin 后台统一管理。后端只走 OpenAI 协议：新增 llm-config 模块（6 个 RPC）、AES-GCM 加密存储 apiKey（主密钥走 LLM_CONFIG_ENC_KEY）、0009 迁移建 llm_provider_configs 表并用部分唯一索引保证至多一条激活配置；chat 与安全/意图分析改从激活配置解析 provider，isPlatformDeepSeek 换成通用 disableThinking；删除 DEEPSEEK_* 环境变量。admin 新增配置管理页（列表/新建/编辑/激活/删除/测试连接）+ BFF。三项质量门禁全绿，本地 D1 迁移验证通过。
+移除 web 端浏览器本地 LLM 配置，把大模型配置收敛到 admin 后台统一管理。后端只走 OpenAI 协议：新增 llm-config 模块（6 个 RPC）、AES-GCM 加密存储 apiKey（主密钥走 LLM*CONFIG_ENC_KEY）、0009 迁移建 llm_provider_configs 表并用部分唯一索引保证至多一条激活配置；chat 与安全/意图分析改从激活配置解析 provider，isPlatformDeepSeek 换成通用 disableThinking；删除 DEEPSEEK*\* 环境变量。admin 新增配置管理页（列表/新建/编辑/激活/删除/测试连接）+ BFF。三项质量门禁全绿，本地 D1 迁移验证通过。
 
 ### Main Changes
 
@@ -946,8 +943,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `31ba34a` | (see git log) |
 | `9215a0e` | (see git log) |
 | `caf6e3d` | (see git log) |
@@ -966,7 +963,6 @@
 
 - None - task complete
 
-
 ## Session 29: 情绪路由 LangGraph（章49）
 
 **Date**: 2026-07-24
@@ -984,8 +980,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `7fd1e18` | (see git log) |
 
 ### Testing
@@ -999,7 +995,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 30: Reply Policy 引擎（章50）
 
@@ -1018,8 +1013,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `fb8e9cf` | (see git log) |
 
 ### Testing
@@ -1033,7 +1028,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 31: Reply Quality Guard 回复后质检落库
 
@@ -1052,8 +1046,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `b057e08` | (see git log) |
 | `23b2135` | (see git log) |
 | `b42a238` | (see git log) |
@@ -1069,7 +1063,6 @@
 ### Next Steps
 
 - None - task complete
-
 
 ## Session 32: 关系阶段系统：LangGraph 关系阶段判断影响路由与策略
 
@@ -1088,8 +1081,8 @@
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `20fc4c0` | (see git log) |
 | `87c965d` | (see git log) |
 | `3596e47` | (see git log) |
