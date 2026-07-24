@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "核对 buildReplyPolicy 分支与二次修正是否符合 chat 分析链路约定"}
+{"file": ".trellis/spec/api/backend/quality-guidelines.md", "reason": "api backend 质量检查项"}
+{"file": ".trellis/spec/contracts/shared/companion-chat.md", "reason": "核对 ReplyPolicySchema 字段与导出是否符合 contract 约定"}

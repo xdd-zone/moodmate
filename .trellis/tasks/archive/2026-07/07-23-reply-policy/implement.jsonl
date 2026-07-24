@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "chat 分析链路的落地约定：schema 进 contracts、分析逻辑进 chat.analysis.ts、装配进 chat.service.ts，以及结构化输出兜底规则"}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "api backend 层开发前检查清单与质量门"}
+{"file": ".trellis/spec/contracts/shared/companion-chat.md", "reason": "companion-analysis contract 的 schema 命名与导出约定"}
