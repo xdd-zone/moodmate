@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "chat 模块分层与落库约定，evaluateReplyQuality 和 assistant metadata 写入要遵循"}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "api backend 前置检查与质量清单入口"}
+{"file": ".trellis/spec/contracts/shared/companion-chat.md", "reason": "companion-analysis schema 契约约定，ReplyQualityGuardSchema 要对齐"}
