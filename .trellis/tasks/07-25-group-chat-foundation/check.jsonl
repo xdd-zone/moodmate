@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/api/backend/index.md", "reason": "API backend 完成检查清单与质量门命令"}
+{"file": ".trellis/spec/api/backend/quality-guidelines.md", "reason": "类型边界、禁止写法与验证命令"}
+{"file": ".trellis/spec/contracts/shared/index.md", "reason": "contracts 完成检查：Zod 输入、index 导出、无 app/Hono/DOM 依赖"}
+{"file": ".trellis/spec/web/frontend/index.md", "reason": "Web 完成检查：布局、主题、键盘可达与 build"}
+{"file": ".trellis/spec/web/frontend/quality-guidelines.md", "reason": "Web 禁止写法、类型与手动验证命令"}

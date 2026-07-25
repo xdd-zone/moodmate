@@ -270,6 +270,40 @@ export type {
   UserAgentListResponse,
   UserAgentStatus,
 } from "./agents/agent.contract";
+export {
+  AddAgentGroupChatMembersRequestSchema,
+  AddAgentGroupChatMembersResponseSchema,
+  AgentGroupChatDetailResponseSchema,
+  AgentGroupChatDetailSchema,
+  AgentGroupChatListItemSchema,
+  AgentGroupChatListResponseSchema,
+  AgentGroupChatMemberSchema,
+  AgentGroupChatMemberStatusSchema,
+  AgentGroupChatMessageSchema,
+  AgentGroupChatMessageSenderTypeSchema,
+  AgentGroupChatMessageStatusSchema,
+  AgentGroupChatMessagesResponseSchema,
+  CreateAgentGroupChatRequestSchema,
+  CreateAgentGroupChatResponseSchema,
+  RemoveAgentGroupChatMemberResponseSchema,
+} from "./chat/group-chat.contract";
+export type {
+  AddAgentGroupChatMembersRequest,
+  AddAgentGroupChatMembersResponse,
+  AgentGroupChatDetail,
+  AgentGroupChatDetailResponse,
+  AgentGroupChatListItem,
+  AgentGroupChatListResponse,
+  AgentGroupChatMember,
+  AgentGroupChatMemberStatus,
+  AgentGroupChatMessage,
+  AgentGroupChatMessageSenderType,
+  AgentGroupChatMessageStatus,
+  AgentGroupChatMessagesResponse,
+  CreateAgentGroupChatRequest,
+  CreateAgentGroupChatResponse,
+  RemoveAgentGroupChatMemberResponse,
+} from "./chat/group-chat.contract";
 export { HealthResponseSchema, ApiEnvSchema } from "./system/health.contract";
 export type { ApiEnvValue, HealthResponse } from "./system/health.contract";
 export { PingRequestSchema, PingResponseSchema } from "./system/ping.contract";

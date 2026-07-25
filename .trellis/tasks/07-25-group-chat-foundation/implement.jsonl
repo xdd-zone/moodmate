@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/api/backend/directory-structure.md", "reason": "group-chat 模块四层落点与依赖方向，照 modules/agents 分层"}
+{"file": ".trellis/spec/api/backend/routing-and-middleware.md", "reason": "Hono 路由、requireWebAccess、zValidator 与应用组装范式"}
+{"file": ".trellis/spec/api/backend/error-handling.md", "reason": "越权 403 与成员超限 422 用 AppError + BizCode 的写法"}
+{"file": ".trellis/spec/api/backend/d1.md", "reason": "0014 迁移落点、本地 binding 与 D1 写库范式"}
+{"file": ".trellis/spec/contracts/shared/contract-guidelines.md", "reason": "group-chat.contract.ts 的 Zod schema、类型推导与 index 导出方式"}
+{"file": ".trellis/spec/contracts/shared/response-guidelines.md", "reason": "buildSuccess/BizCode 统一响应约定"}
+{"file": ".trellis/spec/web/frontend/directory-structure.md", "reason": "(app) 路由组、components/group-chat 与 api/query 数据边界"}
+{"file": ".trellis/spec/web/frontend/http-query-guidelines.md", "reason": "typed http + react-query queryOptions/mutationOptions 范式"}
+{"file": ".trellis/spec/web/frontend/component-guidelines.md", "reason": "三栏页面薄壳、guard、客户端组件与文案约定"}

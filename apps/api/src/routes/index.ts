@@ -4,6 +4,7 @@ import { createAgentsRoute } from "@/modules/agents";
 import { createAssetsRoute } from "@/modules/assets";
 import { createAuthRoute } from "@/modules/auth";
 import { createChatRoute } from "@/modules/chat";
+import { createGroupChatRoute } from "@/modules/group-chat";
 import { createLlmConfigRoute } from "@/modules/llm-config";
 import { createProfileRoute } from "@/modules/profile";
 import { createRoleRoute } from "@/modules/roles";
@@ -17,6 +18,7 @@ export function createRoutes() {
     .route("/", createAuthRoute())
     .route("/", createAgentsRoute())
     .route("/", createChatRoute())
+    .route("/", createGroupChatRoute())
     .route("/", createLlmConfigRoute())
     .route("/", createProfileRoute())
     .route("/", createRoleRoute())
