@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/index.md", "reason": "新建 modules/agents 模块（schema/repository/service/presenter/route）+ 迁移 0013，须对齐 api backend 分层与迁移写法"}
+{"file": ".trellis/spec/contracts/backend/index.md", "reason": "新增 agents/agent.contract.ts 及各响应 schema，须对齐契约定义与导出约定"}
+{"file": ".trellis/spec/web/frontend/index.md", "reason": "新增 /agents 页与 agent.api/agent.query + agents-manager 组件，须对齐 web 前端 api/query/组件范式"}
+{"file": ".trellis/spec/guides/index.md", "reason": "跨包实现的通用思考准则"}

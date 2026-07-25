@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/index.md", "reason": "校验 agents 后端模块与迁移 0013 是否符合 api backend 质量门（越权 403、时间戳 CHECK、索引）"}
+{"file": ".trellis/spec/contracts/backend/index.md", "reason": "校验 agent.contract.ts schema 与导出是否符合契约层规范"}
+{"file": ".trellis/spec/web/frontend/index.md", "reason": "校验 /agents 前端页与 api/query/组件是否符合 web 前端规范"}
+{"file": ".trellis/spec/guides/index.md", "reason": "跨包一致性检查准则"}
