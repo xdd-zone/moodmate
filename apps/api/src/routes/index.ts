@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { createAgentsRoute } from "@/modules/agents";
 import { createAssetsRoute } from "@/modules/assets";
 import { createAuthRoute } from "@/modules/auth";
 import { createChatRoute } from "@/modules/chat";
@@ -14,6 +15,7 @@ export function createRoutes() {
   return new Hono<ApiHonoEnv>()
     .route("/", createSystemRoute())
     .route("/", createAuthRoute())
+    .route("/", createAgentsRoute())
     .route("/", createChatRoute())
     .route("/", createLlmConfigRoute())
     .route("/", createProfileRoute())

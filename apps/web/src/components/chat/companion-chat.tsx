@@ -23,7 +23,9 @@ import {
   Settings2,
   SlidersHorizontal,
   UserRound,
+  Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { getCompanionConversationMessages } from "@/src/api/chat.api";
@@ -360,6 +362,7 @@ function CompanionChatAppInner({
               setMobileDetailOpen(false);
             }}
           />
+          <SidebarLinkButton href="/agents" icon={Users} label="我的 Agent" />
         </div>
       </aside>
 
@@ -775,5 +778,26 @@ function SidebarModeButton({
         />
       ) : null}
     </button>
+  );
+}
+
+function SidebarLinkButton({
+  href,
+  icon: Icon,
+  label,
+}: {
+  href: string;
+  icon: typeof MessageCircle;
+  label: string;
+}) {
+  return (
+    <Link
+      aria-label={label}
+      className="grid size-10 place-items-center rounded-md text-muted outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+      href={href}
+      title={label}
+    >
+      <Icon aria-hidden="true" className="size-5" />
+    </Link>
   );
 }

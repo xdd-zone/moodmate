@@ -248,6 +248,28 @@ export type {
   LlmConfigTestResponse,
   LlmConfigUpdateRequest,
 } from "./llm/llm-config.contract";
+export {
+  CreateUserAgentRequestSchema,
+  CreateUserAgentResponseSchema,
+  DeleteUserAgentResponseSchema,
+  UpdateUserAgentRequestSchema,
+  UpdateUserAgentResponseSchema,
+  UserAgentDetailResponseSchema,
+  UserAgentListResponseSchema,
+  UserAgentSchema,
+  UserAgentStatusSchema,
+} from "./agents/agent.contract";
+export type {
+  CreateUserAgentRequest,
+  CreateUserAgentResponse,
+  DeleteUserAgentResponse,
+  UpdateUserAgentRequest,
+  UpdateUserAgentResponse,
+  UserAgent,
+  UserAgentDetailResponse,
+  UserAgentListResponse,
+  UserAgentStatus,
+} from "./agents/agent.contract";
 export { HealthResponseSchema, ApiEnvSchema } from "./system/health.contract";
 export type { ApiEnvValue, HealthResponse } from "./system/health.contract";
 export { PingRequestSchema, PingResponseSchema } from "./system/ping.contract";
