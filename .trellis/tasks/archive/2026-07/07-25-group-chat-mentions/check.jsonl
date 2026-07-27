@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/group-chat.md", "reason": "核对提及识别与前置覆盖是否符合群聊模块降级矩阵与调度约定"}
+{"file": ".trellis/spec/api/backend/quality-guidelines.md", "reason": "API 后端质量检查标准（类型/lint/format/边界）"}
+{"file": ".trellis/spec/web/frontend/quality-guidelines.md", "reason": "web 前端质量检查标准，核对 MentionTextarea 交互与可访问性"}
+{"file": ".trellis/spec/web/frontend/component-guidelines.md", "reason": "核对 MentionTextarea 组件拆分与 props 边界是否合规"}

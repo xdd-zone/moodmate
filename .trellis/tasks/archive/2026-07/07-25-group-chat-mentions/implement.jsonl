@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/api/backend/group-chat.md", "reason": "群聊模块现有约定：selectAgentsForReply / selectAgentsNode / 降级矩阵，改识别与前置覆盖前必须对齐"}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "API 后端开发前置清单与质量检查入口"}
+{"file": ".trellis/spec/web/frontend/component-guidelines.md", "reason": "手写 MentionTextarea 组件的结构与拆分约定"}
+{"file": ".trellis/spec/web/frontend/styling-guidelines.md", "reason": "候选浮层用 Tailwind 手写遮罩/绝对定位，需对齐样式规范"}
+{"file": ".trellis/spec/web/frontend/state-management.md", "reason": "mentionContext / mentionIndex 本地状态与 draft 的管理方式"}
+{"file": ".trellis/spec/web/frontend/index.md", "reason": "web 前端开发前置清单与质量检查入口"}
