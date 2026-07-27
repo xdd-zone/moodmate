@@ -7,11 +7,20 @@ import {
   type AgentGroupChatMember,
   type AgentGroupChatMessagesResponse,
   type CreateAgentGroupChatRequest,
+  type SendAgentGroupChatMessageResponse,
 } from "@repo/contracts";
+import { uuidv7 } from "uuidv7";
 
-import { listOwnedUserAgentsByIds } from "@/modules/agents/agents.repository";
+import {
+  listActiveAgentMemories,
+  listOwnedUserAgentsByIds,
+} from "@/modules/agents/agents.repository";
+import type { UserAgentRecord } from "@/modules/agents/agents.schema";
+import { resolveActiveLlmProviderConfig } from "@/modules/llm-config/llm-config.service";
 import { AppError } from "@/shared/app-error";
 import type { ApiBindings } from "@/shared/hono-env";
+
+import type { ChatProviderConfig } from "@/modules/chat/chat.service";
 
 import {
   presentDetail,
@@ -24,18 +33,27 @@ import {
   getGroupChatById,
   getGroupChatWithMemberCount,
   getMaxDisplayOrder,
+  insertGroupChatMessages,
   insertGroupChatWithMembers,
   listActiveMembers,
   listAllMembers,
   listGroupChatMessages,
   listGroupChatsForUser as listGroupChatsForUserRows,
   removeMember,
+  updateGroupChatStats,
   type AddOrReviveMemberInput,
+  type GroupChatMessageWithAgentRow,
+  type NewGroupChatMessage,
 } from "./group-chat.repository";
+import { buildAgentReply, selectAgentsForReply } from "./group-chat.reply";
+import type { AgentGroupChatRecord } from "./group-chat.schema";
 
 const MAX_MEMBERS = 6;
 const RECENT_MESSAGES_LIMIT = 50;
 const MESSAGES_PAGE_LIMIT = 30;
+const REPLY_HISTORY_LIMIT = 20;
+const AGENT_MEMORY_INJECTION_LIMIT = 6;
+const AGENT_REPLY_FALLBACK = "（这个 Agent 暂时没能回复，请稍后再试）";
 
 function forbidden() {
   return new AppError(BizCode.AUTH_FORBIDDEN, "无权访问该群聊", 403);
@@ -73,7 +91,7 @@ async function requireGroupChat(input: {
   bindings: ApiBindings;
   groupChatId: string;
   userId: string;
-}): Promise<void> {
+}): Promise<AgentGroupChatRecord> {
   const record = await getGroupChatById({
     database: input.bindings.DB,
     groupChatId: input.groupChatId,
@@ -83,6 +101,8 @@ async function requireGroupChat(input: {
   if (!record) {
     throw forbidden();
   }
+
+  return record;
 }
 
 export async function listGroupChatsForUser(input: {
@@ -311,4 +331,200 @@ export async function removeGroupChatMember(input: {
   });
 
   return { members: members.map(presentMember), success: true };
+}
+
+async function resolveGroupChatProviderConfig(
+  bindings: ApiBindings,
+): Promise<ChatProviderConfig> {
+  const active = await resolveActiveLlmProviderConfig(bindings);
+
+  return {
+    apiKey: active.apiKey,
+    baseURL: active.baseURL.trim().replace(/\/+$/, ""),
+    disableThinking: active.disableThinking,
+    model: active.model,
+    providerName: active.providerName,
+  };
+}
+
+export async function sendGroupChatMessage(input: {
+  bindings: ApiBindings;
+  groupChatId: string;
+  message: string;
+  signal: AbortSignal;
+  userId: string;
+}): Promise<SendAgentGroupChatMessageResponse> {
+  const groupChat = await requireGroupChat({
+    bindings: input.bindings,
+    groupChatId: input.groupChatId,
+    userId: input.userId,
+  });
+
+  const members = await listActiveMembers({
+    database: input.bindings.DB,
+    groupChatId: input.groupChatId,
+  });
+
+  const recent = await listGroupChatMessages({
+    database: input.bindings.DB,
+    groupChatId: input.groupChatId,
+    limit: REPLY_HISTORY_LIMIT,
+  });
+
+  const turnIndex = (recent.at(-1)?.turnIndex ?? 0) + 1;
+  const userText = input.message.trim();
+
+  let nextCreatedAtMs = Date.now();
+  const nextTimestamp = () => {
+    const value = nextCreatedAtMs;
+    nextCreatedAtMs += 1;
+    return value;
+  };
+
+  const userRow: GroupChatMessageWithAgentRow = {
+    agentId: null,
+    agentImageKey: null,
+    agentName: null,
+    content: userText,
+    createdAtMs: nextTimestamp(),
+    groupChatId: input.groupChatId,
+    id: uuidv7(),
+    senderType: "user",
+    status: "completed",
+    turnIndex,
+  };
+
+  const selected = selectAgentsForReply({ agents: members, userText });
+
+  const recordMap = new Map<string, UserAgentRecord>();
+
+  if (selected.length > 0) {
+    const agentRecords = await listOwnedUserAgentsByIds({
+      agentIds: selected.map((member) => member.agentId),
+      database: input.bindings.DB,
+      userId: input.userId,
+    });
+
+    for (const record of agentRecords) {
+      recordMap.set(record.id, record);
+    }
+  }
+
+  const providerConfig =
+    selected.length > 0
+      ? await resolveGroupChatProviderConfig(input.bindings)
+      : null;
+
+  const agentRows: GroupChatMessageWithAgentRow[] = [];
+
+  for (const member of selected) {
+    const agentRecord = recordMap.get(member.agentId);
+
+    if (!agentRecord || !providerConfig) {
+      continue;
+    }
+
+    const memories = await listActiveAgentMemories({
+      agentId: member.agentId,
+      database: input.bindings.DB,
+      limit: AGENT_MEMORY_INJECTION_LIMIT,
+      userId: input.userId,
+    });
+
+    let content = AGENT_REPLY_FALLBACK;
+    let status: "completed" | "failed" = "failed";
+
+    try {
+      content = await buildAgentReply({
+        activeMemories: memories,
+        agent: agentRecord,
+        allAgents: members,
+        groupChat,
+        providerConfig,
+        recentMessages: [...recent, userRow, ...agentRows],
+        signal: input.signal,
+        userText,
+      });
+      status = "completed";
+    } catch (error) {
+      console.warn("群聊 Agent 回复失败", {
+        agentId: member.agentId,
+        groupChatId: input.groupChatId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    agentRows.push({
+      agentId: member.agentId,
+      agentImageKey: member.imageKey,
+      agentName: member.name,
+      content,
+      createdAtMs: nextTimestamp(),
+      groupChatId: input.groupChatId,
+      id: uuidv7(),
+      senderType: "agent",
+      status,
+      turnIndex,
+    });
+  }
+
+  const messagesToInsert: NewGroupChatMessage[] = [
+    {
+      agentId: null,
+      content: userRow.content,
+      createdAtMs: userRow.createdAtMs,
+      groupChatId: input.groupChatId,
+      id: userRow.id,
+      metadataJson: JSON.stringify({ source: "group_chat_user" }),
+      senderType: "user",
+      status: "completed",
+      turnIndex,
+    },
+    ...agentRows.map((row) => ({
+      agentId: row.agentId,
+      content: row.content,
+      createdAtMs: row.createdAtMs,
+      groupChatId: input.groupChatId,
+      id: row.id,
+      metadataJson: JSON.stringify({
+        model: providerConfig?.model ?? null,
+        providerName: providerConfig?.providerName ?? null,
+        selectedBy: "v1_rules",
+        source: "group_chat_agent",
+      }),
+      senderType: "agent" as const,
+      status: row.status,
+      turnIndex,
+    })),
+  ];
+
+  await insertGroupChatMessages({
+    database: input.bindings.DB,
+    messages: messagesToInsert,
+  });
+
+  const lastMessageAtMs = messagesToInsert.at(-1)?.createdAtMs ?? Date.now();
+
+  await updateGroupChatStats({
+    addedCount: messagesToInsert.length,
+    database: input.bindings.DB,
+    groupChatId: input.groupChatId,
+    lastMessageAtMs,
+  });
+
+  const listRow = await getGroupChatWithMemberCount({
+    database: input.bindings.DB,
+    groupChatId: input.groupChatId,
+    userId: input.userId,
+  });
+
+  if (!listRow) {
+    throw forbidden();
+  }
+
+  return {
+    agentMessages: agentRows.map(presentMessage),
+    groupChat: presentListItem(listRow),
+    userMessage: presentMessage(userRow),
+  };
 }

@@ -5,7 +5,9 @@ import {
 } from "@tanstack/react-query";
 import type {
   AddAgentGroupChatMembersRequest,
+  AgentGroupChatDetail,
   CreateAgentGroupChatRequest,
+  SendAgentGroupChatMessageResponse,
 } from "@repo/contracts";
 
 import {
@@ -14,6 +16,7 @@ import {
   getGroupChatDetail,
   getGroupChats,
   removeGroupChatMember,
+  sendGroupChatMessage,
 } from "./group-chat.api";
 
 export const groupChatKeys = {
@@ -73,6 +76,100 @@ export function removeGroupChatMemberMutationOptions(queryClient: QueryClient) {
       void queryClient.invalidateQueries({
         queryKey: groupChatKeys.detail(variables.groupChatId),
       });
+    },
+  });
+}
+
+interface SendGroupChatMessageVariables {
+  groupChatId: string;
+  message: string;
+}
+
+interface SendGroupChatMessageContext {
+  optimisticId: string;
+  previous: AgentGroupChatDetail | undefined;
+}
+
+export function sendGroupChatMessageMutationOptions(queryClient: QueryClient) {
+  return mutationOptions<
+    SendAgentGroupChatMessageResponse,
+    Error,
+    SendGroupChatMessageVariables,
+    SendGroupChatMessageContext
+  >({
+    mutationFn: (variables) =>
+      sendGroupChatMessage(variables.groupChatId, {
+        message: variables.message,
+      }),
+    onError: (_error, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          groupChatKeys.detail(variables.groupChatId),
+          context.previous,
+        );
+      }
+    },
+    onMutate: async (variables) => {
+      const detailKey = groupChatKeys.detail(variables.groupChatId);
+      await queryClient.cancelQueries({ queryKey: detailKey });
+
+      const previous =
+        queryClient.getQueryData<AgentGroupChatDetail>(detailKey);
+      const optimisticId = `optimistic-${Date.now()}`;
+      const nowMs = Date.now();
+      const lastTurnIndex = previous?.recentMessages.at(-1)?.turnIndex ?? 0;
+
+      if (previous) {
+        queryClient.setQueryData<AgentGroupChatDetail>(detailKey, {
+          ...previous,
+          recentMessages: [
+            ...previous.recentMessages,
+            {
+              agentId: null,
+              agentImageKey: null,
+              agentName: null,
+              content: variables.message,
+              createdAtMs: nowMs,
+              groupChatId: variables.groupChatId,
+              id: optimisticId,
+              senderType: "user",
+              status: "completed",
+              turnIndex: lastTurnIndex + 1,
+            },
+          ],
+        });
+      }
+
+      return { optimisticId, previous };
+    },
+    onSuccess: (response, variables, context) => {
+      const detailKey = groupChatKeys.detail(variables.groupChatId);
+
+      queryClient.setQueryData<AgentGroupChatDetail>(detailKey, (current) => {
+        if (!current) {
+          return current;
+        }
+
+        const serverIds = new Set([
+          context.optimisticId,
+          response.userMessage.id,
+          ...response.agentMessages.map((message) => message.id),
+        ]);
+
+        return {
+          ...current,
+          groupChat: response.groupChat,
+          recentMessages: [
+            ...current.recentMessages.filter(
+              (message) => !serverIds.has(message.id),
+            ),
+            response.userMessage,
+            ...response.agentMessages,
+          ],
+        };
+      });
+
+      void queryClient.invalidateQueries({ queryKey: groupChatKeys.list() });
     },
   });
 }

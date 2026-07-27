@@ -5,8 +5,10 @@ import {
   AgentGroupChatMessagesResponseSchema,
   CreateAgentGroupChatResponseSchema,
   RemoveAgentGroupChatMemberResponseSchema,
+  SendAgentGroupChatMessageResponseSchema,
   type AddAgentGroupChatMembersRequest,
   type CreateAgentGroupChatRequest,
+  type SendAgentGroupChatMessageRequest,
 } from "@repo/contracts";
 
 import { http, type HttpRequestOptions } from "@/src/lib/http";
@@ -35,6 +37,19 @@ export function getGroupChatMessages(
     `/rpc/chat/group/${encodeURIComponent(groupChatId)}/messages`,
     AgentGroupChatMessagesResponseSchema,
     { ...options, query: { ...options?.query, cursor } },
+  );
+}
+
+export function sendGroupChatMessage(
+  groupChatId: string,
+  input: SendAgentGroupChatMessageRequest,
+  options?: HttpRequestOptions,
+) {
+  return http.post(
+    `/rpc/chat/group/${encodeURIComponent(groupChatId)}/send`,
+    input,
+    SendAgentGroupChatMessageResponseSchema,
+    options,
   );
 }
 

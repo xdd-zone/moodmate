@@ -15,6 +15,7 @@ import {
   LoaderCircle,
   MessageSquare,
   Plus,
+  Send,
   Trash2,
   UserPlus,
   Users,
@@ -24,12 +25,15 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { userAgentsQueryOptions } from "@/src/api/agent.query";
+import { getGroupChatMessages } from "@/src/api/group-chat.api";
 import {
   addGroupChatMembersMutationOptions,
   createGroupChatMutationOptions,
   groupChatDetailQueryOptions,
+  groupChatKeys,
   groupChatsQueryOptions,
   removeGroupChatMemberMutationOptions,
+  sendGroupChatMessageMutationOptions,
 } from "@/src/api/group-chat.query";
 
 const MAX_MEMBERS = 6;
@@ -202,13 +206,105 @@ function GroupChatDetailColumns({ groupChatId }: { groupChatId: string }) {
 
   return (
     <>
-      <MessageColumn detail={detailQuery.data} />
+      <MessageColumn detail={detailQuery.data} groupChatId={groupChatId} />
       <MemberColumn detail={detailQuery.data} groupChatId={groupChatId} />
     </>
   );
 }
 
-function MessageColumn({ detail }: { detail: AgentGroupChatDetail }) {
+const RECENT_MESSAGES_LIMIT = 50;
+
+function MessageColumn({
+  detail,
+  groupChatId,
+}: {
+  detail: AgentGroupChatDetail;
+  groupChatId: string;
+}) {
+  const queryClient = useQueryClient();
+  const sendMutation = useMutation(
+    sendGroupChatMessageMutationOptions(queryClient),
+  );
+  const [draft, setDraft] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
+  const [nextCursor, setNextCursor] = useState<number | null>(() =>
+    detail.recentMessages.length >= RECENT_MESSAGES_LIMIT
+      ? (detail.recentMessages[0]?.createdAtMs ?? null)
+      : null,
+  );
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [detail.recentMessages.length]);
+
+  const canSend = draft.trim().length > 0 && !sendMutation.isPending;
+
+  function handleSend() {
+    const message = draft.trim();
+
+    if (message.length === 0 || sendMutation.isPending) {
+      return;
+    }
+
+    setDraft("");
+    sendMutation.mutate(
+      { groupChatId, message },
+      {
+        onError: () => setDraft(message),
+      },
+    );
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSend();
+    }
+  }
+
+  async function handleLoadEarlier() {
+    if (nextCursor === null || isLoadingEarlier) {
+      return;
+    }
+
+    setIsLoadingEarlier(true);
+    setLoadError(null);
+
+    try {
+      const result = await getGroupChatMessages(groupChatId, nextCursor);
+      const detailKey = groupChatKeys.detail(groupChatId);
+
+      queryClient.setQueryData<AgentGroupChatDetail>(detailKey, (current) => {
+        if (!current) {
+          return current;
+        }
+
+        const existingIds = new Set(
+          current.recentMessages.map((message) => message.id),
+        );
+        const earlier = result.items.filter(
+          (message) => !existingIds.has(message.id),
+        );
+
+        return {
+          ...current,
+          recentMessages: [...earlier, ...current.recentMessages].sort(
+            (a, b) => a.createdAtMs - b.createdAtMs,
+          ),
+        };
+      });
+
+      setNextCursor(result.nextCursor);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "加载失败，请重试");
+    } finally {
+      setIsLoadingEarlier(false);
+    }
+  }
+
   return (
     <section className="flex min-h-0 flex-col rounded-md border border-border bg-surface">
       <div className="border-b border-border px-4 py-3">
@@ -221,6 +317,25 @@ function MessageColumn({ detail }: { detail: AgentGroupChatDetail }) {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
+        {nextCursor !== null ? (
+          <div className="grid place-items-center">
+            <button
+              className="rounded-md px-3 py-1.5 text-xs text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
+              disabled={isLoadingEarlier}
+              onClick={handleLoadEarlier}
+              type="button"
+            >
+              {isLoadingEarlier ? "正在加载" : "加载更早消息"}
+            </button>
+          </div>
+        ) : null}
+
+        {loadError ? (
+          <p className="text-center text-xs text-danger" role="alert">
+            {loadError}
+          </p>
+        ) : null}
+
         {detail.recentMessages.length === 0 ? (
           <div className="grid flex-1 place-items-center">
             <p className="flex flex-col items-center gap-2 text-sm text-muted">
@@ -233,12 +348,33 @@ function MessageColumn({ detail }: { detail: AgentGroupChatDetail }) {
             <MessageBubble key={message.id} message={message} />
           ))
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="border-t border-border px-4 py-3">
-        <p className="rounded-md border border-dashed border-border px-3 py-3 text-center text-xs text-muted">
-          发送框将在后续版本接入
-        </p>
+        <div className="flex items-end gap-2">
+          <textarea
+            className="min-h-[44px] w-full flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-border-strong focus-visible:ring-2 focus-visible:ring-focus"
+            disabled={sendMutation.isPending}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="说点什么，Enter 发送，Shift+Enter 换行"
+            rows={1}
+            value={draft}
+          />
+          <Button
+            disabled={!canSend}
+            onClick={handleSend}
+            size="icon"
+            type="button"
+          >
+            {sendMutation.isPending ? (
+              <LoaderCircle aria-hidden className="size-4 animate-spin" />
+            ) : (
+              <Send aria-hidden className="size-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </section>
   );
@@ -254,6 +390,7 @@ function MessageBubble({ message }: { message: AgentGroupChatMessage }) {
   }
 
   const isUser = message.senderType === "user";
+  const isFailed = message.status === "failed";
 
   return (
     <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
@@ -266,8 +403,15 @@ function MessageBubble({ message }: { message: AgentGroupChatMessage }) {
       <div className={`min-w-0 max-w-[75%] ${isUser ? "text-right" : ""}`}>
         <p className="text-xs text-muted">
           {isUser ? "我" : (message.agentName ?? "Agent")}
+          {isFailed ? <span className="ml-1 text-danger">发送失败</span> : null}
         </p>
-        <div className="mt-1 inline-block whitespace-pre-wrap break-words rounded-md border border-border bg-background px-3 py-2 text-left text-sm">
+        <div
+          className={`mt-1 inline-block whitespace-pre-wrap break-words rounded-md border px-3 py-2 text-left text-sm ${
+            isFailed
+              ? "border-danger/50 bg-danger/8 text-danger"
+              : "border-border bg-background"
+          }`}
+        >
           {message.content}
         </div>
       </div>

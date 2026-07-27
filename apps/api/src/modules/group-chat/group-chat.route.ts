@@ -9,6 +9,8 @@ import {
   CreateAgentGroupChatRequestSchema,
   CreateAgentGroupChatResponseSchema,
   RemoveAgentGroupChatMemberResponseSchema,
+  SendAgentGroupChatMessageRequestSchema,
+  SendAgentGroupChatMessageResponseSchema,
   buildSuccess,
 } from "@repo/contracts";
 import { Hono } from "hono";
@@ -26,6 +28,7 @@ import {
   getGroupChatMessages,
   listGroupChatsForUser,
   removeGroupChatMember,
+  sendGroupChatMessage,
 } from "./group-chat.service";
 
 const groupChatParamsSchema = z.object({ groupChatId: z.string().min(1) });
@@ -107,6 +110,30 @@ export function createGroupChatRoute() {
           userId: c.var.webSession.userId,
         });
         const data = AgentGroupChatMessagesResponseSchema.parse(result);
+
+        return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+      },
+    )
+    .post(
+      "/rpc/chat/group/:groupChatId/send",
+      requireWebAccess,
+      zValidator("param", groupChatParamsSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("群聊 ID 无效", result.error.issues);
+      }),
+      zValidator("json", SendAgentGroupChatMessageRequestSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("发送内容无效", result.error.issues);
+      }),
+      async (c) => {
+        const result = await sendGroupChatMessage({
+          bindings: c.env,
+          groupChatId: c.req.valid("param").groupChatId,
+          message: c.req.valid("json").message,
+          signal: c.req.raw.signal,
+          userId: c.var.webSession.userId,
+        });
+        const data = SendAgentGroupChatMessageResponseSchema.parse(result);
 
         return c.json(buildSuccess(data, createMeta(c.var.requestId)));
       },

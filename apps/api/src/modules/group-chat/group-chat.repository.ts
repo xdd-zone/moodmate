@@ -53,6 +53,18 @@ export interface CreateGroupChatMemberInput {
   displayOrder: number;
 }
 
+export interface NewGroupChatMessage {
+  agentId: string | null;
+  content: string;
+  createdAtMs: number;
+  groupChatId: string;
+  id: string;
+  metadataJson: string | null;
+  senderType: "user" | "agent" | "system";
+  status: "completed" | "failed";
+  turnIndex: number;
+}
+
 export async function insertGroupChatWithMembers(input: {
   database: D1Database | undefined;
   members: CreateGroupChatMemberInput[];
@@ -374,6 +386,51 @@ export async function removeMember(input: {
     .returning();
 
   return rows[0] ?? null;
+}
+
+export async function insertGroupChatMessages(input: {
+  database: D1Database | undefined;
+  messages: NewGroupChatMessage[];
+}): Promise<void> {
+  if (input.messages.length === 0) {
+    return;
+  }
+
+  const db = createD1Client(input.database);
+
+  const statements = input.messages.map((message) =>
+    db.insert(agentGroupChatMessages).values({
+      agentId: message.agentId,
+      content: message.content,
+      createdAtMs: message.createdAtMs,
+      groupChatId: message.groupChatId,
+      id: message.id,
+      metadataJson: message.metadataJson,
+      senderType: message.senderType,
+      status: message.status,
+      turnIndex: message.turnIndex,
+    }),
+  );
+
+  await db.batch([statements[0]!, ...statements.slice(1)]);
+}
+
+export async function updateGroupChatStats(input: {
+  addedCount: number;
+  database: D1Database | undefined;
+  groupChatId: string;
+  lastMessageAtMs: number;
+}): Promise<void> {
+  const db = createD1Client(input.database);
+
+  await db
+    .update(agentGroupChats)
+    .set({
+      lastMessageAtMs: input.lastMessageAtMs,
+      messageCount: sql`${agentGroupChats.messageCount} + ${input.addedCount}`,
+      updatedAtMs: input.lastMessageAtMs,
+    })
+    .where(eq(agentGroupChats.id, input.groupChatId));
 }
 
 export type {

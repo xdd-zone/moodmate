@@ -286,6 +286,8 @@ export {
   CreateAgentGroupChatRequestSchema,
   CreateAgentGroupChatResponseSchema,
   RemoveAgentGroupChatMemberResponseSchema,
+  SendAgentGroupChatMessageRequestSchema,
+  SendAgentGroupChatMessageResponseSchema,
 } from "./chat/group-chat.contract";
 export type {
   AddAgentGroupChatMembersRequest,
@@ -303,6 +305,8 @@ export type {
   CreateAgentGroupChatRequest,
   CreateAgentGroupChatResponse,
   RemoveAgentGroupChatMemberResponse,
+  SendAgentGroupChatMessageRequest,
+  SendAgentGroupChatMessageResponse,
 } from "./chat/group-chat.contract";
 export { HealthResponseSchema, ApiEnvSchema } from "./system/health.contract";
 export type { ApiEnvValue, HealthResponse } from "./system/health.contract";

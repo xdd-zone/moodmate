@@ -86,6 +86,16 @@ export const RemoveAgentGroupChatMemberResponseSchema = z.object({
   members: z.array(AgentGroupChatMemberSchema),
 });
 
+export const SendAgentGroupChatMessageRequestSchema = z.object({
+  message: z.string().trim().min(1).max(2000),
+});
+
+export const SendAgentGroupChatMessageResponseSchema = z.object({
+  userMessage: AgentGroupChatMessageSchema,
+  agentMessages: z.array(AgentGroupChatMessageSchema),
+  groupChat: AgentGroupChatListItemSchema,
+});
+
 export type AgentGroupChatMemberStatus = z.infer<
   typeof AgentGroupChatMemberStatusSchema
 >;
@@ -124,4 +134,10 @@ export type AddAgentGroupChatMembersResponse = z.infer<
 >;
 export type RemoveAgentGroupChatMemberResponse = z.infer<
   typeof RemoveAgentGroupChatMemberResponseSchema
+>;
+export type SendAgentGroupChatMessageRequest = z.infer<
+  typeof SendAgentGroupChatMessageRequestSchema
+>;
+export type SendAgentGroupChatMessageResponse = z.infer<
+  typeof SendAgentGroupChatMessageResponseSchema
 >;
