@@ -30,14 +30,14 @@ Authorization: Bearer <web access token>
 - 归属校验：`requireGroupChat` 确认群聊属当前 `userId`，否则 403；返回群聊记录供后续复用。
 - 成员上限：一个群最多 6 个 Agent；每轮最多 3 个 Agent 回复（`groupReplyAgentLimit = 3`），上限在后端 `selectAgentsForReply` 里兜底，不依赖前端。
 - 发言权判断：正常走 LangGraph 编排（第 8 节），失败逐级回退到 v1 规则 `selectAgentsForReply`。v1 规则（也是 fallback）：点名（`userText` 含成员 name）→ 返回被点名成员（≤3）；群体关键词 `/(你们|大家|一起|分别|都说|怎么看|意见)/` → 返回前 min(3, 成员数) 个；否则默认单个。均保持 `displayOrder` 顺序。
-- 人设补拉：`listActiveMembers` 只返回展示字段（name/headline/imageKey/displayOrder），**没有人设 prompt**。选中成员后必须用 `listOwnedUserAgentsByIds` 按 agentId 拉完整 `UserAgentRecord`，`buildAgentReply` 用完整记录构造 prompt。
+- 人设补拉：`listActiveMembers` 只返回展示字段（name/headline/imageKey/displayOrder）与一对一会话统计（`conversationMessageCount` / `conversationLastMessageAtMs`，见 8.7），**没有人设 prompt**。选中成员后必须用 `listOwnedUserAgentsByIds` 按 agentId 拉完整 `UserAgentRecord`，`buildAgentReply` 用完整记录构造 prompt。会话统计字段仅供编排层发言权判断，presenter 不透传给前端契约。
 - 记忆隔离：每个 Agent 回复只注入自己的 `listActiveAgentMemories({ userId, agentId, limit: 6 })`，禁止跨 Agent 记忆污染。
 - 生成方式由编排 `selection.mode` 决定：`single`/`multi_serial` 串行生成，把已生成回复累积进下一轮 `recentMessages`（`[...recent, userMsg, ...已生成 agentMsgs]`），让后一个 Agent 看到同轮前面 Agent 说了什么；`multi_parallel`（明确"分别/各自/轮流"类意图）才用 `Promise.all` 并发，各 Agent 只看 `[...recent, userMsg]`，互不可见。默认路径仍是串行。
 - 单 Agent 失败降级：某个 Agent 的 LLM 调用失败时，该条落 `status: 'failed'` + 占位文案，不中断整轮，其余 Agent 继续。
 - provider：`resolveActiveLlmProviderConfig(bindings)` 解析一次平台默认配置，循环复用。`createGroupChatText` 用 `stream: false` 调 `{baseURL}/chat/completions`，解析 `choices[0].message.content`。
 - 落库：一轮内 1 条 user + N 条 agent 用 `insertGroupChatMessages` 批量 `db.batch` 一次写入；同轮消息 `createdAtMs` 逐条 +1ms 递增，配合 `(created_at_ms, id)` 索引保证回看顺序稳定；共用同一 `turnIndex = (recent.at(-1)?.turnIndex ?? 0) + 1`。
 - 统计更新：`updateGroupChatStats` 只更新 `messageCount(+本轮条数)` / `lastMessageAtMs` / `updatedAtMs`，**不动 summary，不抽记忆**。
-- 消息 metadata：user 记 `source: group_chat_user`；agent 记 `source: group_chat_agent` / `selectedBy`（正常编排 `langgraph_v1`，整图兜底 `v1_rules_fallback`）/ `model` / `providerName` / `orchestration: { intent, selection, quality, crossReplyPlan }`（编排轨迹只进 metadata，不入契约）/ 每条 agent 消息另记 `replyKind`（`primary` / `cross_agent`）/ `respondToAgentId` / `crossReplyReason` / `crossReplyRound`（补充回应见 8.6）。补充回应**不新增 `selectedBy` 取值**，靠 `replyKind: cross_agent` 区分。**无 wireApi**，该字段是 bobo 结构，moodmate provider 不存在。
+- 消息 metadata：user 记 `source: group_chat_user`；agent 记 `source: group_chat_agent` / `selectedBy`（正常编排 `langgraph_v1`，整图兜底 `v1_rules_fallback`）/ `model` / `providerName` / `orchestration: { intent, selection, quality, crossReplyPlan, speakingContext }`（编排轨迹只进 metadata，不入契约；`speakingContext` 见 8.7）/ 每条 agent 消息另记 `replyKind`（`primary` / `cross_agent`）/ `respondToAgentId` / `crossReplyReason` / `crossReplyRound`（补充回应见 8.6）。补充回应**不新增 `selectedBy` 取值**，靠 `replyKind: cross_agent` 区分。**无 wireApi**，该字段是 bobo 结构，moodmate provider 不存在。
 - 历史分页：首屏取最近 50 条（正序）；`messages?cursor=` 取 `createdAtMs < cursor` 的最近 50 条正序；`nextCursor` 仅当返回数达上限时给最早一条的 `createdAtMs`，否则 null。
 - 无 active 成员：跳过生成循环，仍写用户消息并更新统计，返回空 `agentMessages`，不报错。
 
@@ -121,11 +121,12 @@ orchestrateGroupChatReplies(params: {
   replies: PlannedAgentReply[];         // { agent, content, status, replyKind?, respondToAgentId?, crossReplyReason?, crossReplyRound? }
   quality: GroupChatReplyQuality | null;
   crossReplyPlan: GroupChatCrossReplyPlan | null;  // Agent 间补充回应计划，见 8.6
+  speakingContext: GroupSpeakingContext | null;    // 发言权上下文，见 8.7
   usedFallback: boolean;                 // 整图兜底时 true，供 metadata 标 selectedBy
 }>
 ```
 
-图结构：`START -> classifyIntent -> selectAgents -> generateReplies -> generateCrossReplies -> checkQuality -> END`。`generateCrossReplies` 是 Agent 间补充回应节点，见 8.6。
+图结构：`START -> classifyIntent -> detectEmotion -> selectAgents -> generateReplies -> generateCrossReplies -> checkQuality -> END`。`detectEmotion` 是发言权前置的轻量情绪识别节点，见 8.7；`generateCrossReplies` 是 Agent 间补充回应节点，见 8.6。
 
 ### 8.2 图内无副作用（关键约定）
 
@@ -165,3 +166,17 @@ orchestrateGroupChatReplies(params: {
 - 降级：规划失败 → `enabled=false` 跳过补充；整图失败走 `runFallbackOrchestration` → 回填 `enabled=false` 计划，不追加补充回应。
 
 > **Warning**（去重失效坑）：`normalizeCrossReplyPlan` 的同 Agent 去重必须在 `.filter()` 内 `usedAgentIds.add()`，不能放到后面的 `.map()` 里。JS 数组方法分两趟执行——所有 `.filter()` 先跑完，`.map()` 才开始，把 `add` 放 `.map()` 会让去重判断时集合恒空，两条同 `agentId` 计划双通过。
+
+### 8.7 智能发言权判断（detectEmotion + 发言权上下文 + 打分 fallback）
+
+发言权判断从「点名 + 关键词」升级为多信号调度：选 Agent 前先跑轻量情绪识别，把用户情绪 + 每个 Agent 的关系阶段 / 最近发言频率汇总成发言权上下文，同时喂给 LLM 选择器和本地打分 fallback。能力全在编排层，前端协议不变。相关代码在 `group-chat.speaking.ts`（新文件，纯函数 + schema，不 import orchestration，避免循环依赖）。
+
+- 会话统计来源：`listActiveMembers` 加 `leftJoin(agentConversations)`（`userId` + `agentId` 双条件，走 `agent_conversations_user_agent_idx`），行增 `conversationMessageCount`（`coalesce(...,0)`）/ `conversationLastMessageAtMs`。这两字段**不进前端契约**（`presentMember` 不透传），仅供发言权判断。
+- 情绪识别 `detectGroupUserEmotionWithLangChain`：独立 schema `GroupChatUserEmotionSchema`（`primaryEmotion` 11 态 / `intensity` / `needsComfort` / `needsAdvice` / `needsDeescalation` / `socialEnergy` / `reason`），三法轮询，失败回 `buildFallbackGroupUserEmotion`（关键词兜底），`signal.aborted` 向上抛不吞。**不复用单聊 `ConversationEmotion`**——`needsAdvice` / `socialEnergy` 是打分直接要用的信号，单聊 schema 没有。
+- 关系阶段：`getRelationshipStageFromMessageCount` 用一对一消息数 4 档启发式（`>=80` close_bond / `>=30` trusted / `>=8` warming_up / else new_connection），`getRelationshipScore` 映射到分值。**非完整关系阶段模型**（不复用单聊 8 态 LLM 链路），是有意保留的轻量边界。
+- 新鲜度：从 `recentMessages` 取最近 18 条 agent 消息，`freshnessScore = max(0, min(1, lastSpokeTurnsAgo/6) - min(0.75, recentReplyCount*0.16))`；刚发过话（`lastSpokeTurnsAgo===0`）打分再 -0.9，避免连续抢话。
+- `buildGroupSpeakingContext`：纯函数、无 LLM、无 DB，`userEmotion` 缺省用关键词兜底。`detectEmotion` 节点调它，结果进 `state.speakingContext`，喂 `selectAgents` 的 prompt（`formatSpeakingContextForPrompt`）。
+- 打分 fallback `scoreAgentForFallbackSelection`：`relationshipScore*1.6 + freshnessScore*1.8 - recentReplyCount*0.45`，再按 `needsComfort/needsAdvice/needsDeescalation` 匹配人设关键词加分。`selectAgentsForReply` 升级为「点名优先 → 有上下文则打分排序 → 缺上下文退回关键词」，新增可选 `speakingContext` / `agentRecordsById` 参数（打分要人设文本，来自 `UserAgentRecord`）。
+- 降级一致性：**整图失败的 `runFallbackOrchestration` 也构造上下文再打分**（情绪走关键词兜底），不留「有时打分有时纯关键词」的分叉。`orchestration.speakingContext` 落 metadata。
+
+> **Warning**（打分需人设文本）：`GroupChatMemberWithAgentRow` 只有 `name/headline/imageKey`，没有 persona/tone/guardrails。打分的情绪-人设关键词匹配依赖 `agentRecordsById` 里的完整 `UserAgentRecord`。fallback 路径必须先备好该 map 再打分，否则人设匹配项恒不加分，退化成只看关系/新鲜度。
