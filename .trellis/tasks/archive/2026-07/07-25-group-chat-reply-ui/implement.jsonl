@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/index.md", "reason": "后端模块化分层（route/service/repository/presenter/provider）规范与质量检查清单，新增 send 端点/编排/provider 遵循"}
+{"file": ".trellis/spec/contracts/shared/index.md", "reason": "共享契约定义规范，新增 Send 请求/响应 schema 并从 index 导出遵循此约定"}
+{"file": ".trellis/spec/web/frontend/index.md", "reason": "web 前端规范（路径别名 @/src、react-query 用法、UI 依赖约束），改 MessageColumn 与新增 mutation 遵循"}
+{"file": ".trellis/tasks/07-25-group-chat-reply-ui/research/existing-backend-interfaces.md", "reason": "已核实的 foundation/chat/agents 真实接口清单，纠正草稿 57 与初版调查报告的接口名与 wireApi 错误"}

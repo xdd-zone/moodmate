@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/index.md", "reason": "后端质量检查清单，核对分层、越权校验、错误码映射、db.batch 用法"}
+{"file": ".trellis/spec/contracts/shared/index.md", "reason": "核对新增 Send 契约的 schema 定义与导出方式是否符合规范"}
+{"file": ".trellis/spec/web/frontend/index.md", "reason": "核对前端乐观更新、UI 依赖约束、路径别名是否合规"}
+{"file": ".trellis/tasks/07-25-group-chat-reply-ui/research/existing-backend-interfaces.md", "reason": "核对实现是否与已核实的真实接口签名一致，metadata 是否误用 wireApi"}
