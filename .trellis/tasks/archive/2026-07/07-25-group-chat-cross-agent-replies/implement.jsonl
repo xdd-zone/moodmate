@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/group-chat.md", "reason": "群聊模块分层、编排图、PlannedAgentReply、metadata 落库与降级约定的现有规范，本次新增 generateCrossReplies 节点必须沿用"}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "api backend 层入口，含 Pre-Development Checklist 与 Quality Check，编码前必读"}
+{"file": ".trellis/spec/api/backend/error-handling.md", "reason": "规划器/补充回应生成失败的降级与静默跳过要符合现有错误处理与 AbortSignal 取消约定"}
+{"file": ".trellis/tasks/07-25-group-chat-cross-agent-replies/research/draft-59-key-snippets.md", "reason": "草稿 59 关键片段与 moodmate 落点映射，实现 schema/prompt/归一化/质检的逻辑参考"}
