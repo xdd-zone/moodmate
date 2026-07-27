@@ -7,10 +7,9 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
-
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 32
-- **Last Active**: 2026-07-24
+- **Total Sessions**: 33
+- **Last Active**: 2026-07-27
 <!-- @@@/auto:current-status -->
 
 ---
@@ -18,11 +17,9 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-
-| File           | Lines | Status |
-| -------------- | ----- | ------ |
-| `journal-1.md` | ~1108 | Active |
-
+| File | Lines | Status |
+|------|-------|--------|
+| `journal-1.md` | ~1135 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,8 +28,9 @@
 
 <!-- @@@auto:session-history -->
 
-| #   | Date       | Title                                                       | Commits                                               | Branch |
-| --- | ---------- | ----------------------------------------------------------- | ----------------------------------------------------- | ------ |
+| # | Date | Title | Commits | Branch |
+|---|------|-------|---------|--------|
+| 33 | 2026-07-27 | 群聊 LangGraph 回复编排 | `292f8f2` | `main` |
 | 32  | 2026-07-24 | 关系阶段系统：LangGraph 关系阶段判断影响路由与策略          | `20fc4c0`, `87c965d`, `3596e47`, `1c12525`            | `main` |
 | 31  | 2026-07-24 | Reply Quality Guard 回复后质检落库                          | `b057e08`, `23b2135`, `b42a238`                       | `main` |
 | 30  | 2026-07-24 | Reply Policy 引擎（章50）                                   | `fb8e9cf`                                             | `main` |

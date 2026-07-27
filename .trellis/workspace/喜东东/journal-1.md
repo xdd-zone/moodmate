@@ -1099,3 +1099,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 33: 群聊 LangGraph 回复编排
+
+**Date**: 2026-07-27
+**Task**: 群聊 LangGraph 回复编排
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+把群聊 v1 关键词规则发言权升级为线性 LangGraph 图 classifyIntent->selectAgents->generateReplies->checkQuality。三决策节点复用 chat.analysis.ts 固定 method 顺序（无 wireApi），回复生成走 buildAgentReply 自由文本。两级降级回退 v1 规则。检查阶段修复 abort 被当 LLM 失败吞掉的缺陷（四处 catch 加 signal.aborted 守卫）。契约/DB/summary 零改动，metadata 记 selectedBy=langgraph_v1 + orchestration 轨迹。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `292f8f2` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
