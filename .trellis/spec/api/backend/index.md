@@ -16,6 +16,7 @@
 | [角色管理](./role-management.md)            | application 隔离、生命周期、Admin API |
 | [用户管理](./user-management.md)            | 用户分页、密码账号创建和角色绑定      |
 | [伴侣聊天](./companion-chat.md)             | 会话历史、长期记忆、Prompt 和流式落库 |
+| [Agent 群聊](./group-chat.md)               | 群聊发送链路、Agent 选择、非流式回复  |
 | [质量检查](./quality-guidelines.md)         | 类型边界、禁止写法、验证命令          |
 
 ## 开发前检查

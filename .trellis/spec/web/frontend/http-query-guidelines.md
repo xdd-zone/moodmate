@@ -133,3 +133,77 @@ await ensureClientRefresh();
 const retryRequest = createRequestInit(method, options?.init, payload);
 return executeRequest(url, retryRequest.init, responseSchema);
 ```
+
+## 9. 乐观更新（onMutate / onError / onSuccess）
+
+即时聊天类交互（用户发消息后要立刻看到自己的气泡）用 React Query 乐观更新，不等服务端返回再渲染。首见于群聊发送 `sendGroupChatMessageMutationOptions`（`apps/web/src/api/group-chat.query.ts`）。
+
+### 9.1 三段式契约
+
+```ts
+export function sendGroupChatMessageMutationOptions(queryClient: QueryClient) {
+  return mutationOptions({
+    mutationFn: (input: { groupChatId: string; message: string }) =>
+      sendGroupChatMessage(input.groupChatId, { message: input.message }),
+    async onMutate(variables) {
+      const detailKey = groupChatKeys.detail(variables.groupChatId);
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previous =
+        queryClient.getQueryData<AgentGroupChatDetail>(detailKey);
+      const optimistic = buildOptimisticUserMessage(variables, previous);
+      queryClient.setQueryData<AgentGroupChatDetail>(detailKey, (current) =>
+        current
+          ? {
+              ...current,
+              recentMessages: [...current.recentMessages, optimistic],
+            }
+          : current,
+      );
+      return { optimisticId: optimistic.id, previous };
+    },
+    onSuccess(response, variables, context) {
+      const detailKey = groupChatKeys.detail(variables.groupChatId);
+      const serverIds = new Set([
+        context.optimisticId,
+        response.userMessage.id,
+        ...response.agentMessages.map((m) => m.id),
+      ]);
+      queryClient.setQueryData<AgentGroupChatDetail>(detailKey, (current) =>
+        current
+          ? {
+              ...current,
+              groupChat: response.groupChat,
+              recentMessages: [
+                ...current.recentMessages.filter((m) => !serverIds.has(m.id)),
+                response.userMessage,
+                ...response.agentMessages,
+              ],
+            }
+          : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: groupChatKeys.list() });
+    },
+    onError(_error, variables, context) {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          groupChatKeys.detail(variables.groupChatId),
+          context.previous,
+        );
+      }
+    },
+  });
+}
+```
+
+### 9.2 硬约定
+
+- `onMutate` 先 `cancelQueries` 目标 key，再快照 `previous`，最后写入乐观数据。跳过 `cancelQueries` 会让在途请求的旧响应覆盖乐观值。
+- 乐观消息 id 用可识别前缀（`optimistic-${Date.now()}`），`onSuccess` 靠它 + 服务端返回的真实 id 组成去重集合，避免乐观项与真实项并存。
+- `onSuccess` 用服务端返回的权威字段覆盖（如 `groupChat` 的 `messageCount` / `lastMessageAtMs`），不复用乐观时的估算值。
+- `onError` 用 `context.previous` 整体回滚。草稿等输入态恢复放组件层（在组件的 `onError` 回调里 `setDraft(variables.message)`），不塞进 mutationOptions。
+- 列表类连带数据（左栏群聊列表的消息数 / 时间）在 `onSuccess` 里 `invalidateQueries` 拉最新，不做乐观估算。
+
+### 9.3 何时用 / 何时不用
+
+- 用：即时聊天发送、点赞点踩这类高频、低风险、用户需要即时反馈的写操作。
+- 不用：创建 / 删除 / 成员增减这类低频操作，直接 `onSuccess` + `invalidateQueries` 即可（见 3.3），乐观更新的回滚成本不划算。
