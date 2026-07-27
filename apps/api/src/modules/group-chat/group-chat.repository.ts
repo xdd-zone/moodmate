@@ -2,7 +2,7 @@ import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { createD1Client } from "@/infra/db/d1";
-import { userAgents } from "@/modules/agents/agents.schema";
+import { agentConversations, userAgents } from "@/modules/agents/agents.schema";
 
 import {
   agentGroupChatMembers,
@@ -33,6 +33,8 @@ export interface GroupChatMemberWithAgentRow {
   status: "active" | "removed";
   displayOrder: number;
   joinedAtMs: number;
+  conversationMessageCount: number;
+  conversationLastMessageAtMs: number | null;
 }
 
 export interface GroupChatMessageWithAgentRow {
@@ -212,6 +214,8 @@ export async function listActiveMembers(input: {
   return db
     .select({
       agentId: agentGroupChatMembers.agentId,
+      conversationLastMessageAtMs: agentConversations.lastMessageAtMs,
+      conversationMessageCount: sql<number>`coalesce(${agentConversations.messageCount}, 0)`,
       displayOrder: agentGroupChatMembers.displayOrder,
       headline: userAgents.headline,
       id: agentGroupChatMembers.id,
@@ -222,6 +226,13 @@ export async function listActiveMembers(input: {
     })
     .from(agentGroupChatMembers)
     .innerJoin(userAgents, eq(userAgents.id, agentGroupChatMembers.agentId))
+    .leftJoin(
+      agentConversations,
+      and(
+        eq(agentConversations.userId, agentGroupChatMembers.userId),
+        eq(agentConversations.agentId, agentGroupChatMembers.agentId),
+      ),
+    )
     .where(
       and(
         eq(agentGroupChatMembers.groupChatId, input.groupChatId),

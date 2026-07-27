@@ -9,20 +9,27 @@ import type {
   GroupChatMessageWithAgentRow,
 } from "./group-chat.repository";
 import type { AgentGroupChatRecord } from "./group-chat.schema";
+import {
+  scoreAgentForFallbackSelection,
+  type GroupSpeakingContext,
+} from "./group-chat.speaking";
 
 export const groupReplyAgentLimit = 3;
 
 const GROUP_QUESTION_PATTERN = /你们|大家|一起|分别|都说|怎么看|意见/;
 
 /**
- * v1 群聊发言权规则：点名 → 群体提问关键词 → 默认第一个。
+ * 群聊发言权 fallback 规则：点名仍最优先；非点名场景有发言权上下文时按打分排序，
+ * 无上下文时退回 v1 关键词逻辑（群体提问关键词 → 前若干个，否则第一个）。
  * 入参成员保持 displayOrder 顺序（listActiveMembers 已按 displayOrder 升序）。
  */
 export function selectAgentsForReply(input: {
   agents: GroupChatMemberWithAgentRow[];
   userText: string;
+  speakingContext?: GroupSpeakingContext;
+  agentRecordsById?: Record<string, UserAgentRecord>;
 }): GroupChatMemberWithAgentRow[] {
-  const { agents, userText } = input;
+  const { agents, userText, speakingContext, agentRecordsById } = input;
 
   if (agents.length === 0) {
     return [];
@@ -37,11 +44,38 @@ export function selectAgentsForReply(input: {
     return mentioned.slice(0, groupReplyAgentLimit);
   }
 
-  if (GROUP_QUESTION_PATTERN.test(userText)) {
-    return agents.slice(0, Math.min(groupReplyAgentLimit, agents.length));
+  const limit = GROUP_QUESTION_PATTERN.test(userText)
+    ? Math.min(groupReplyAgentLimit, agents.length)
+    : 1;
+
+  // 有发言权上下文则打分排序，否则退回 v1 关键词逻辑（保持向后兼容）。
+  if (speakingContext) {
+    const contextByAgentId = new Map(
+      speakingContext.agentContexts.map((context) => [
+        context.agentId,
+        context,
+      ]),
+    );
+
+    return [...agents]
+      .map((agent) => ({
+        agent,
+        score: scoreAgentForFallbackSelection({
+          agent,
+          userEmotion: speakingContext.userEmotion,
+          context: contextByAgentId.get(agent.agentId),
+          agentRecord: agentRecordsById?.[agent.agentId],
+        }),
+      }))
+      .sort(
+        (a, b) =>
+          b.score - a.score || a.agent.displayOrder - b.agent.displayOrder,
+      )
+      .slice(0, limit)
+      .map((item) => item.agent);
   }
 
-  return agents.slice(0, 1);
+  return agents.slice(0, limit);
 }
 
 /**

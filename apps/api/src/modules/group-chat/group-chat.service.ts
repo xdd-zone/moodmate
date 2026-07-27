@@ -56,6 +56,7 @@ import {
   type GroupChatReplyQuality,
 } from "./group-chat.orchestration";
 import type { AgentGroupChatRecord } from "./group-chat.schema";
+import type { GroupSpeakingContext } from "./group-chat.speaking";
 
 const MAX_MEMBERS = 6;
 const RECENT_MESSAGES_LIMIT = 50;
@@ -421,6 +422,7 @@ export async function sendGroupChatMessage(input: {
     selection: GroupChatAgentSelection | null;
     quality: GroupChatReplyQuality | null;
     crossReplyPlan: GroupChatCrossReplyPlan | null;
+    speakingContext: GroupSpeakingContext | null;
   } | null = null;
   let selectedBy = "langgraph_v1";
 
@@ -468,6 +470,7 @@ export async function sendGroupChatMessage(input: {
       selection: result.selection,
       quality: result.quality,
       crossReplyPlan: result.crossReplyPlan,
+      speakingContext: result.speakingContext,
     };
 
     for (const reply of result.replies) {
