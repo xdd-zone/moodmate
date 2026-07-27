@@ -51,6 +51,7 @@ import {
 import {
   orchestrateGroupChatReplies,
   type GroupChatAgentSelection,
+  type GroupChatCrossReplyPlan,
   type GroupChatIntent,
   type GroupChatReplyQuality,
 } from "./group-chat.orchestration";
@@ -406,11 +407,20 @@ export async function sendGroupChatMessage(input: {
       ? await resolveGroupChatProviderConfig(input.bindings)
       : null;
 
-  const agentRows: GroupChatMessageWithAgentRow[] = [];
+  // agentRows 携带补充回应追踪字段，只用于落库 metadata，不进 presenter 契约。
+  type AgentRowWithCrossReply = GroupChatMessageWithAgentRow & {
+    replyKind: "primary" | "cross_agent";
+    respondToAgentId: string | null;
+    crossReplyReason: string | null;
+    crossReplyRound: number | null;
+  };
+
+  const agentRows: AgentRowWithCrossReply[] = [];
   let orchestration: {
     intent: GroupChatIntent | null;
     selection: GroupChatAgentSelection | null;
     quality: GroupChatReplyQuality | null;
+    crossReplyPlan: GroupChatCrossReplyPlan | null;
   } | null = null;
   let selectedBy = "langgraph_v1";
 
@@ -457,6 +467,7 @@ export async function sendGroupChatMessage(input: {
       intent: result.intent,
       selection: result.selection,
       quality: result.quality,
+      crossReplyPlan: result.crossReplyPlan,
     };
 
     for (const reply of result.replies) {
@@ -471,6 +482,10 @@ export async function sendGroupChatMessage(input: {
         senderType: "agent",
         status: reply.status,
         turnIndex,
+        replyKind: reply.replyKind ?? "primary",
+        respondToAgentId: reply.respondToAgentId ?? null,
+        crossReplyReason: reply.crossReplyReason ?? null,
+        crossReplyRound: reply.crossReplyRound ?? null,
       });
     }
   }
@@ -494,9 +509,13 @@ export async function sendGroupChatMessage(input: {
       groupChatId: input.groupChatId,
       id: row.id,
       metadataJson: JSON.stringify({
+        crossReplyReason: row.crossReplyReason,
+        crossReplyRound: row.crossReplyRound,
         model: providerConfig?.model ?? null,
         orchestration,
         providerName: providerConfig?.providerName ?? null,
+        replyKind: row.replyKind,
+        respondToAgentId: row.respondToAgentId,
         selectedBy,
         source: "group_chat_agent",
       }),

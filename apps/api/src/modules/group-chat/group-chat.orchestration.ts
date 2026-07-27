@@ -15,6 +15,7 @@ import type {
 } from "./group-chat.repository";
 import {
   buildAgentReply,
+  buildCrossAgentReply,
   formatGroupHistory,
   groupReplyAgentLimit,
   selectAgentsForReply,
@@ -33,6 +34,11 @@ const GROUP_QUESTION_PATTERN = /你们|大家|一起|分别|都说|怎么看|意
 const GROUP_PARALLEL_PATTERN = /分别|各自|各说|轮流|逐个|每个人/;
 
 const AGENT_REPLY_FALLBACK = "（这个 Agent 暂时没能回复，请稍后再试）";
+
+/** 每轮用户消息后最多追加的 Agent 间补充回应条数（产品体验硬上限）。 */
+const groupCrossReplyLimit = 2;
+/** 每轮用户消息后最多追加的补充回应轮数（目前固定 1 轮，作语义常量与 prompt 文案用）。 */
+const groupCrossReplyRoundLimit = 1;
 
 const GroupChatIntentSchema = z.object({
   intent: z.enum([
@@ -85,10 +91,36 @@ const GroupChatReplyQualitySchema = z.object({
 
 export type GroupChatReplyQuality = z.infer<typeof GroupChatReplyQualitySchema>;
 
+const GroupChatCrossReplyPlanSchema = z.object({
+  enabled: z.boolean(),
+  plans: z
+    .array(
+      z.object({
+        agentId: z.string().trim().min(1),
+        respondToAgentId: z.string().trim().min(1).nullable(),
+        angle: z.string().trim().max(240),
+      }),
+    )
+    .max(groupCrossReplyLimit),
+  reason: z.string().trim().max(500),
+});
+
+export type GroupChatCrossReplyPlan = z.infer<
+  typeof GroupChatCrossReplyPlanSchema
+>;
+
 export interface PlannedAgentReply {
   agent: GroupChatMemberWithAgentRow;
   content: string;
   status: "completed" | "failed";
+  /** 首轮回复为 "primary"，Agent 间补充回应为 "cross_agent"。 */
+  replyKind?: "primary" | "cross_agent";
+  /** 补充回应指向的首轮 Agent 的 agentId；首轮回复为 null。 */
+  respondToAgentId?: string | null;
+  /** 补充回应的角度说明（取自归一化后的 angle）；首轮回复为 null。 */
+  crossReplyReason?: string | null;
+  /** 补充回应所在轮次（目前恒为 1）；首轮回复为 undefined。 */
+  crossReplyRound?: number;
 }
 
 export interface GroupChatOrchestrationResult {
@@ -96,6 +128,8 @@ export interface GroupChatOrchestrationResult {
   selection: GroupChatAgentSelection;
   replies: PlannedAgentReply[];
   quality: GroupChatReplyQuality | null;
+  /** Agent 间补充回应的规划结果；未启用或降级时为 enabled=false 的计划或 null。 */
+  crossReplyPlan: GroupChatCrossReplyPlan | null;
   /** 整图 invoke 抛错、走本地规则兜底时为 true，供 metadata 标记 selectedBy。 */
   usedFallback: boolean;
 }
@@ -113,6 +147,8 @@ const GroupChatOrchestrationState = Annotation.Root({
   selection: Annotation<GroupChatAgentSelection | null>(),
   selectedAgents: Annotation<GroupChatMemberWithAgentRow[]>(),
   replies: Annotation<PlannedAgentReply[]>(),
+  primaryReplies: Annotation<PlannedAgentReply[]>(),
+  crossReplyPlan: Annotation<GroupChatCrossReplyPlan | null>(),
   quality: Annotation<GroupChatReplyQuality | null>(),
   signal: Annotation<AbortSignal | undefined>(),
 });
@@ -236,6 +272,39 @@ const groupChatQualityPrompt = ChatPromptTemplate.fromMessages([
       "",
       "各 Agent 的回复：",
       "{replies}",
+    ].join("\n"),
+  ],
+]);
+
+const groupChatCrossReplyPlanPrompt = ChatPromptTemplate.fromMessages([
+  [
+    "system",
+    [
+      "你是多 Agent 群聊产品的 Agent 间补充回应规划器。",
+      "用户消息已经被首轮回复过。你的任务是判断是否值得追加一轮非常克制的 Agent 间补充回应，让群聊更自然，而不是重复首轮内容。",
+      "你不生成聊天回复本身，只输出结构化计划。",
+      `最多规划 ${groupCrossReplyLimit} 条补充回应，最多 ${groupCrossReplyRoundLimit} 轮。`,
+      "enabled=true 仅当满足以下之一：首轮 Agent 之间存在明显可补充的点 / 轻微分歧 / 安抚接力 / 观点呼应；或用户明确希望互动、讨论、互相评价、补充看法；或补充能让群聊更自然而不是重复首轮。",
+      "enabled=false 必须当：首轮只有一个 Agent 回复且没有必要接话；用户只想要一个直接答案；补充会显得刷屏、抢话或自说自话。",
+      "plans 里的 agentId 是准备发言的 Agent，respondToAgentId 是它回应的那个首轮 Agent；agentId 不能等于 respondToAgentId。",
+      "agentId 与 respondToAgentId 都必须取自给定成员名单里的真实 id，不要编造。",
+      "只返回一个 JSON 对象，包含且仅包含以下字段，不要输出多余字段、解释文字或 markdown 代码块：",
+      "- enabled: 布尔值，是否需要补充回应",
+      `- plans: 数组，最多 ${groupCrossReplyLimit} 条，每条含 agentId(字符串) / respondToAgentId(字符串或 null) / angle(补充角度，不超过 240 字)`,
+      "- reason: 字符串，简述判断原因，不超过 500 字",
+    ].join("\n"),
+  ],
+  [
+    "human",
+    [
+      "群成员名单：",
+      "{agentRoster}",
+      "",
+      "本轮用户消息：",
+      "{userText}",
+      "",
+      "首轮各 Agent 的回复：",
+      "{primaryReplies}",
     ].join("\n"),
   ],
 ]);
@@ -581,6 +650,7 @@ async function generateSingleReply(params: {
       agent: params.agent,
       content: AGENT_REPLY_FALLBACK,
       status: "failed",
+      replyKind: "primary",
     };
   }
 
@@ -598,7 +668,12 @@ async function generateSingleReply(params: {
       selectionReason: params.selectionReason,
     });
 
-    return { agent: params.agent, content, status: "completed" };
+    return {
+      agent: params.agent,
+      content,
+      status: "completed",
+      replyKind: "primary",
+    };
   } catch (error) {
     // 用户主动取消不算单 Agent 失败，向上抛，不落 failed 占位。
     if (params.signal.aborted) {
@@ -613,6 +688,7 @@ async function generateSingleReply(params: {
       agent: params.agent,
       content: AGENT_REPLY_FALLBACK,
       status: "failed",
+      replyKind: "primary",
     };
   }
 }
@@ -751,6 +827,8 @@ async function checkGroupReplyQualityWithLangChain(params: {
 
 /**
  * 保守应用质检修订：只有当某 Agent 有非空 revision 文本时才替换其回复。
+ * 同一 Agent 本轮出现多条消息（首轮 + 补充回应）时跳过自动覆盖，
+ * 避免 revision 按 agentId 粒度把两条混改。
  */
 function applyQualityRevisions(
   replies: PlannedAgentReply[],
@@ -760,9 +838,18 @@ function applyQualityRevisions(
     return replies;
   }
 
+  const replyCountByAgentId = new Map<string, number>();
+  for (const reply of replies) {
+    replyCountByAgentId.set(
+      reply.agent.agentId,
+      (replyCountByAgentId.get(reply.agent.agentId) ?? 0) + 1,
+    );
+  }
+
   const revisionByAgentId = new Map(
     quality.revisions
       .filter((revision) => revision.content.trim().length > 0)
+      .filter((revision) => replyCountByAgentId.get(revision.agentId) === 1)
       .map((revision) => [revision.agentId, revision.content.trim()]),
   );
 
@@ -777,6 +864,128 @@ function applyQualityRevisions(
     }
     return { ...reply, content: revised };
   });
+}
+
+/** 规划失败时的降级计划：不追加任何补充回应。 */
+function buildDisabledCrossReplyPlan(reason: string): GroupChatCrossReplyPlan {
+  return GroupChatCrossReplyPlanSchema.parse({
+    enabled: false,
+    plans: [],
+    reason,
+  });
+}
+
+/**
+ * 归一化补充回应计划：过滤 agentId 是否真实成员、同 Agent 一轮只留一条、
+ * respondToAgentId 必须指向首轮已回复的 Agent 且不等于 agentId、
+ * angle 收缩到 240 字、最多保留 groupCrossReplyLimit 条。
+ * 索引键统一用 member.agentId（不是群成员关系行 id）。
+ */
+function normalizeCrossReplyPlan(params: {
+  plan: GroupChatCrossReplyPlan;
+  agents: GroupChatMemberWithAgentRow[];
+  primaryReplies: PlannedAgentReply[];
+}): GroupChatCrossReplyPlan {
+  const agentById = new Map(
+    params.agents.map((agent) => [agent.agentId, agent]),
+  );
+  const primaryReplyAgentIds = new Set(
+    params.primaryReplies.map((reply) => reply.agent.agentId),
+  );
+  const usedAgentIds = new Set<string>();
+
+  const plans = params.plan.plans
+    .filter((plan) => agentById.has(plan.agentId))
+    .filter((plan) => {
+      // 同一 agentId 一轮只保留第一条；add 必须在 filter 内做，
+      // 放到后面的 map 里会因 filter/map 分两趟而让去重失效。
+      if (usedAgentIds.has(plan.agentId)) {
+        return false;
+      }
+      usedAgentIds.add(plan.agentId);
+      return true;
+    })
+    .filter(
+      (plan) =>
+        Boolean(plan.respondToAgentId) &&
+        primaryReplyAgentIds.has(plan.respondToAgentId as string),
+    )
+    .filter((plan) => plan.respondToAgentId !== plan.agentId)
+    .map((plan) => ({
+      agentId: plan.agentId,
+      respondToAgentId: plan.respondToAgentId as string,
+      angle:
+        plan.angle.trim().slice(0, 240) ||
+        "补充前面 Agent 的观点，但保持简短。",
+    }))
+    .slice(0, groupCrossReplyLimit);
+
+  return GroupChatCrossReplyPlanSchema.parse({
+    enabled: Boolean(
+      params.plan.enabled &&
+      plans.length > 0 &&
+      params.primaryReplies.length > 0,
+    ),
+    plans,
+    reason:
+      params.plan.reason.trim() ||
+      "根据首轮回复判断是否需要 Agent 间补充回应。",
+  });
+}
+
+/**
+ * 跑结构化规划器，判断是否需要追加 Agent 间补充回应。
+ * 全部结构化方法失败时返回 enabled=false 的降级计划；用户取消向上抛。
+ */
+async function planCrossRepliesWithLangChain(params: {
+  providerConfig: ChatProviderConfig;
+  agents: GroupChatMemberWithAgentRow[];
+  primaryReplies: PlannedAgentReply[];
+  userText: string;
+  signal?: AbortSignal;
+}): Promise<GroupChatCrossReplyPlan> {
+  const primaryRepliesText = params.primaryReplies
+    .map(
+      (reply) =>
+        `- ${reply.agent.name}（id: ${reply.agent.agentId}）：${reply.content}`,
+    )
+    .join("\n");
+
+  let lastError: unknown = null;
+
+  for (const method of STRUCTURED_OUTPUT_METHODS) {
+    try {
+      const model = buildLangChainChatModel(params.providerConfig);
+      const structuredModel = model.withStructuredOutput(
+        GroupChatCrossReplyPlanSchema,
+        {
+          name: "group_chat_cross_reply_plan",
+          method,
+        },
+      );
+      const chain = groupChatCrossReplyPlanPrompt.pipe(structuredModel);
+
+      const result = await chain.invoke(
+        {
+          agentRoster: formatAgentRoster(params.agents),
+          primaryReplies: primaryRepliesText,
+          userText: params.userText,
+        },
+        params.signal ? { signal: params.signal } : undefined,
+      );
+
+      return GroupChatCrossReplyPlanSchema.parse(result);
+    } catch (error) {
+      // 用户主动取消不算规划失败，直接向上抛，不吞成 enabled=false。
+      if (params.signal?.aborted) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  console.warn("LangChain group chat cross reply planning failed", lastError);
+  return buildDisabledCrossReplyPlan("Agent 间回应规划失败，跳过补充回应。");
 }
 
 async function classifyIntentNode(
@@ -844,6 +1053,117 @@ async function generateRepliesNode(
   return { replies };
 }
 
+async function generateCrossAgentRepliesNode(
+  state: typeof GroupChatOrchestrationState.State,
+) {
+  const primaryReplies = state.replies;
+
+  // 无首轮回复时不追加补充回应，几乎零成本直接返回。
+  if (primaryReplies.length === 0) {
+    return {
+      replies: primaryReplies,
+      primaryReplies,
+      crossReplyPlan: buildDisabledCrossReplyPlan(
+        "本轮无首轮回复，不追加 Agent 间补充回应。",
+      ),
+    };
+  }
+
+  const rawPlan = await planCrossRepliesWithLangChain({
+    providerConfig: state.providerConfig,
+    agents: state.agents,
+    primaryReplies,
+    userText: state.userText,
+    signal: state.signal,
+  });
+
+  const crossReplyPlan = normalizeCrossReplyPlan({
+    plan: rawPlan,
+    agents: state.agents,
+    primaryReplies,
+  });
+
+  if (!crossReplyPlan.enabled) {
+    return { replies: primaryReplies, primaryReplies, crossReplyPlan };
+  }
+
+  const agentById = new Map(
+    state.agents.map((agent) => [agent.agentId, agent]),
+  );
+  const primaryReplyByAgentId = new Map(
+    primaryReplies.map((reply) => [reply.agent.agentId, reply]),
+  );
+  const signal = state.signal ?? new AbortController().signal;
+  const baseMessages = [...state.recentMessages, state.userMessage];
+
+  const crossReplies: PlannedAgentReply[] = [];
+
+  for (const plan of crossReplyPlan.plans) {
+    const agent = agentById.get(plan.agentId);
+    const agentRecord = state.agentRecordsById[plan.agentId];
+
+    if (!agent || !agentRecord) {
+      continue;
+    }
+
+    const respondToName =
+      primaryReplyByAgentId.get(plan.respondToAgentId ?? "")?.agent.name ??
+      agentById.get(plan.respondToAgentId ?? "")?.name ??
+      "另一位 Agent";
+
+    // 串行生成时把首轮回复 + 已生成的补充回应拼进上下文，让后一条能看到前一条。
+    const plannedRows = [...primaryReplies, ...crossReplies].map(
+      (reply, index) =>
+        plannedReplyToMessageRow(
+          reply,
+          state.userMessage.createdAtMs + index + 1,
+        ),
+    );
+
+    try {
+      const content = await buildCrossAgentReply({
+        activeMemories: state.agentMemoriesByAgentId[plan.agentId] ?? [],
+        agent: agentRecord,
+        allAgents: state.agents,
+        groupChat: state.groupChat,
+        providerConfig: state.providerConfig,
+        recentMessages: [...baseMessages, ...plannedRows],
+        signal,
+        userText: state.userText,
+        respondToName,
+        angle: plan.angle,
+      });
+
+      crossReplies.push({
+        agent,
+        content,
+        status: "completed",
+        replyKind: "cross_agent",
+        respondToAgentId: plan.respondToAgentId,
+        crossReplyReason: plan.angle,
+        crossReplyRound: groupCrossReplyRoundLimit,
+      });
+    } catch (error) {
+      // 用户主动取消不算补充回应失败，向上抛，不静默跳过。
+      if (signal.aborted) {
+        throw error;
+      }
+      // 补充回应是可选增强，单条失败静默跳过，不落 failed 占位。
+      console.warn("群聊 Agent 补充回应失败", {
+        agentId: plan.agentId,
+        groupChatId: state.groupChat.id,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return {
+    replies: [...primaryReplies, ...crossReplies],
+    primaryReplies,
+    crossReplyPlan,
+  };
+}
+
 async function checkQualityNode(
   state: typeof GroupChatOrchestrationState.State,
 ) {
@@ -872,11 +1192,13 @@ const groupChatOrchestrationGraph = new StateGraph(GroupChatOrchestrationState)
   .addNode("classifyIntent", classifyIntentNode)
   .addNode("selectAgents", selectAgentsNode)
   .addNode("generateReplies", generateRepliesNode)
+  .addNode("generateCrossReplies", generateCrossAgentRepliesNode)
   .addNode("checkQuality", checkQualityNode)
   .addEdge(START, "classifyIntent")
   .addEdge("classifyIntent", "selectAgents")
   .addEdge("selectAgents", "generateReplies")
-  .addEdge("generateReplies", "checkQuality")
+  .addEdge("generateReplies", "generateCrossReplies")
+  .addEdge("generateCrossReplies", "checkQuality")
   .addEdge("checkQuality", END)
   .compile();
 
@@ -914,6 +1236,8 @@ export async function orchestrateGroupChatReplies(
         selection: null,
         selectedAgents: [],
         replies: [],
+        primaryReplies: [],
+        crossReplyPlan: null,
         quality: null,
         signal: params.signal,
       },
@@ -937,6 +1261,7 @@ export async function orchestrateGroupChatReplies(
       selection: result.selection ?? fallbackSelection.selection,
       replies: result.replies ?? [],
       quality: result.quality ?? null,
+      crossReplyPlan: result.crossReplyPlan ?? null,
       usedFallback: false,
     };
   } catch (error) {
@@ -982,5 +1307,14 @@ async function runFallbackOrchestration(
     signal: params.signal,
   });
 
-  return { intent, selection, replies, quality: null, usedFallback: true };
+  return {
+    intent,
+    selection,
+    replies,
+    quality: null,
+    crossReplyPlan: buildDisabledCrossReplyPlan(
+      "fallback 流程不追加 Agent 间回应。",
+    ),
+    usedFallback: true,
+  };
 }
