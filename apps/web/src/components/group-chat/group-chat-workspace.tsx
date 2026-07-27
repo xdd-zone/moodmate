@@ -24,6 +24,8 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { MentionTextarea } from "@/src/components/group-chat/mention-textarea";
+
 import { userAgentsQueryOptions } from "@/src/api/agent.query";
 import { getGroupChatMessages } from "@/src/api/group-chat.api";
 import {
@@ -258,12 +260,9 @@ function MessageColumn({
     );
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      handleSend();
-    }
-  }
+  const activeMembers = detail.members.filter(
+    (member) => member.status === "active",
+  );
 
   async function handleLoadEarlier() {
     if (nextCursor === null || isLoadingEarlier) {
@@ -353,13 +352,11 @@ function MessageColumn({
 
       <div className="border-t border-border px-4 py-3">
         <div className="flex items-end gap-2">
-          <textarea
-            className="min-h-[44px] w-full flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-border-strong focus-visible:ring-2 focus-visible:ring-focus"
+          <MentionTextarea
             disabled={sendMutation.isPending}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="说点什么，Enter 发送，Shift+Enter 换行"
-            rows={1}
+            members={activeMembers}
+            onChange={setDraft}
+            onSend={handleSend}
             value={draft}
           />
           <Button

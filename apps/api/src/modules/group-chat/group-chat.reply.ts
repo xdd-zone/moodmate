@@ -19,6 +19,22 @@ export const groupReplyAgentLimit = 3;
 const GROUP_QUESTION_PATTERN = /你们|大家|一起|分别|都说|怎么看|意见/;
 
 /**
+ * 严格识别消息中的 `@昵称` 显式提及：昵称后须紧跟空白、标点或文本结尾，
+ * 避免子串误命中（如「小明」命中「小明明」）与「name@example.com」误判。
+ * 昵称先做正则特殊字符转义。reply 与 orchestration 两条路径共用此单一实现。
+ */
+export function findExplicitlyMentionedAgents(
+  agents: GroupChatMemberWithAgentRow[],
+  userText: string,
+): GroupChatMemberWithAgentRow[] {
+  return agents.filter((agent) => {
+    const escaped = agent.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`@${escaped}(?=\\s|[,.!?，。！？、]|$)`, "i");
+    return pattern.test(userText);
+  });
+}
+
+/**
  * 群聊发言权 fallback 规则：点名仍最优先；非点名场景有发言权上下文时按打分排序，
  * 无上下文时退回 v1 关键词逻辑（群体提问关键词 → 前若干个，否则第一个）。
  * 入参成员保持 displayOrder 顺序（listActiveMembers 已按 displayOrder 升序）。
@@ -35,10 +51,7 @@ export function selectAgentsForReply(input: {
     return [];
   }
 
-  const normalized = userText.toLowerCase();
-  const mentioned = agents.filter((agent) =>
-    normalized.includes(agent.name.toLowerCase()),
-  );
+  const mentioned = findExplicitlyMentionedAgents(agents, userText);
 
   if (mentioned.length > 0) {
     return mentioned.slice(0, groupReplyAgentLimit);

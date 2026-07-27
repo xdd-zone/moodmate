@@ -17,6 +17,7 @@ import {
   buildAgentReply,
   buildCrossAgentReply,
   formatGroupHistory,
+  findExplicitlyMentionedAgents,
   groupReplyAgentLimit,
   selectAgentsForReply,
 } from "./group-chat.reply";
@@ -1155,6 +1156,21 @@ async function selectAgentsNode(
       agents: state.agents,
       userText: state.userText,
     });
+
+  // 显式提及优先：用户在消息中 @昵称 时，被提及的 Agent 一定进本轮回复，
+  // 不进 LLM 调度，避免智能调度覆盖用户点名意图。
+  const mentioned = findExplicitlyMentionedAgents(state.agents, state.userText);
+
+  if (mentioned.length > 0) {
+    const picked = mentioned.slice(0, groupReplyAgentLimit);
+    const selection = GroupChatAgentSelectionSchema.parse({
+      selectedAgentIds: picked.map((agent) => agent.agentId),
+      mode: picked.length > 1 ? "multi_serial" : "single",
+      reason: "用户在消息中显式提及了 Agent。",
+    });
+
+    return { selection, selectedAgents: picked };
+  }
 
   const { selection, selectedAgents } = await selectGroupAgentsWithLangChain({
     providerConfig: state.providerConfig,
