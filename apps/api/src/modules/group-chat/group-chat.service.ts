@@ -15,7 +15,10 @@ import {
   listActiveAgentMemories,
   listOwnedUserAgentsByIds,
 } from "@/modules/agents/agents.repository";
-import type { UserAgentRecord } from "@/modules/agents/agents.schema";
+import type {
+  AgentMemoryRecord,
+  UserAgentRecord,
+} from "@/modules/agents/agents.schema";
 import { resolveActiveLlmProviderConfig } from "@/modules/llm-config/llm-config.service";
 import { AppError } from "@/shared/app-error";
 import type { ApiBindings } from "@/shared/hono-env";
@@ -45,7 +48,12 @@ import {
   type GroupChatMessageWithAgentRow,
   type NewGroupChatMessage,
 } from "./group-chat.repository";
-import { buildAgentReply, selectAgentsForReply } from "./group-chat.reply";
+import {
+  orchestrateGroupChatReplies,
+  type GroupChatAgentSelection,
+  type GroupChatIntent,
+  type GroupChatReplyQuality,
+} from "./group-chat.orchestration";
 import type { AgentGroupChatRecord } from "./group-chat.schema";
 
 const MAX_MEMBERS = 6;
@@ -53,7 +61,6 @@ const RECENT_MESSAGES_LIMIT = 50;
 const MESSAGES_PAGE_LIMIT = 30;
 const REPLY_HISTORY_LIMIT = 20;
 const AGENT_MEMORY_INJECTION_LIMIT = 6;
-const AGENT_REPLY_FALLBACK = "（这个 Agent 暂时没能回复，请稍后再试）";
 
 function forbidden() {
   return new AppError(BizCode.AUTH_FORBIDDEN, "无权访问该群聊", 403);
@@ -394,78 +401,78 @@ export async function sendGroupChatMessage(input: {
     turnIndex,
   };
 
-  const selected = selectAgentsForReply({ agents: members, userText });
-
-  const recordMap = new Map<string, UserAgentRecord>();
-
-  if (selected.length > 0) {
-    const agentRecords = await listOwnedUserAgentsByIds({
-      agentIds: selected.map((member) => member.agentId),
-      database: input.bindings.DB,
-      userId: input.userId,
-    });
-
-    for (const record of agentRecords) {
-      recordMap.set(record.id, record);
-    }
-  }
-
   const providerConfig =
-    selected.length > 0
+    members.length > 0
       ? await resolveGroupChatProviderConfig(input.bindings)
       : null;
 
   const agentRows: GroupChatMessageWithAgentRow[] = [];
+  let orchestration: {
+    intent: GroupChatIntent | null;
+    selection: GroupChatAgentSelection | null;
+    quality: GroupChatReplyQuality | null;
+  } | null = null;
+  let selectedBy = "langgraph_v1";
 
-  for (const member of selected) {
-    const agentRecord = recordMap.get(member.agentId);
-
-    if (!agentRecord || !providerConfig) {
-      continue;
-    }
-
-    const memories = await listActiveAgentMemories({
-      agentId: member.agentId,
+  if (members.length > 0 && providerConfig) {
+    // 进图前预取上下文：全体活跃成员的记忆（按 agentId 隔离）与人设记录。
+    const agentRecords = await listOwnedUserAgentsByIds({
+      agentIds: members.map((member) => member.agentId),
       database: input.bindings.DB,
-      limit: AGENT_MEMORY_INJECTION_LIMIT,
       userId: input.userId,
     });
 
-    let content = AGENT_REPLY_FALLBACK;
-    let status: "completed" | "failed" = "failed";
+    const agentRecordsById: Record<string, UserAgentRecord> = {};
+    for (const record of agentRecords) {
+      agentRecordsById[record.id] = record;
+    }
 
-    try {
-      content = await buildAgentReply({
-        activeMemories: memories,
-        agent: agentRecord,
-        allAgents: members,
-        groupChat,
-        providerConfig,
-        recentMessages: [...recent, userRow, ...agentRows],
-        signal: input.signal,
-        userText,
-      });
-      status = "completed";
-    } catch (error) {
-      console.warn("群聊 Agent 回复失败", {
+    const agentMemoriesByAgentId: Record<string, AgentMemoryRecord[]> = {};
+    for (const member of members) {
+      agentMemoriesByAgentId[member.agentId] = await listActiveAgentMemories({
         agentId: member.agentId,
-        groupChatId: input.groupChatId,
-        message: error instanceof Error ? error.message : String(error),
+        database: input.bindings.DB,
+        limit: AGENT_MEMORY_INJECTION_LIMIT,
+        userId: input.userId,
       });
     }
 
-    agentRows.push({
-      agentId: member.agentId,
-      agentImageKey: member.imageKey,
-      agentName: member.name,
-      content,
-      createdAtMs: nextTimestamp(),
-      groupChatId: input.groupChatId,
-      id: uuidv7(),
-      senderType: "agent",
-      status,
-      turnIndex,
+    const result = await orchestrateGroupChatReplies({
+      providerConfig,
+      groupChat,
+      agents: members,
+      recentMessages: [...recent, userRow],
+      userMessage: userRow,
+      userText,
+      agentMemoriesByAgentId,
+      agentRecordsById,
+      signal: input.signal,
     });
+
+    if (result.usedFallback) {
+      selectedBy = "v1_rules_fallback";
+    }
+
+    orchestration = {
+      intent: result.intent,
+      selection: result.selection,
+      quality: result.quality,
+    };
+
+    for (const reply of result.replies) {
+      agentRows.push({
+        agentId: reply.agent.agentId,
+        agentImageKey: reply.agent.imageKey,
+        agentName: reply.agent.name,
+        content: reply.content,
+        createdAtMs: nextTimestamp(),
+        groupChatId: input.groupChatId,
+        id: uuidv7(),
+        senderType: "agent",
+        status: reply.status,
+        turnIndex,
+      });
+    }
   }
 
   const messagesToInsert: NewGroupChatMessage[] = [
@@ -488,8 +495,9 @@ export async function sendGroupChatMessage(input: {
       id: row.id,
       metadataJson: JSON.stringify({
         model: providerConfig?.model ?? null,
+        orchestration,
         providerName: providerConfig?.providerName ?? null,
-        selectedBy: "v1_rules",
+        selectedBy,
         source: "group_chat_agent",
       }),
       senderType: "agent" as const,

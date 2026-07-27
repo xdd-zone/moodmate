@@ -97,14 +97,30 @@ function buildSystemPrompt(input: {
   return sections.join("\n\n");
 }
 
+/** 群聊编排信号，注入回复 prompt 用的最小形状，避免与 orchestration 模块循环依赖。 */
+export interface GroupReplyIntentSignal {
+  intent: string;
+  replyMode: "single" | "multi_serial" | "multi_parallel";
+}
+
 function buildUserPrompt(input: {
   agent: UserAgentRecord;
   allAgents: GroupChatMemberWithAgentRow[];
   groupChat: AgentGroupChatRecord;
   recentMessages: GroupChatMessageWithAgentRow[];
   userText: string;
+  intent?: GroupReplyIntentSignal;
+  selectionReason?: string;
 }): string {
-  const { agent, allAgents, groupChat, recentMessages, userText } = input;
+  const {
+    agent,
+    allAgents,
+    groupChat,
+    recentMessages,
+    userText,
+    intent,
+    selectionReason,
+  } = input;
 
   const sections: string[] = [`群聊标题：${groupChat.title}`];
 
@@ -144,6 +160,16 @@ function buildUserPrompt(input: {
     sections.push(`最近的群聊记录：\n${history}`);
   }
 
+  if (intent) {
+    sections.push(
+      `本轮群聊意图：${intent.intent}（回复模式 ${intent.replyMode}）`,
+    );
+  }
+
+  if (selectionReason?.trim()) {
+    sections.push(`你被选中回复的原因：${selectionReason.trim()}`);
+  }
+
   sections.push(`用户刚说：${userText}`);
   sections.push("请以你的身份，给出一条简洁的群聊回复。");
 
@@ -163,6 +189,8 @@ export async function buildAgentReply(input: {
   recentMessages: GroupChatMessageWithAgentRow[];
   signal: AbortSignal;
   userText: string;
+  intent?: GroupReplyIntentSignal;
+  selectionReason?: string;
 }): Promise<string> {
   const memoryText = input.activeMemories
     .map((memory) => `- ${memory.content}`)
@@ -180,6 +208,8 @@ export async function buildAgentReply(input: {
         groupChat: input.groupChat,
         recentMessages: input.recentMessages,
         userText: input.userText,
+        intent: input.intent,
+        selectionReason: input.selectionReason,
       }),
       role: "user",
     },
