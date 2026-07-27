@@ -180,3 +180,12 @@ orchestrateGroupChatReplies(params: {
 - 降级一致性：**整图失败的 `runFallbackOrchestration` 也构造上下文再打分**（情绪走关键词兜底），不留「有时打分有时纯关键词」的分叉。`orchestration.speakingContext` 落 metadata。
 
 > **Warning**（打分需人设文本）：`GroupChatMemberWithAgentRow` 只有 `name/headline/imageKey`，没有 persona/tone/guardrails。打分的情绪-人设关键词匹配依赖 `agentRecordsById` 里的完整 `UserAgentRecord`。fallback 路径必须先备好该 map 再打分，否则人设匹配项恒不加分，退化成只看关系/新鲜度。
+
+### 8.8 显式 @ 提及优先（findExplicitlyMentionedAgents）
+
+用户在消息里 `@昵称` 时，被提及的 Agent 一定优先回复，且不被 LangGraph 智能调度或打分覆盖。提及信息只以 `@昵称` 文本形态随 `message` 走，**不新增契约字段**（`SendAgentGroupChatMessageRequest` 无变化）。
+
+- `findExplicitlyMentionedAgents(agents, userText)`（`group-chat.reply.ts` 导出）：只识别 `@昵称`，昵称后须紧跟空白、标点或文本结尾，正则 `@${escapedName}(?=\s|[,.!?，。！？、]|$)` 带 `i`；昵称先做正则特殊字符转义（`name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")`），昵称含 `()+.` 等符号不报错。只在传入 active 成员里匹配，已移除/不存在的名字返回空。
+- 严格边界取代旧的无边界 `includes`：`@小明明` 里的 `@小明` 不命中「小明」，`name@example.com` 不误判；且不打 `@` 直接说名字不再算点名（**有意收紧**）。
+- 单一实现供两条路径共用，避免正则漂移：`selectAgentsForReply`（fallback / 节点内兜底 / `runFallbackOrchestration`）点名分支调它，命中 `slice(0, groupReplyAgentLimit)` 返回；`selectAgentsNode`（正常路径）在 `selectGroupAgentsWithLangChain` **之前**先跑它，命中即构造 `GroupChatAgentSelectionSchema`（`selectedAgentIds` 取被提及 Agent 的 `agentId`、`slice(0, groupReplyAgentLimit)`，1 人 `single` / 多人 `multi_serial`，`reason`「用户在消息中显式提及了 Agent。」）直接返回，跳过 LLM 调度与 speakingContext 打分——这是「点名优先于智能调度」的预期语义。
+- 提及超过 `groupReplyAgentLimit`（3）个按 `agents`（displayOrder）顺序 `slice(0, 3)`。前端输入侧由 `apps/web/src/components/group-chat/mention-textarea.tsx` 提供 `@` 候选浮层，手打 `@昵称`（不经候选菜单）同样被识别。
