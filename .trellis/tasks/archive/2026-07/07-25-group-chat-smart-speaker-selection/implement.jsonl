@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/api/backend/group-chat.md", "reason": "群聊模块分层、LangGraph 编排图、state/节点、metadata 落库与两级降级的现有规范；本次插入 detectEmotion 节点、升级选择器与 fallback 必须沿用"}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "api backend 层入口，含 Pre-Development Checklist 与 Quality Check，编码前必读"}
+{"file": ".trellis/spec/api/backend/error-handling.md", "reason": "情绪识别/选择器失败降级与 AbortSignal 取消不被吞成兜底，需符合现有错误处理约定"}
+{"file": ".trellis/spec/api/backend/database-guidelines.md", "reason": "listActiveMembers 加 leftJoin(agentConversations) 的查询写法与索引使用需符合 D1/drizzle 规范"}
+{"file": ".trellis/tasks/07-25-group-chat-smart-speaker-selection/research/draft-60-key-snippets.md", "reason": "草稿 60 关键片段与 moodmate 落点映射，实现情绪 schema/关系阶段/新鲜度/打分/prompt 的逻辑参考"}

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/api/backend/group-chat.md", "reason": "校验新增 detectEmotion 节点、发言权上下文、metadata speakingContext、降级是否符合群聊模块既有规范与硬上限约束"}
+{"file": ".trellis/spec/api/backend/quality-guidelines.md", "reason": "api backend 质量检查清单，验收前逐条对照"}
+{"file": ".trellis/spec/api/backend/error-handling.md", "reason": "复核情绪/选择失败降级、fallback 打分兜底、AbortSignal 取消不被吞成兜底"}
+{"file": ".trellis/tasks/07-25-group-chat-smart-speaker-selection/research/draft-60-key-snippets.md", "reason": "对照草稿意图与落点映射，确认关系阶段/新鲜度/打分/情绪实现无逻辑偏差"}
