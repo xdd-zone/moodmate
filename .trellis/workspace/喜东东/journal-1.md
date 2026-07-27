@@ -1133,3 +1133,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 34: 群聊 Agent 间互相回应（cross-agent replies）
+
+**Date**: 2026-07-27
+**Task**: 群聊 Agent 间互相回应（cross-agent replies）
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+在 LangGraph 群聊编排上新增 generateCrossReplies 节点，首轮回复后按规划器判断追加最多 2 条、1 轮 Agent 间补充回应，硬上限后端兜底。PlannedAgentReply 新增 replyKind/respondToAgentId/crossReplyReason/crossReplyRound 元数据并与 status 共存；normalizeCrossReplyPlan 做成员/去重/指向合法性校验（索引键 member.agentId）；质检 applyQualityRevisions 改为同 Agent 本轮仅 1 条时才允许 revision 覆盖；规划失败/整图失败均不追加补充回应；前端契约与页面零改动，追踪走 metadata_json。检查阶段修掉 normalizeCrossReplyPlan 因 filter/map 分两趟致同 Agent 去重失效的 bug 并写入 spec gotcha。质量门 check-types/lint/format 全绿。三条提交：4cbaa20 feat、5935dbb docs(spec)、7338a47 archive。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7338a47` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
