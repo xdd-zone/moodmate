@@ -1237,3 +1237,37 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 ### Next Steps
 
 - None - task complete
+
+
+## Session 37: 完成 Web 原型视觉基础与应用外壳
+
+**Date**: 2026-07-29
+**Task**: 完成 Web 原型视觉基础与应用外壳
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+新增 MoodMate 局部主题样式、三种 IM 外壳布局、导航栏、头像、会话条目、资料栏、菜单、dialog 和原型占位数据；补充 Web 组件规范并完成类型、Lint、Web Format 与生产构建检查。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d42f389` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
