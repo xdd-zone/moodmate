@@ -1,0 +1,10 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "API 后端开发前检查清单与质量检查入口"}
+{"file": ".trellis/spec/api/backend/directory-structure.md", "reason": "确认 infra/ai 目录与模块分层落点"}
+{"file": ".trellis/spec/api/backend/error-handling.md", "reason": "AiError 与 AppError/BizCode 的边界转换规则"}
+{"file": ".trellis/spec/api/backend/logging-guidelines.md", "reason": "日志字段与敏感信息保护要求"}
+{"file": ".trellis/spec/api/backend/database-guidelines.md", "reason": "llm_provider_configs 增加 api 字段的 migration 与 Drizzle 约定"}
+{"file": ".trellis/spec/api/backend/companion-chat.md", "reason": "单聊流式链路现状与写库时机"}
+{"file": ".trellis/spec/api/backend/group-chat.md", "reason": "群聊编排与非流式生成现状"}
+{"file": ".trellis/spec/contracts/shared/contract-guidelines.md", "reason": "llm-config contract 增加 api 字段的写法"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨 api/contracts/admin 改动的一致性检查"}

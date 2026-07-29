@@ -1,0 +1,7 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/api/backend/index.md", "reason": "API 后端质量检查清单"}
+{"file": ".trellis/spec/api/backend/quality-guidelines.md", "reason": "后端代码质量与检查命令"}
+{"file": ".trellis/spec/api/backend/error-handling.md", "reason": "核对错误分类与转换位置"}
+{"file": ".trellis/spec/api/backend/logging-guidelines.md", "reason": "核对日志不含 API Key 与完整 prompt"}
+{"file": ".trellis/spec/contracts/shared/quality-guidelines.md", "reason": "contracts 变更的质量检查"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层一致性复核"}
