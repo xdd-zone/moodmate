@@ -7,11 +7,13 @@ import type { MoodmateConversation } from "./models";
 type MoodmateConversationItemProps = {
   active?: boolean;
   conversation: MoodmateConversation;
+  onNavigate?: () => void;
 };
 
 export function MoodmateConversationItem({
   active = false,
   conversation,
+  onNavigate,
 }: MoodmateConversationItemProps) {
   return (
     <Link
@@ -22,6 +24,7 @@ export function MoodmateConversationItem({
         conversation.muted && "moodmate-conversation--muted",
       )}
       href={conversation.href}
+      onClick={onNavigate}
     >
       <MoodmateAvatar
         isGroup={conversation.kind === "group"}

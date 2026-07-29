@@ -1,13 +1,14 @@
 # web
 
-`apps/web` 是 moodmate 的用户端站点。当前先放公开首页和应用入口。
+`apps/web` 是 moodmate 的用户端站点，包含公开首页和登录后的聊天页面。
 
 技术栈是 `Next.js 16 + React 19 + Tailwind CSS 4 + TypeScript`。开发服务默认使用 `6153` 端口。
 
 ## 当前页面
 
 - 首页在 `app/(site)/page.tsx`，URL 是 `/`。
-- 应用入口在 `app/(app)/app/page.tsx`，URL 是 `/app`。
+- 聊天入口在 `app/(app)/chats/page.tsx`，URL 是 `/chats`。
+- 单聊和群聊共用 `app/(app)/chats/[kind]/[id]/page.tsx`。
 - 全局布局、字体和 metadata 放在 `app/layout.tsx`。
 - 全局样式入口放在 `app/globals.css`。
 - Tailwind 4 的 PostCSS 配置放在 `postcss.config.mjs`。
@@ -42,8 +43,10 @@ cp apps/web/.env.example apps/web/.env.local
 
 - `app/(site)/page.tsx`
   首页。
-- `app/(app)/app/page.tsx`
-  应用入口。
+- `app/(app)/chats/page.tsx`
+  聊天入口和最近会话选择。
+- `src/components/chat/chat-workspace.tsx`
+  单聊、群聊共用的会话列表和应用外壳。
 - `app/globals.css`
   Tailwind 入口、颜色、字体、动效和基础样式。
 - `app/layout.tsx`

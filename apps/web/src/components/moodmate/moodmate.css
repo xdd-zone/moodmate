@@ -780,6 +780,11 @@
   color: var(--mm-fg);
 }
 
+.moodmate-icon-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .moodmate-scroll {
   overflow-y: auto;
   scrollbar-color: var(--mm-border) transparent;
@@ -839,6 +844,703 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+.moodmate-chat {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--mm-bg);
+}
+
+.moodmate-chat__header {
+  display: flex;
+  min-height: 68px;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--mm-border);
+  background: var(--mm-surface);
+}
+
+.moodmate-chat__heading {
+  min-width: 0;
+}
+
+.moodmate-chat__heading h1 {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  font-size: var(--mm-fs-lg);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodmate-chat__heading p {
+  margin: 2px 0 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-chat__relationship {
+  display: inline-flex;
+  min-height: 22px;
+  padding: 2px 8px;
+  align-items: center;
+  border-radius: var(--mm-radius-full);
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.moodmate-chat__actions {
+  display: flex;
+  margin-left: auto;
+  gap: 4px;
+}
+
+.moodmate-chat__mobile-action {
+  display: none;
+}
+
+.moodmate-chat__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.moodmate-chat__history {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-chat__history button,
+.moodmate-chat__error button {
+  display: inline-flex;
+  min-height: 32px;
+  padding: 4px 10px;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--mm-radius-xs);
+  background: transparent;
+  color: var(--mm-accent);
+  cursor: pointer;
+}
+
+.moodmate-chat__history button:hover,
+.moodmate-chat__error button:hover {
+  background: var(--mm-accent-soft);
+}
+
+.moodmate-chat__history svg {
+  width: 15px;
+  height: 15px;
+}
+
+.moodmate-chat__error {
+  display: flex;
+  margin: 0 18px 8px;
+  padding: 8px 10px 8px 14px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in oklch, var(--mm-danger) 40%, transparent);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-danger-soft);
+  color: var(--mm-danger);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-chat__error p {
+  min-width: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.moodmate-chat__inline-error,
+.moodmate-messages__empty {
+  margin: 0;
+  padding: 18px;
+  color: var(--mm-muted);
+  text-align: center;
+}
+
+.moodmate-chat__inline-error {
+  color: var(--mm-danger);
+}
+
+.moodmate-messages {
+  min-height: 0;
+  flex: 1;
+  padding: 24px clamp(16px, 3vw, 34px);
+}
+
+.moodmate-messages__inner {
+  display: flex;
+  width: min(100%, 800px);
+  min-height: 100%;
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.moodmate-message {
+  display: flex;
+  max-width: min(78%, 620px);
+  align-items: flex-end;
+  gap: 9px;
+}
+
+.moodmate-message--outgoing {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.moodmate-message__content {
+  min-width: 0;
+}
+
+.moodmate-message__sender {
+  display: block;
+  margin: 0 0 4px 3px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-message__bubble {
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--mm-border);
+  border-radius: 4px 14px 14px 14px;
+  background: var(--mm-surface);
+  color: var(--mm-fg);
+  font-size: var(--mm-fs-md);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.moodmate-message--outgoing .moodmate-message__bubble {
+  border-color: var(--mm-accent);
+  border-radius: 14px 4px 14px 14px;
+  background: var(--mm-accent);
+  color: var(--mm-accent-fg);
+}
+
+.moodmate-message__bubble--failed {
+  border-color: var(--mm-danger);
+  background: var(--mm-danger-soft);
+  color: var(--mm-danger);
+}
+
+.moodmate-message__bubble time {
+  margin-left: 8px;
+  opacity: 0.65;
+  font-family: var(--mm-font-mono);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.moodmate-message__system {
+  align-self: center;
+  margin: 0;
+  padding: 5px 12px;
+  border-radius: var(--mm-radius-full);
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-message__typing {
+  display: flex;
+  min-height: 40px;
+  padding: 9px 13px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--mm-border);
+  border-radius: 4px 14px 14px 14px;
+  background: var(--mm-surface);
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-message__typing svg {
+  width: 15px;
+  height: 15px;
+}
+
+.moodmate-message__feedback {
+  display: flex;
+  margin-top: 4px;
+  gap: 2px;
+}
+
+.moodmate-message__feedback-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--mm-radius-xs);
+  background: transparent;
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+
+.moodmate-message__feedback-button:hover,
+.moodmate-message__feedback-button--active {
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+}
+
+.moodmate-message__feedback-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.moodmate-composer,
+.moodmate-group-composer {
+  flex: none;
+  padding: 10px clamp(14px, 3vw, 28px) 16px;
+  border-top: 1px solid var(--mm-border);
+  background: var(--mm-bg);
+}
+
+.moodmate-composer__box,
+.moodmate-group-composer__box {
+  display: flex;
+  width: min(100%, 800px);
+  min-height: 50px;
+  margin: 0 auto;
+  padding: 7px 8px 7px 14px;
+  align-items: flex-end;
+  gap: 8px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  background: var(--mm-surface);
+  box-shadow: var(--mm-shadow-card);
+}
+
+.moodmate-composer textarea,
+.moodmate-group-composer textarea {
+  width: 100%;
+  max-height: 140px;
+  min-height: 34px;
+  padding: 6px 0;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--mm-fg);
+  font-size: var(--mm-fs-md);
+  line-height: 1.55;
+}
+
+.moodmate-composer textarea::placeholder,
+.moodmate-group-composer textarea::placeholder {
+  color: var(--mm-muted);
+}
+
+.moodmate-composer__send {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-accent);
+  color: var(--mm-accent-fg);
+  cursor: pointer;
+}
+
+.moodmate-composer__send:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.moodmate-composer__send svg {
+  width: 17px;
+  height: 17px;
+}
+
+.moodmate-group-composer > p {
+  width: min(100%, 800px);
+  margin: 0 auto 6px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-mention {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+
+.moodmate-mention__menu {
+  position: absolute;
+  z-index: 50;
+  bottom: calc(100% + 12px);
+  left: -14px;
+  width: min(360px, calc(100vw - 48px));
+  max-height: 260px;
+  padding: 5px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  background: var(--mm-surface-2);
+  box-shadow: var(--mm-shadow-menu);
+}
+
+.moodmate-mention__menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.moodmate-mention__menu button {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 9px;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  text-align: left;
+}
+
+.moodmate-mention__menu button:hover,
+.moodmate-mention__menu button[aria-current="true"] {
+  background: var(--mm-accent-soft);
+}
+
+.moodmate-mention__avatar {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  place-items: center;
+  border-radius: var(--mm-radius-full);
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+}
+
+.moodmate-mention__avatar svg {
+  width: 15px;
+  height: 15px;
+}
+
+.moodmate-mention__person {
+  min-width: 0;
+  flex: 1;
+}
+
+.moodmate-mention__person strong,
+.moodmate-mention__person small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodmate-mention__person small,
+.moodmate-mention__label,
+.moodmate-mention__empty {
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-mention__empty {
+  margin: 0;
+  padding: 10px;
+}
+
+.moodmate-list__notice {
+  margin: 0 12px;
+  padding: 12px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.moodmate-list__notice[role="alert"] {
+  color: var(--mm-danger);
+}
+
+.moodmate-chat-state {
+  display: grid;
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
+  place-items: center;
+  background: var(--mm-bg);
+  color: var(--mm-fg);
+  text-align: center;
+}
+
+.moodmate-chat-state > div {
+  max-width: 360px;
+}
+
+.moodmate-chat-state svg {
+  width: 30px;
+  height: 30px;
+  color: var(--mm-muted);
+}
+
+.moodmate-chat-state h1 {
+  margin: 14px 0 0;
+  font-size: var(--mm-fs-lg);
+}
+
+.moodmate-chat-state p {
+  margin: 7px 0 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-info-frame {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.moodmate-info-frame__close {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  left: 10px;
+  display: none;
+}
+
+.moodmate-member-list {
+  display: grid;
+  gap: 4px;
+}
+
+.moodmate-member {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 9px;
+}
+
+.moodmate-member > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.moodmate-member strong,
+.moodmate-member span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodmate-member strong {
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-member span {
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-member .moodmate-icon-button {
+  width: 32px;
+  height: 32px;
+}
+
+.moodmate-info__invite {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.moodmate-button {
+  display: inline-flex;
+  min-height: 40px;
+  padding: 8px 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.moodmate-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.moodmate-button--primary {
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+  color: var(--mm-accent-fg);
+}
+
+.moodmate-button--secondary {
+  background: var(--mm-surface-2);
+  color: var(--mm-fg);
+}
+
+.moodmate-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.moodmate-field {
+  display: grid;
+  margin-bottom: 18px;
+  gap: 7px;
+  font-size: var(--mm-fs-sm);
+  font-weight: 650;
+}
+
+.moodmate-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  outline: 0;
+  background: var(--mm-bg);
+  color: var(--mm-fg);
+}
+
+.moodmate-picker {
+  display: grid;
+  max-height: 330px;
+  gap: 5px;
+  overflow-y: auto;
+}
+
+.moodmate-picker__item {
+  display: flex;
+  min-height: 54px;
+  padding: 7px 9px;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  text-align: left;
+}
+
+.moodmate-picker__item:hover,
+.moodmate-picker__item[aria-pressed="true"] {
+  background: var(--mm-accent-soft);
+}
+
+.moodmate-picker__item > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+
+.moodmate-picker__item strong,
+.moodmate-picker__item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodmate-picker__item small,
+.moodmate-picker__item em {
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+  font-style: normal;
+}
+
+.moodmate-picker__item[aria-pressed="true"] em {
+  color: var(--mm-accent);
+}
+
+.moodmate-picker__state,
+.moodmate-form-error {
+  margin: 0;
+  padding: 16px 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  text-align: center;
+}
+
+.moodmate-form-error {
+  color: var(--mm-danger);
+}
+
+@media (max-width: 640px) {
+  .moodmate-chat__header {
+    padding-inline: 10px;
+  }
+
+  .moodmate-chat__mobile-action {
+    display: grid;
+  }
+
+  .moodmate-chat__actions .moodmate-icon-button:first-child,
+  .moodmate-chat__actions .moodmate-icon-button:last-child {
+    display: none;
+  }
+
+  .moodmate-chat__relationship {
+    display: none;
+  }
+
+  .moodmate-messages {
+    padding: 18px 12px;
+  }
+
+  .moodmate-message {
+    max-width: 92%;
+  }
+
+  .moodmate-composer,
+  .moodmate-group-composer {
+    padding: 8px 10px 12px;
+  }
+
+  .moodmate-app--mobile-list > .moodmate-list {
+    display: flex;
+  }
+
+  .moodmate-app--mobile-list > .moodmate-main,
+  .moodmate-app--mobile-list > .moodmate-info,
+  .moodmate-app--mobile-info > .moodmate-main,
+  .moodmate-app--mobile-info > .moodmate-list {
+    display: none;
+  }
+
+  .moodmate-app--mobile-info > .moodmate-info {
+    display: flex;
+  }
+
+  .moodmate-info-frame__close {
+    display: grid;
   }
 }
 

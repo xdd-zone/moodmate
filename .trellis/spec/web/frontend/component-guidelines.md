@@ -2,7 +2,7 @@
 
 ## 服务端组件优先
 
-页面默认保持服务端组件。只有需要浏览器事件、React state、本地存储或浏览器 API 时才加 `"use client"`。当前 `app/(site)/page.tsx` 和 `app/(app)/app/page.tsx` 都是服务端组件。
+页面默认保持服务端组件。只有需要浏览器事件、React state、本地存储或浏览器 API 时才加 `"use client"`。当前 `app/(site)/page.tsx`、`app/(app)/chats/page.tsx` 和动态聊天页面都是服务端组件，登录恢复和聊天交互留在客户端子组件。
 
 不要因为子组件需要交互就把整页改成 client component；把交互区域拆成较小的客户端组件。
 

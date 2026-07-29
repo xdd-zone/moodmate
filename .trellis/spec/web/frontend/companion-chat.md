@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-修改 `/app` 对话、历史恢复、长期记忆管理、AI SDK transport、本地 LLM 配置或 assistant 逐字显示时使用本规范。页面入口继续由 `WebDashboardGuard` 恢复登录态，聊天与设置实现位于 `apps/web/src/components/`，请求函数位于 `apps/web/src/api/`。
+修改 `/chats/direct/[id]` 对话、历史恢复、长期记忆管理、AI SDK transport、本地 LLM 配置或 assistant 逐字显示时使用本规范。`ChatWorkspaceGuard` 恢复登录态，`ChatWorkspace` 统一单聊与群聊的会话列表和外壳，消息协议仍由各自组件处理，请求函数位于 `apps/web/src/api/`。
 
 ## 2. 公开签名
 
@@ -29,7 +29,8 @@ AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BAS
 - 只有 `enabled: true` 的完整配置会进入聊天请求。
 - API Key 只保存在当前浏览器，并在发送聊天时交给 Moodmate API 代理。
 - transport 使用 `fetchWithClientSession`，复用 access token、单例 refresh Promise 和一次重试规则。
-- 进入 `/app` 后先读取默认会话；加载和失败状态不能初始化 `useChat`。
+- 进入 `/chats` 后并行读取默认单聊和群聊列表，按最后消息时间进入最近会话；两边都没有消息时优先单聊。
+- `/chats/direct/[id]` 加载和失败状态不能初始化 `useChat`；路由 ID 与服务端 `conversationId` 不一致时替换为规范 URL。
 - `useChat` 使用服务端 `conversationId` 和最近 40 条消息初始化；没有历史时继续显示现有开场文案，不创建伪消息。
 - 每次发送只带最近 20 条 AI SDK 消息、服务端 `conversationId` 和最新本地配置。
 - “加载更早消息”使用服务端游标，把去重后的旧消息插入当前数组头部，并更新下一游标。
@@ -51,7 +52,7 @@ AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BAS
 | 配置不完整或 URL 无效        | 不保存，显示需要补全的字段                 |
 | 配置关闭或删除               | 下次请求不带 `llmConfig`                   |
 | access token 到期            | 刷新 session 后重试一次                    |
-| session 无效                 | 清除本地 session 并进入 `/login`           |
+| session 无效                 | 清除本地 session 并进入 `/`                |
 | 模型请求失败                 | 保留消息，显示检查配置和关闭错误的操作     |
 | 用户停止生成                 | 调 `stop()`，保留已经收到的 assistant 文本 |
 | 历史会话读取失败             | 显示重试入口，不初始化空聊天替代服务端数据 |

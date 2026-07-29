@@ -111,6 +111,15 @@ export function MentionTextarea({
     }
   }, [value]);
 
+  useEffect(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
+  }, [value]);
+
   function refreshMentionContext(nextValue: string, cursor: number) {
     setMentionContext(getMentionContext(nextValue, cursor));
   }
@@ -176,7 +185,11 @@ export function MentionTextarea({
       return;
     }
 
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
       event.preventDefault();
       setMentionContext(null);
       onSend();
@@ -184,43 +197,32 @@ export function MentionTextarea({
   }
 
   return (
-    <div className="relative w-full flex-1">
+    <div className="moodmate-mention">
       {isMenuOpen ? (
-        <div className="absolute bottom-full left-0 z-30 mb-2 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-surface shadow-lg">
+        <div className="moodmate-mention__menu moodmate-scroll">
           {mentionCandidates.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-muted">没有匹配的群成员</p>
+            <p className="moodmate-mention__empty">没有匹配的群成员</p>
           ) : (
-            <ul className="grid gap-0.5 p-1">
+            <ul>
               {mentionCandidates.map((member, index) => (
                 <li key={member.id}>
                   <button
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left outline-none transition-colors ${
-                      index === mentionIndex
-                        ? "bg-primary/12"
-                        : "hover:bg-surface-muted"
-                    }`}
+                    aria-current={index === mentionIndex}
                     onClick={() => insertMention(member)}
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setMentionIndex(index)}
                     type="button"
                   >
-                    <span
-                      aria-hidden
-                      className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/12 text-primary"
-                    >
-                      <Bot className="size-4" />
+                    <span aria-hidden className="moodmate-mention__avatar">
+                      <Bot />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {member.name}
-                      </span>
+                    <span className="moodmate-mention__person">
+                      <strong>{member.name}</strong>
                       {member.headline ? (
-                        <span className="block truncate text-xs text-muted">
-                          {member.headline}
-                        </span>
+                        <small>{member.headline}</small>
                       ) : null}
                     </span>
-                    <span className="shrink-0 text-xs text-muted">
+                    <span className="moodmate-mention__label">
                       @{member.name}
                     </span>
                   </button>
@@ -232,7 +234,6 @@ export function MentionTextarea({
       ) : null}
 
       <textarea
-        className="min-h-[44px] w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus-visible:border-border-strong focus-visible:ring-2 focus-visible:ring-focus"
         disabled={disabled}
         onChange={handleChange}
         onKeyDown={handleKeyDown}

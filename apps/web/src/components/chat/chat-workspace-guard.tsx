@@ -1,6 +1,6 @@
 "use client";
 
-import type { WebSession, WebUserProfile } from "@repo/contracts";
+import type { WebUserProfile } from "@repo/contracts";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -9,12 +9,16 @@ import {
   clearClientSession,
   readClientSession,
 } from "@/src/auth/client-session";
-import { CompanionChatApp } from "@/src/components/chat/companion-chat";
 
-interface DashboardState {
+import { ChatWorkspace, type ChatSelection } from "./chat-workspace";
+
+type ChatWorkspaceGuardProps = {
+  selection: ChatSelection;
+};
+
+type ChatSessionState = {
   profile: WebUserProfile;
-  session: WebSession;
-}
+};
 
 function isAbortError(error: unknown) {
   return (
@@ -25,9 +29,9 @@ function isAbortError(error: unknown) {
   );
 }
 
-export function WebDashboardGuard() {
+export function ChatWorkspaceGuard({ selection }: ChatWorkspaceGuardProps) {
   const router = useRouter();
-  const [dashboard, setDashboard] = useState<DashboardState | null>(null);
+  const [chatSession, setChatSession] = useState<ChatSessionState | null>(null);
 
   useEffect(() => {
     const storedSession = readClientSession();
@@ -51,11 +55,9 @@ export function WebDashboardGuard() {
           return;
         }
 
-        setDashboard({ profile, session: latestSession.session });
+        setChatSession({ profile });
       } catch (error) {
-        if (isAbortError(error)) {
-          return;
-        }
+        if (isAbortError(error)) return;
 
         clearClientSession();
         router.replace("/");
@@ -66,20 +68,23 @@ export function WebDashboardGuard() {
     return () => abortController.abort();
   }, [router]);
 
-  if (!dashboard) {
+  if (!chatSession) {
     return (
-      <main
-        aria-busy="true"
-        className="grid min-h-svh place-items-center px-5 text-foreground"
-      >
-        <p className="text-sm text-muted" role="status">
-          正在恢复登录状态
-        </p>
+      <main aria-busy="true" className="moodmate moodmate-chat-state">
+        <p role="status">正在恢复登录状态</p>
       </main>
     );
   }
 
+  const selectionKey = selection
+    ? `${selection.kind}:${selection.id}`
+    : "entry";
+
   return (
-    <CompanionChatApp profile={dashboard.profile} session={dashboard.session} />
+    <ChatWorkspace
+      key={selectionKey}
+      profile={chatSession.profile}
+      selection={selection}
+    />
   );
 }

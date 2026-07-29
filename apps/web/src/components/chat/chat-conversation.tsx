@@ -2,12 +2,17 @@
 
 import type { CompanionMessageFeedbackRating } from "@repo/contracts";
 import type { ChatStatus, UIMessage } from "ai";
-import { Bot, LoaderCircle, ThumbsDown, ThumbsUp } from "lucide-react";
+import { LoaderCircle, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
+import { classNames } from "@/src/components/moodmate/class-names";
+import type { MoodmateProfile } from "@/src/components/moodmate/models";
 
 const TYPEWRITER_INTERVAL_MS = 18;
 
 interface ChatConversationProps {
+  assistantProfile: MoodmateProfile;
   feedbackByMessageId: Record<string, CompanionMessageFeedbackRating>;
   feedbackPendingMessageId: string | null;
   historicalAssistantMessageIds: readonly string[];
@@ -17,6 +22,7 @@ interface ChatConversationProps {
     rating: CompanionMessageFeedbackRating,
   ) => void;
   status: ChatStatus;
+  userProfile: MoodmateProfile;
 }
 
 function getMessageText(message: UIMessage): string {
@@ -45,12 +51,14 @@ function usePrefersReducedMotion(): boolean {
 }
 
 export function ChatConversation({
+  assistantProfile,
   feedbackByMessageId,
   feedbackPendingMessageId,
   historicalAssistantMessageIds,
   messages,
   onSubmitFeedback,
   status,
+  userProfile,
 }: ChatConversationProps) {
   const reducedMotion = usePrefersReducedMotion();
   const endRef = useRef<HTMLDivElement>(null);
@@ -174,17 +182,15 @@ export function ChatConversation({
 
   return (
     <div
-      aria-label="与 MoodMate 的对话"
-      className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6"
+      aria-label={`与${assistantProfile.name}的对话`}
+      className="moodmate-messages moodmate-scroll"
       role="log"
     >
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <div className="moodmate-messages__inner">
         {messages.length === 0 ? (
-          <div className="flex max-w-[min(36rem,92%)] items-start gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-strong">
-              <Bot aria-hidden="true" className="size-4" />
-            </span>
-            <div className="min-w-0 rounded-md border border-border bg-surface px-4 py-3 text-sm leading-6">
+          <div className="moodmate-message moodmate-message--incoming">
+            <MoodmateAvatar onSurface profile={assistantProfile} size="sm" />
+            <div className="moodmate-message__bubble">
               我在。今天想聊点什么？
             </div>
           </div>
@@ -207,24 +213,28 @@ export function ChatConversation({
 
           return (
             <div
-              className={
+              className={classNames(
+                "moodmate-message",
                 isUser
-                  ? "ml-auto flex max-w-[min(36rem,88%)] justify-end"
-                  : "flex max-w-[min(36rem,92%)] items-start gap-3"
-              }
+                  ? "moodmate-message--outgoing"
+                  : "moodmate-message--incoming",
+              )}
               key={message.id}
             >
               {isUser ? (
-                <div className="min-w-0 whitespace-pre-wrap rounded-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
-                  {fullText}
-                </div>
+                <>
+                  <MoodmateAvatar profile={userProfile} size="sm" />
+                  <div className="moodmate-message__bubble">{fullText}</div>
+                </>
               ) : (
                 <>
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-strong">
-                    <Bot aria-hidden="true" className="size-4" />
-                  </span>
-                  <div className="flex min-w-0 flex-col gap-1.5">
-                    <div className="min-w-0 whitespace-pre-wrap rounded-md border border-border bg-surface px-4 py-3 text-sm leading-6">
+                  <MoodmateAvatar
+                    onSurface
+                    profile={assistantProfile}
+                    size="sm"
+                  />
+                  <div className="moodmate-message__content">
+                    <div className="moodmate-message__bubble">
                       <span aria-hidden="true">{visibleText}</span>
                       <span className="sr-only">{fullText}</span>
                     </div>
@@ -246,16 +256,14 @@ export function ChatConversation({
 
         {showLoading ? (
           <div
-            className="flex items-center gap-3 text-sm text-muted"
+            className="moodmate-message moodmate-message--incoming"
             role="status"
           >
-            <span className="grid size-9 place-items-center rounded-full bg-primary-subtle text-primary-strong">
-              <LoaderCircle
-                aria-hidden="true"
-                className="size-4 animate-spin"
-              />
-            </span>
-            MoodMate 正在回复
+            <MoodmateAvatar onSurface profile={assistantProfile} size="sm" />
+            <div className="moodmate-message__typing">
+              <LoaderCircle aria-hidden="true" className="animate-spin" />
+              {assistantProfile.name}正在回复
+            </div>
           </div>
         ) : null}
         <div ref={endRef} />
@@ -274,7 +282,7 @@ function FeedbackControls({
   rating: CompanionMessageFeedbackRating | null;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="moodmate-message__feedback">
       <FeedbackButton
         active={rating === "positive"}
         disabled={disabled}
@@ -310,17 +318,16 @@ function FeedbackButton({
     <button
       aria-label={label}
       aria-pressed={active}
-      className={`grid size-8 place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 ${
-        active
-          ? "bg-primary-subtle text-primary-strong"
-          : "text-muted hover:bg-surface-muted hover:text-foreground"
-      }`}
+      className={classNames(
+        "moodmate-message__feedback-button",
+        active && "moodmate-message__feedback-button--active",
+      )}
       disabled={disabled}
       onClick={onClick}
       title={label}
       type="button"
     >
-      <Icon aria-hidden="true" className="size-4" />
+      <Icon aria-hidden="true" />
     </button>
   );
 }

@@ -160,7 +160,7 @@ export function AgentsManager() {
     <main className="mx-auto w-full max-w-3xl px-4 py-8 text-foreground sm:px-6 sm:py-12">
       <Link
         className="inline-flex items-center gap-1.5 text-sm text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
-        href="/app"
+        href="/chats"
       >
         <ArrowLeft aria-hidden className="size-4" />
         返回聊天

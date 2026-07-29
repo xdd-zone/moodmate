@@ -4,135 +4,56 @@ import { useChat } from "@ai-sdk/react";
 import type {
   CompanionConversationResponse,
   CompanionMessageFeedbackRating,
-  WebSession,
-  WebUserProfile,
 } from "@repo/contracts";
-import { Button } from "@repo/ui/button";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TextStreamChatTransport, type UIMessage } from "ai";
 import {
-  Bot,
-  Brain,
-  ChevronLeft,
-  Heart,
   History,
   LoaderCircle,
-  MessageCircle,
-  Palette,
+  MoreVertical,
+  PanelLeft,
+  PanelRight,
   Search,
-  Settings2,
-  SlidersHorizontal,
-  UserRound,
-  Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { getCompanionConversationMessages } from "@/src/api/chat.api";
 import {
   companionChatKeys,
-  companionConversationQueryOptions,
   submitCompanionMessageFeedbackMutationOptions,
 } from "@/src/api/chat.query";
-import { clearClientSession } from "@/src/auth/client-session";
-import {
-  AppearancePanel,
-  CarePanel,
-  GeneralPanel,
-  MemoryPanel,
-  ProfilePanel,
-} from "@/src/components/settings/settings-panels";
+import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
+import type { MoodmateProfile } from "@/src/components/moodmate/models";
 import { getWebClientEnv } from "@/src/env/client";
 import { fetchWithClientSession } from "@/src/lib/http";
 
 import { ChatComposer } from "./chat-composer";
 import { ChatConversation } from "./chat-conversation";
 
-type AppMode = "chat" | "settings";
-type SettingsSection = "profile" | "general" | "memory" | "care" | "appearance";
-
-const AGENT_NAME = "MoodMate";
-const AGENT_SUBTITLE = "你的 AI 伴侣";
+type CompanionChatPaneProps = {
+  assistantProfile: MoodmateProfile;
+  onInformationToggle: () => void;
+  onOpenList: () => void;
+  profile: MoodmateProfile;
+  serverConversation: CompanionConversationResponse;
+};
 
 function getRelationshipStageLabel(messageCount: number) {
-  if (messageCount >= 80) {
-    return "亲密连结";
-  }
-  if (messageCount >= 36) {
-    return "稳定信任";
-  }
-  if (messageCount >= 16) {
-    return "舒适陪伴";
-  }
-  if (messageCount >= 6) {
-    return "升温熟悉";
-  }
+  if (messageCount >= 80) return "亲密连结";
+  if (messageCount >= 36) return "稳定信任";
+  if (messageCount >= 16) return "舒适陪伴";
+  if (messageCount >= 6) return "升温熟悉";
   return "初识破冰";
 }
 
-interface CompanionChatAppProps {
-  profile: WebUserProfile;
-  session: WebSession;
-}
-
-interface SettingsMenuEntry {
-  icon: typeof MessageCircle;
-  label: string;
-  section: SettingsSection;
-}
-
-const settingsMenu: SettingsMenuEntry[] = [
-  { icon: UserRound, label: "个人资料", section: "profile" },
-  { icon: SlidersHorizontal, label: "General", section: "general" },
-  { icon: Brain, label: "记忆", section: "memory" },
-  { icon: Heart, label: "主动关怀", section: "care" },
-  { icon: Palette, label: "Appearance", section: "appearance" },
-];
-
-const settingsTitle: Record<SettingsSection, string> = {
-  appearance: "Appearance",
-  care: "主动关怀",
-  general: "General",
-  memory: "记忆",
-  profile: "个人资料",
-};
-
-export function CompanionChatApp({ profile, session }: CompanionChatAppProps) {
-  const conversationQuery = useQuery(companionConversationQueryOptions());
-
-  if (conversationQuery.isPending) {
-    return <ConversationLoadingState />;
-  }
-
-  if (conversationQuery.isError) {
-    return (
-      <ConversationErrorState
-        onRetry={() => void conversationQuery.refetch()}
-      />
-    );
-  }
-
-  return (
-    <CompanionChatAppInner
-      key={conversationQuery.data.conversationId}
-      profile={profile}
-      serverConversation={conversationQuery.data}
-      session={session}
-    />
-  );
-}
-
-function CompanionChatAppInner({
+export function CompanionChatPane({
+  assistantProfile,
+  onInformationToggle,
+  onOpenList,
   profile,
   serverConversation,
-  session,
-}: CompanionChatAppProps & {
-  serverConversation: CompanionConversationResponse;
-}) {
+}: CompanionChatPaneProps) {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<AppMode>("chat");
-  const [settingsSection, setSettingsSection] =
-    useState<SettingsSection>("profile");
   const [draft, setDraft] = useState("");
   const transport = useMemo(
     () =>
@@ -188,18 +109,12 @@ function CompanionChatAppInner({
   const feedbackMutation = useMutation(
     submitCompanionMessageFeedbackMutationOptions(queryClient),
   );
-  // hasUnreadCareEvent 是打开会话前的快照：服务端已在本次读取时标记已读，前端据此做一次性提示。
-  const [hasUnreadCareEvent, setHasUnreadCareEvent] = useState(
-    serverConversation.hasUnreadCareEvent,
-  );
 
   function handleSubmitFeedback(
     messageId: string,
     rating: CompanionMessageFeedbackRating,
   ) {
-    if (feedbackMutation.isPending) {
-      return;
-    }
+    if (feedbackMutation.isPending) return;
 
     feedbackMutation.mutate(
       { messageId, payload: { rating } },
@@ -217,24 +132,15 @@ function CompanionChatAppInner({
   function handleSend() {
     const text = draft.trim();
 
-    if (!text || isSending) {
-      return;
-    }
+    if (!text || isSending) return;
 
     clearError();
     setDraft("");
     void sendMessage({ text });
   }
 
-  function handleLogout() {
-    clearClientSession();
-    window.location.replace("/");
-  }
-
   async function loadMoreHistory() {
-    if (!nextCursor || isLoadingMoreHistory) {
-      return;
-    }
+    if (!nextCursor || isLoadingMoreHistory) return;
 
     setHistoryLoadError(false);
     setIsLoadingMoreHistory(true);
@@ -268,313 +174,125 @@ function CompanionChatAppInner({
     }
   }
 
-  const lastMessage = messages.at(-1);
-  const lastMessageText =
-    lastMessage?.parts
-      .flatMap((part) => (part.type === "text" ? [part.text] : []))
-      .join("")
-      .trim() ?? "";
-  const conversationPreview = lastMessageText || AGENT_SUBTITLE;
-
-  // 移动端：聊天模式默认展示会话列表，进入会话后隐藏列表；设置模式同理展示菜单。
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-
   return (
-    <main className="h-svh overflow-hidden bg-background text-foreground lg:grid lg:grid-cols-[20rem_minmax(0,1fr)]">
-      <aside
-        className={`min-h-0 flex-col border-r border-border bg-surface lg:flex ${
-          mobileDetailOpen ? "hidden lg:flex" : "flex"
-        }`}
-      >
-        <div className="flex min-h-16 items-center gap-2 px-4">
-          <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-            {mode === "chat" ? (
-              <MessageCircle aria-hidden="true" className="size-4" />
-            ) : (
-              <Settings2 aria-hidden="true" className="size-4" />
-            )}
-          </span>
-          <span className="text-lg font-semibold">
-            {mode === "chat" ? AGENT_NAME : "设置"}
-          </span>
+    <div className="moodmate-chat">
+      <header className="moodmate-chat__header">
+        <button
+          aria-label="打开会话列表"
+          className="moodmate-icon-button moodmate-chat__mobile-action"
+          onClick={onOpenList}
+          title="打开会话列表"
+          type="button"
+        >
+          <PanelLeft aria-hidden="true" />
+        </button>
+        <MoodmateAvatar
+          onSurface
+          profile={assistantProfile}
+          showStatus
+          size="sm"
+        />
+        <div className="moodmate-chat__heading">
+          <h1>
+            {assistantProfile.name}
+            <span className="moodmate-chat__relationship">
+              {getRelationshipStageLabel(serverConversation.messageCount)}
+            </span>
+          </h1>
+          <p>在线</p>
         </div>
-
-        <div className="px-3 pb-3">
-          <div className="flex items-center gap-2 rounded-full bg-surface-muted px-3.5 py-2 text-sm text-muted">
-            <Search aria-hidden="true" className="size-4 shrink-0" />
-            <span className="truncate">搜索</span>
-          </div>
-        </div>
-
-        {mode === "chat" ? (
-          <nav
-            aria-label="会话列表"
-            className="min-h-0 flex-1 overflow-y-auto px-2"
+        <div className="moodmate-chat__actions">
+          <button
+            aria-label="消息搜索暂未开放"
+            className="moodmate-icon-button"
+            disabled
+            title="消息搜索暂未开放"
+            type="button"
           >
-            <ConversationItem
-              active
-              name={AGENT_NAME}
-              onClick={() => setMobileDetailOpen(true)}
-              preview={conversationPreview}
-            />
-          </nav>
-        ) : (
-          <nav
-            aria-label="设置菜单"
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2"
+            <Search aria-hidden="true" />
+          </button>
+          <button
+            aria-label="切换资料栏"
+            className="moodmate-icon-button"
+            onClick={onInformationToggle}
+            title="切换资料栏"
+            type="button"
           >
-            {settingsMenu.map((entry) => (
-              <SettingsMenuItem
-                active={settingsSection === entry.section}
-                icon={entry.icon}
-                key={entry.section}
-                label={entry.label}
-                onClick={() => {
-                  setSettingsSection(entry.section);
-                  setMobileDetailOpen(true);
-                  if (entry.section === "care") {
-                    setHasUnreadCareEvent(false);
-                  }
-                }}
-                showBadge={entry.section === "care" && hasUnreadCareEvent}
-              />
-            ))}
-          </nav>
-        )}
-
-        <div className="flex items-center gap-1 border-t border-border px-3 py-2.5">
-          <SidebarModeButton
-            active={mode === "chat"}
-            icon={MessageCircle}
-            label="聊天"
-            onClick={() => {
-              setMode("chat");
-              setMobileDetailOpen(false);
-            }}
-          />
-          <SidebarModeButton
-            active={mode === "settings"}
-            hasBadge={hasUnreadCareEvent}
-            icon={Settings2}
-            label="设置"
-            onClick={() => {
-              setMode("settings");
-              setMobileDetailOpen(false);
-            }}
-          />
-          <SidebarLinkButton href="/agents" icon={Users} label="我的 Agent" />
+            <PanelRight aria-hidden="true" />
+          </button>
+          <button
+            aria-label="更多操作暂未开放"
+            className="moodmate-icon-button"
+            disabled
+            title="更多操作暂未开放"
+            type="button"
+          >
+            <MoreVertical aria-hidden="true" />
+          </button>
         </div>
-      </aside>
+      </header>
 
-      <div
-        className={`h-svh min-h-0 flex-col lg:flex ${
-          mobileDetailOpen ? "flex" : "hidden lg:flex"
-        }`}
-      >
-        {mode === "chat" ? (
-          <ChatMode
-            clearError={clearError}
-            draft={draft}
-            error={error}
-            feedbackByMessageId={feedbackByMessageId}
-            feedbackPendingMessageId={
-              feedbackMutation.isPending
-                ? (feedbackMutation.variables?.messageId ?? null)
-                : null
-            }
-            isSending={isSending}
-            messageCount={serverConversation.messageCount}
-            historicalAssistantMessageIds={historicalAssistantMessageIds}
-            historyLoadError={historyLoadError}
-            isLoadingMoreHistory={isLoadingMoreHistory}
-            messages={messages}
-            onBack={() => setMobileDetailOpen(false)}
-            onDraftChange={setDraft}
-            onLoadMoreHistory={() => void loadMoreHistory()}
-            onSend={handleSend}
-            onStop={() => void stop()}
-            onSubmitFeedback={handleSubmitFeedback}
-            status={status}
-            hasMoreHistory={nextCursor !== null}
-          />
-        ) : (
-          <SettingsMode
-            onBack={() => setMobileDetailOpen(false)}
-            onLogout={handleLogout}
-            profile={profile}
-            section={settingsSection}
-            session={session}
-            title={settingsTitle[settingsSection]}
-          />
-        )}
-      </div>
-    </main>
-  );
-}
-
-function ChatMode({
-  clearError,
-  draft,
-  error,
-  feedbackByMessageId,
-  feedbackPendingMessageId,
-  hasMoreHistory,
-  historicalAssistantMessageIds,
-  historyLoadError,
-  isSending,
-  isLoadingMoreHistory,
-  messageCount,
-  messages,
-  onBack,
-  onDraftChange,
-  onLoadMoreHistory,
-  onSend,
-  onStop,
-  onSubmitFeedback,
-  status,
-}: {
-  clearError: () => void;
-  draft: string;
-  error: Error | undefined;
-  feedbackByMessageId: Record<string, CompanionMessageFeedbackRating>;
-  feedbackPendingMessageId: string | null;
-  hasMoreHistory: boolean;
-  historicalAssistantMessageIds: readonly string[];
-  historyLoadError: boolean;
-  isSending: boolean;
-  isLoadingMoreHistory: boolean;
-  messageCount: number;
-  messages: UIMessage[];
-  onBack: () => void;
-  onDraftChange: (value: string) => void;
-  onLoadMoreHistory: () => void;
-  onSend: () => void;
-  onStop: () => void;
-  onSubmitFeedback: (
-    messageId: string,
-    rating: CompanionMessageFeedbackRating,
-  ) => void;
-  status: ReturnType<typeof useChat>["status"];
-}) {
-  return (
-    <>
-      <DetailHeader
-        onBack={onBack}
-        subtitle={getRelationshipStageLabel(messageCount)}
-        title={AGENT_NAME}
-      >
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-strong">
-          <Bot aria-hidden="true" className="size-4" />
-        </span>
-      </DetailHeader>
-
-      <section className="flex min-h-0 flex-1 flex-col">
-        {hasMoreHistory || historyLoadError ? (
-          <div className="flex min-h-11 shrink-0 items-center justify-center border-b border-border px-4 py-2">
+      <section className="moodmate-chat__body">
+        {nextCursor || historyLoadError ? (
+          <div className="moodmate-chat__history">
             {historyLoadError ? (
-              <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-danger">
-                <span>更早的消息加载失败</span>
-                <Button
-                  onClick={onLoadMoreHistory}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
+              <>
+                <span role="alert">更早的消息加载失败</span>
+                <button onClick={() => void loadMoreHistory()} type="button">
                   重试
-                </Button>
-              </div>
+                </button>
+              </>
             ) : (
-              <Button
+              <button
                 disabled={isLoadingMoreHistory}
-                onClick={onLoadMoreHistory}
-                size="sm"
+                onClick={() => void loadMoreHistory()}
                 type="button"
-                variant="ghost"
               >
                 {isLoadingMoreHistory ? (
-                  <LoaderCircle
-                    aria-hidden="true"
-                    className="size-4 animate-spin"
-                  />
+                  <LoaderCircle aria-hidden="true" className="animate-spin" />
                 ) : (
-                  <History aria-hidden="true" className="size-4" />
+                  <History aria-hidden="true" />
                 )}
                 {isLoadingMoreHistory ? "正在加载" : "加载更早消息"}
-              </Button>
+              </button>
             )}
           </div>
         ) : null}
 
         <ChatConversation
+          assistantProfile={assistantProfile}
           feedbackByMessageId={feedbackByMessageId}
-          feedbackPendingMessageId={feedbackPendingMessageId}
+          feedbackPendingMessageId={
+            feedbackMutation.isPending
+              ? (feedbackMutation.variables?.messageId ?? null)
+              : null
+          }
           historicalAssistantMessageIds={historicalAssistantMessageIds}
           messages={messages}
-          onSubmitFeedback={onSubmitFeedback}
+          onSubmitFeedback={handleSubmitFeedback}
           status={status}
+          userProfile={profile}
         />
 
         {error ? (
-          <div
-            className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm sm:mx-6"
-            role="alert"
-          >
-            <p className="min-w-0 flex-1">回复生成失败，请稍后重试。</p>
-            <Button
-              onClick={clearError}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
+          <div className="moodmate-chat__error" role="alert">
+            <p>回复生成失败，请稍后重试。</p>
+            <button onClick={clearError} type="button">
               关闭
-            </Button>
+            </button>
           </div>
         ) : null}
 
         <ChatComposer
           isSending={isSending}
-          onChange={onDraftChange}
-          onStop={onStop}
-          onSubmit={onSend}
+          onChange={setDraft}
+          onStop={() => void stop()}
+          onSubmit={handleSend}
+          placeholder={`和${assistantProfile.name}说点什么`}
           value={draft}
         />
       </section>
-    </>
-  );
-}
-
-function SettingsMode({
-  onBack,
-  onLogout,
-  profile,
-  section,
-  session,
-  title,
-}: {
-  onBack: () => void;
-  onLogout: () => void;
-  profile: WebUserProfile;
-  section: SettingsSection;
-  session: WebSession;
-  title: string;
-}) {
-  return (
-    <>
-      <DetailHeader onBack={onBack} title={title} />
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {section === "profile" ? (
-          <ProfilePanel
-            onLogout={onLogout}
-            profile={profile}
-            session={session}
-          />
-        ) : null}
-        {section === "general" ? <GeneralPanel /> : null}
-        {section === "memory" ? <MemoryPanel /> : null}
-        {section === "care" ? <CarePanel /> : null}
-        {section === "appearance" ? <AppearancePanel /> : null}
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -594,210 +312,8 @@ function collectFeedback(
   const ratings: Record<string, CompanionMessageFeedbackRating> = {};
 
   for (const message of messages) {
-    if (message.feedback) {
-      ratings[message.id] = message.feedback.rating;
-    }
+    if (message.feedback) ratings[message.id] = message.feedback.rating;
   }
 
   return ratings;
-}
-
-function ConversationLoadingState() {
-  return (
-    <main
-      aria-busy="true"
-      className="grid min-h-svh place-items-center bg-background px-5 text-foreground"
-    >
-      <div className="flex items-center gap-3 text-sm text-muted" role="status">
-        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-        正在加载聊天记录
-      </div>
-    </main>
-  );
-}
-
-function ConversationErrorState({ onRetry }: { onRetry: () => void }) {
-  return (
-    <main className="grid min-h-svh place-items-center bg-background px-5 text-foreground">
-      <section className="w-full max-w-sm text-center">
-        <h1 className="text-base font-semibold">聊天记录加载失败</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">
-          请确认 API 已运行，并已应用最新 D1 迁移。
-        </p>
-        <Button className="mt-5 min-h-11" onClick={onRetry} type="button">
-          重新加载
-        </Button>
-      </section>
-    </main>
-  );
-}
-
-function DetailHeader({
-  children,
-  onBack,
-  subtitle,
-  title,
-}: {
-  children?: React.ReactNode;
-  onBack: () => void;
-  subtitle?: string;
-  title: string;
-}) {
-  return (
-    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
-      <button
-        aria-label="返回"
-        className="grid size-9 shrink-0 place-items-center rounded-md text-muted outline-none hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
-        onClick={onBack}
-        title="返回"
-        type="button"
-      >
-        <ChevronLeft aria-hidden="true" className="size-5" />
-      </button>
-      {children}
-      <div className="min-w-0">
-        <h1 className="truncate text-sm font-semibold">{title}</h1>
-        {subtitle ? (
-          <p className="truncate text-xs text-muted">{subtitle}</p>
-        ) : null}
-      </div>
-    </header>
-  );
-}
-
-function ConversationItem({
-  active,
-  name,
-  onClick,
-  preview,
-}: {
-  active: boolean;
-  name: string;
-  onClick: () => void;
-  preview: string;
-}) {
-  return (
-    <button
-      aria-current={active ? "page" : undefined}
-      className={`flex w-full items-start gap-3 rounded-lg px-2.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-        active ? "bg-primary text-primary-foreground" : "hover:bg-surface-muted"
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      <span
-        className={`grid size-12 shrink-0 place-items-center rounded-full ${
-          active
-            ? "bg-primary-foreground/15 text-primary-foreground"
-            : "bg-primary-subtle text-primary-strong"
-        }`}
-      >
-        <Bot aria-hidden="true" className="size-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{name}</span>
-        <span
-          className={`mt-0.5 line-clamp-2 text-xs leading-snug ${
-            active ? "text-primary-foreground/80" : "text-muted"
-          }`}
-        >
-          {preview}
-        </span>
-      </span>
-    </button>
-  );
-}
-
-function SettingsMenuItem({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-  showBadge = false,
-}: {
-  active: boolean;
-  icon: typeof MessageCircle;
-  label: string;
-  onClick: () => void;
-  showBadge?: boolean;
-}) {
-  return (
-    <button
-      aria-current={active ? "page" : undefined}
-      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-        active
-          ? "bg-primary text-primary-foreground"
-          : "text-foreground hover:bg-surface-muted"
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      <Icon aria-hidden="true" className="size-5 shrink-0" />
-      <span className="truncate">{label}</span>
-      {showBadge ? (
-        <span
-          aria-label="有未读关怀"
-          className="ml-auto size-2 shrink-0 rounded-full bg-primary"
-        />
-      ) : null}
-    </button>
-  );
-}
-
-function SidebarModeButton({
-  active,
-  hasBadge = false,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  hasBadge?: boolean;
-  icon: typeof MessageCircle;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-current={active ? "page" : undefined}
-      aria-label={label}
-      className={`relative grid size-10 place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-        active
-          ? "bg-primary-subtle text-primary-strong"
-          : "text-muted hover:bg-surface-muted hover:text-foreground"
-      }`}
-      onClick={onClick}
-      title={label}
-      type="button"
-    >
-      <Icon aria-hidden="true" className="size-5" />
-      {hasBadge ? (
-        <span
-          aria-hidden="true"
-          className="absolute right-1.5 top-1.5 size-2 rounded-full bg-danger"
-        />
-      ) : null}
-    </button>
-  );
-}
-
-function SidebarLinkButton({
-  href,
-  icon: Icon,
-  label,
-}: {
-  href: string;
-  icon: typeof MessageCircle;
-  label: string;
-}) {
-  return (
-    <Link
-      aria-label={label}
-      className="grid size-10 place-items-center rounded-md text-muted outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
-      href={href}
-      title={label}
-    >
-      <Icon aria-hidden="true" className="size-5" />
-    </Link>
-  );
 }

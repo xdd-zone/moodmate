@@ -25,7 +25,7 @@ Web 使用 Tailwind CSS 4，入口是 `apps/web/app/globals.css`，PostCSS 配�
 
 - 只支持 Latte 亮色与 Mocha 暗色，根节点通过 `data-theme` 切换，不使用 `prefers-color-scheme` 选择主题。
 - `app/layout.tsx` 设置默认 Latte，并在 `<head>` 渲染 `@repo/ui/theme-script`，不能改成挂载后再读取 localStorage。
-- 页面使用 `@repo/ui/theme-toggle` 提供切换入口；首页和 `/app` 都必须能直接切换。
+- 页面使用 `@repo/ui/theme-toggle` 提供切换入口；首页和 `/chats` 都必须能直接切换。
 - Web 的 `warm`、`calm`、`rose` 和环境背景变量引用共享 `--theme-*`，不另写一套固定明暗色值。
 
 ## 布局与视觉
