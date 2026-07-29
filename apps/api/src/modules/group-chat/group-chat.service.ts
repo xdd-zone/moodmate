@@ -350,7 +350,9 @@ async function resolveGroupChatProviderConfig(
   return {
     apiKey: active.apiKey,
     baseURL: active.baseURL.trim().replace(/\/+$/, ""),
-    disableThinking: active.disableThinking,
+    disableThinking:
+      active.providerOptions?.["openai-chat-completions"]?.disableThinking ??
+      false,
     model: active.model,
     providerName: active.providerName,
   };

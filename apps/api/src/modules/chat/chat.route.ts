@@ -20,12 +20,20 @@ import {
 import { Hono } from "hono";
 import { z } from "zod";
 
+import {
+  streamText,
+  toTextByteStream,
+  type AiEventStream,
+  type AiMessage,
+  type AiModel,
+  type AiStreamEvent,
+} from "@/infra/ai";
 import { requireWebAccess } from "@/modules/auth/auth.middleware";
 import { AppError } from "@/shared/app-error";
 import type { ApiHonoEnv } from "@/shared/hono-env";
 import { createMeta } from "@/shared/meta";
 
-import { createCompanionTextStream } from "./chat.provider";
+import { toAiMessages, toAiModel, toChatAppError } from "./chat.ai-model";
 import {
   deleteCompanionMemory,
   generateCompanionCareEvent,
@@ -243,14 +251,14 @@ export function createChatRoute() {
         }
 
         const stream = await createCompanionTextStream({
-          messages: chat.messages,
+          messages: toAiMessages(chat.messages),
+          model: toAiModel(chat.providerConfig),
           onComplete: (assistantText) =>
             saveCompanionAssistantTurn({
               assistantText,
               bindings: c.env,
               turn: chat.turn,
             }),
-          providerConfig: chat.providerConfig,
           signal: c.req.raw.signal,
         });
 
@@ -261,6 +269,77 @@ export function createChatRoute() {
         });
       },
     );
+}
+
+/**
+ * 单聊流式：用 AI runtime 的 streamText + toTextByteStream 生成纯文本字节流。
+ *
+ * 预取事件直到首个 text-delta 或流结束，把连接、认证、超时类 AiError 在写响应头前
+ * 转成 AppError，保持迁移前 fetch 阶段抛错、由全局 onError 返回干净 JSON 的行为。
+ * 首个 text-delta 出现后（响应头已提交）的错误仍以 controller.error 破坏流，
+ * 空文本沿用 toTextByteStream 默认 errorOnEmpty，等价旧的「模型未返回文本」。
+ */
+async function createCompanionTextStream(input: {
+  messages: AiMessage[];
+  model: AiModel;
+  onComplete: (text: string) => Promise<void>;
+  signal: AbortSignal;
+}): Promise<ReadableStream<Uint8Array>> {
+  const eventStream = streamText({
+    messages: input.messages,
+    model: input.model,
+    signal: input.signal,
+  });
+  const iterator = eventStream[Symbol.asyncIterator]();
+  const buffered: AiStreamEvent[] = [];
+
+  while (true) {
+    let result: IteratorResult<AiStreamEvent>;
+
+    try {
+      result = await iterator.next();
+    } catch (error) {
+      throw toChatAppError(error);
+    }
+
+    if (result.done) {
+      break;
+    }
+
+    if (result.value.type === "error") {
+      throw toChatAppError(result.value.error);
+    }
+
+    buffered.push(result.value);
+
+    if (result.value.type === "text-delta") {
+      break;
+    }
+  }
+
+  return toTextByteStream(replayEventStream(buffered, iterator), {
+    onComplete: input.onComplete,
+  });
+}
+
+/** 把预取阶段缓冲的事件先回放，再继续消费原始事件流。 */
+async function* replayEventStream(
+  buffered: AiStreamEvent[],
+  iterator: AsyncIterator<AiStreamEvent>,
+): AiEventStream {
+  for (const event of buffered) {
+    yield event;
+  }
+
+  while (true) {
+    const result = await iterator.next();
+
+    if (result.done) {
+      return;
+    }
+
+    yield result.value;
+  }
 }
 
 function buildTextStream(text: string): ReadableStream<Uint8Array> {

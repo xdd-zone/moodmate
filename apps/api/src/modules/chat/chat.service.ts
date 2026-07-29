@@ -1086,7 +1086,9 @@ async function resolveProviderConfig(
     baseURL: normalizeBaseURL(active.baseURL),
     model: active.model,
     apiKey: active.apiKey,
-    disableThinking: active.disableThinking,
+    disableThinking:
+      active.providerOptions?.["openai-chat-completions"]?.disableThinking ??
+      false,
   };
 }
 

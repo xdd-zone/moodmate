@@ -1,8 +1,9 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 
+import { generateObject, isAiError } from "@/infra/ai";
+import { fromLangChainMessages, toAiModel } from "@/modules/chat/chat.ai-model";
 import type {
   AgentMemoryRecord,
   UserAgentRecord,
@@ -30,14 +31,6 @@ import {
   type GroupChatUserEmotion,
   type GroupSpeakingContext,
 } from "./group-chat.speaking";
-
-type StructuredOutputMethod = "functionCalling" | "jsonSchema" | "jsonMode";
-
-const STRUCTURED_OUTPUT_METHODS: readonly StructuredOutputMethod[] = [
-  "functionCalling",
-  "jsonSchema",
-  "jsonMode",
-] as const;
 
 const GROUP_QUESTION_PATTERN = /你们|大家|一起|分别|都说|怎么看|意见/;
 const GROUP_PARALLEL_PATTERN = /分别|各自|各说|轮流|逐个|每个人/;
@@ -166,15 +159,15 @@ const GroupChatOrchestrationState = Annotation.Root({
   signal: Annotation<AbortSignal | undefined>(),
 });
 
-function buildLangChainChatModel(providerConfig: ChatProviderConfig) {
-  return new ChatOpenAI({
-    model: providerConfig.model,
-    apiKey: providerConfig.apiKey,
-    temperature: 0,
-    configuration: {
-      baseURL: providerConfig.baseURL.replace(/\/+$/, ""),
-    },
-  });
+/**
+ * 判断错误是否来自用户取消：AiError 的 aborted code 或 signal 已置 aborted。
+ * 取消必须向上抛，不吞成业务兜底，保持迁移前 `if (signal?.aborted) throw` 语义。
+ */
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) {
+    return true;
+  }
+  return isAiError(error) && error.code === "aborted";
 }
 
 function formatAgentRoster(agents: GroupChatMemberWithAgentRow[]) {
@@ -467,51 +460,38 @@ async function classifyGroupIntentWithLangChain(params: {
   userText: string;
   signal?: AbortSignal;
 }): Promise<GroupChatIntent> {
-  let lastError: unknown = null;
-
   const history = formatGroupHistory(params.recentMessages);
 
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      const model = buildLangChainChatModel(params.providerConfig);
-      const structuredModel = model.withStructuredOutput(
-        GroupChatIntentSchema,
-        {
-          name: "group_chat_intent",
-          method,
-        },
-      );
-      const chain = groupChatIntentPrompt.pipe(structuredModel);
+  try {
+    const messages = await groupChatIntentPrompt.formatMessages({
+      groupTitle: params.groupChat.title,
+      groupSummary: params.groupChat.summary?.trim() || "暂无",
+      agentRoster: formatAgentRoster(params.agents),
+      recentHistory: history.length > 0 ? history : "暂无",
+      userText: params.userText,
+    });
 
-      const result = await chain.invoke(
-        {
-          groupTitle: params.groupChat.title,
-          groupSummary: params.groupChat.summary?.trim() || "暂无",
-          agentRoster: formatAgentRoster(params.agents),
-          recentHistory: history.length > 0 ? history : "暂无",
-          userText: params.userText,
-        },
-        params.signal ? { signal: params.signal } : undefined,
-      );
+    const { value } = await generateObject({
+      model: toAiModel(params.providerConfig),
+      messages: fromLangChainMessages(messages),
+      schema: GroupChatIntentSchema,
+      schemaName: "group_chat_intent",
+      temperature: 0,
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
 
-      return normalizeGroupChatIntent(
-        GroupChatIntentSchema.parse(result),
-        params.userText,
-      );
-    } catch (error) {
-      // 用户主动取消不算 LLM 失败，直接向上抛，不吞成兜底意图。
-      if (params.signal?.aborted) {
-        throw error;
-      }
-      lastError = error;
+    return normalizeGroupChatIntent(value, params.userText);
+  } catch (error) {
+    // 用户主动取消不算 LLM 失败，直接向上抛，不吞成兜底意图。
+    if (isAbortError(error, params.signal)) {
+      throw error;
     }
+    console.warn("LangChain group chat intent classification failed", error);
+    return buildFallbackGroupChatIntent({
+      agents: params.agents,
+      userText: params.userText,
+    });
   }
-
-  console.warn("LangChain group chat intent classification failed", lastError);
-  return buildFallbackGroupChatIntent({
-    agents: params.agents,
-    userText: params.userText,
-  });
 }
 
 /**
@@ -524,42 +504,32 @@ async function detectGroupUserEmotionWithLangChain(params: {
   userText: string;
   signal?: AbortSignal;
 }): Promise<GroupChatUserEmotion> {
-  let lastError: unknown = null;
-
   const history = formatGroupHistory(params.recentMessages);
 
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      const model = buildLangChainChatModel(params.providerConfig);
-      const structuredModel = model.withStructuredOutput(
-        GroupChatUserEmotionSchema,
-        {
-          name: "group_chat_user_emotion",
-          method,
-        },
-      );
-      const chain = groupChatUserEmotionPrompt.pipe(structuredModel);
+  try {
+    const messages = await groupChatUserEmotionPrompt.formatMessages({
+      recentHistory: history.length > 0 ? history : "暂无",
+      userText: params.userText,
+    });
 
-      const result = await chain.invoke(
-        {
-          recentHistory: history.length > 0 ? history : "暂无",
-          userText: params.userText,
-        },
-        params.signal ? { signal: params.signal } : undefined,
-      );
+    const { value } = await generateObject({
+      model: toAiModel(params.providerConfig),
+      messages: fromLangChainMessages(messages),
+      schema: GroupChatUserEmotionSchema,
+      schemaName: "group_chat_user_emotion",
+      temperature: 0,
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
 
-      return GroupChatUserEmotionSchema.parse(result);
-    } catch (error) {
-      // 用户主动取消不算情绪识别失败，直接向上抛，不吞成关键词兜底。
-      if (params.signal?.aborted) {
-        throw error;
-      }
-      lastError = error;
+    return value;
+  } catch (error) {
+    // 用户主动取消不算情绪识别失败，直接向上抛，不吞成关键词兜底。
+    if (isAbortError(error, params.signal)) {
+      throw error;
     }
+    console.warn("LangChain group chat user emotion detection failed", error);
+    return buildFallbackGroupUserEmotion(params.userText);
   }
-
-  console.warn("LangChain group chat user emotion detection failed", lastError);
-  return buildFallbackGroupUserEmotion(params.userText);
 }
 
 function selectionFromLocalRules(input: {
@@ -664,8 +634,6 @@ async function selectGroupAgentsWithLangChain(params: {
   selection: GroupChatAgentSelection;
   selectedAgents: GroupChatMemberWithAgentRow[];
 }> {
-  let lastError: unknown = null;
-
   const intentText = [
     `意图：${params.intent.intent}`,
     `点名成员：${
@@ -686,53 +654,45 @@ async function selectGroupAgentsWithLangChain(params: {
       })
     : "暂无发言权上下文";
 
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      const model = buildLangChainChatModel(params.providerConfig);
-      const structuredModel = model.withStructuredOutput(
-        GroupChatAgentSelectionSchema,
-        {
-          name: "group_chat_agent_selection",
-          method,
-        },
-      );
-      const chain = groupChatSelectionPrompt.pipe(structuredModel);
+  try {
+    const messages = await groupChatSelectionPrompt.formatMessages({
+      intent: intentText,
+      agentRoster: formatAgentRoster(params.agents),
+      speakingContext: speakingContextText,
+      userText: params.userText,
+    });
 
-      const result = await chain.invoke(
-        {
-          intent: intentText,
-          agentRoster: formatAgentRoster(params.agents),
-          speakingContext: speakingContextText,
-          userText: params.userText,
-        },
-        params.signal ? { signal: params.signal } : undefined,
-      );
+    const { value } = await generateObject({
+      model: toAiModel(params.providerConfig),
+      messages: fromLangChainMessages(messages),
+      schema: GroupChatAgentSelectionSchema,
+      schemaName: "group_chat_agent_selection",
+      temperature: 0,
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
 
-      return normalizeAgentSelection({
-        selection: GroupChatAgentSelectionSchema.parse(result),
-        agents: params.agents,
-        userText: params.userText,
-        intent: params.intent,
-        speakingContext: params.speakingContext,
-        agentRecordsById: params.agentRecordsById,
-      });
-    } catch (error) {
-      // 用户主动取消不算 LLM 失败，直接向上抛，不吞成本地规则兜底。
-      if (params.signal?.aborted) {
-        throw error;
-      }
-      lastError = error;
+    return normalizeAgentSelection({
+      selection: value,
+      agents: params.agents,
+      userText: params.userText,
+      intent: params.intent,
+      speakingContext: params.speakingContext,
+      agentRecordsById: params.agentRecordsById,
+    });
+  } catch (error) {
+    // 用户主动取消不算 LLM 失败，直接向上抛，不吞成本地规则兜底。
+    if (isAbortError(error, params.signal)) {
+      throw error;
     }
+    console.warn("LangChain group chat agent selection failed", error);
+    return selectionFromLocalRules({
+      agents: params.agents,
+      userText: params.userText,
+      intent: params.intent,
+      speakingContext: params.speakingContext,
+      agentRecordsById: params.agentRecordsById,
+    });
   }
-
-  console.warn("LangChain group chat agent selection failed", lastError);
-  return selectionFromLocalRules({
-    agents: params.agents,
-    userText: params.userText,
-    intent: params.intent,
-    speakingContext: params.speakingContext,
-    agentRecordsById: params.agentRecordsById,
-  });
 }
 
 function plannedReplyToMessageRow(
@@ -911,41 +871,31 @@ async function checkGroupReplyQualityWithLangChain(params: {
     )
     .join("\n");
 
-  let lastError: unknown = null;
+  try {
+    const messages = await groupChatQualityPrompt.formatMessages({
+      intent: intentText,
+      userText: params.userText,
+      replies: repliesText,
+    });
 
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      const model = buildLangChainChatModel(params.providerConfig);
-      const structuredModel = model.withStructuredOutput(
-        GroupChatReplyQualitySchema,
-        {
-          name: "group_chat_reply_quality",
-          method,
-        },
-      );
-      const chain = groupChatQualityPrompt.pipe(structuredModel);
+    const { value } = await generateObject({
+      model: toAiModel(params.providerConfig),
+      messages: fromLangChainMessages(messages),
+      schema: GroupChatReplyQualitySchema,
+      schemaName: "group_chat_reply_quality",
+      temperature: 0,
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
 
-      const result = await chain.invoke(
-        {
-          intent: intentText,
-          userText: params.userText,
-          replies: repliesText,
-        },
-        params.signal ? { signal: params.signal } : undefined,
-      );
-
-      return GroupChatReplyQualitySchema.parse(result);
-    } catch (error) {
-      // 用户主动取消不算质检失败，直接向上抛，不吞成 quality = null。
-      if (params.signal?.aborted) {
-        throw error;
-      }
-      lastError = error;
+    return value;
+  } catch (error) {
+    // 用户主动取消不算质检失败，直接向上抛，不吞成 quality = null。
+    if (isAbortError(error, params.signal)) {
+      throw error;
     }
+    console.warn("LangChain group chat reply quality check failed", error);
+    return null;
   }
-
-  console.warn("LangChain group chat reply quality check failed", lastError);
-  return null;
 }
 
 /**
@@ -1074,41 +1024,31 @@ async function planCrossRepliesWithLangChain(params: {
     )
     .join("\n");
 
-  let lastError: unknown = null;
+  try {
+    const messages = await groupChatCrossReplyPlanPrompt.formatMessages({
+      agentRoster: formatAgentRoster(params.agents),
+      primaryReplies: primaryRepliesText,
+      userText: params.userText,
+    });
 
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      const model = buildLangChainChatModel(params.providerConfig);
-      const structuredModel = model.withStructuredOutput(
-        GroupChatCrossReplyPlanSchema,
-        {
-          name: "group_chat_cross_reply_plan",
-          method,
-        },
-      );
-      const chain = groupChatCrossReplyPlanPrompt.pipe(structuredModel);
+    const { value } = await generateObject({
+      model: toAiModel(params.providerConfig),
+      messages: fromLangChainMessages(messages),
+      schema: GroupChatCrossReplyPlanSchema,
+      schemaName: "group_chat_cross_reply_plan",
+      temperature: 0,
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
 
-      const result = await chain.invoke(
-        {
-          agentRoster: formatAgentRoster(params.agents),
-          primaryReplies: primaryRepliesText,
-          userText: params.userText,
-        },
-        params.signal ? { signal: params.signal } : undefined,
-      );
-
-      return GroupChatCrossReplyPlanSchema.parse(result);
-    } catch (error) {
-      // 用户主动取消不算规划失败，直接向上抛，不吞成 enabled=false。
-      if (params.signal?.aborted) {
-        throw error;
-      }
-      lastError = error;
+    return value;
+  } catch (error) {
+    // 用户主动取消不算规划失败，直接向上抛，不吞成 enabled=false。
+    if (isAbortError(error, params.signal)) {
+      throw error;
     }
+    console.warn("LangChain group chat cross reply planning failed", error);
+    return buildDisabledCrossReplyPlan("Agent 间回应规划失败，跳过补充回应。");
   }
-
-  console.warn("LangChain group chat cross reply planning failed", lastError);
-  return buildDisabledCrossReplyPlan("Agent 间回应规划失败，跳过补充回应。");
 }
 
 async function classifyIntentNode(

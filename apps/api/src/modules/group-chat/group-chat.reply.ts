@@ -1,7 +1,15 @@
+import { BizCode } from "@repo/contracts";
+
 import type { UserAgentRecord } from "@/modules/agents/agents.schema";
 import type { AgentMemoryRecord } from "@/modules/agents/agents.schema";
+import {
+  toAiMessages,
+  toAiModel,
+  toChatAppError,
+} from "@/modules/chat/chat.ai-model";
+import { generateText, type AiGenerationResult } from "@/infra/ai";
+import { AppError } from "@/shared/app-error";
 
-import { createGroupChatText } from "./group-chat.provider";
 import type { ChatProviderConfig } from "@/modules/chat/chat.service";
 import type { ChatCompletionMessage } from "@/modules/chat/chat.service";
 import type {
@@ -262,11 +270,46 @@ export async function buildAgentReply(input: {
     },
   ];
 
-  return createGroupChatText({
+  return generateGroupChatText({
     messages,
     providerConfig: input.providerConfig,
     signal: input.signal,
   });
+}
+
+/**
+ * 群聊非流式回复：一次拿完整文本并 trim。
+ * 空文本对齐迁移前 group-chat.provider.ts 的 503「没有返回可用的回复内容」；
+ * AiError 经 toChatAppError 转成 AppError，取消语义向上抛。
+ */
+async function generateGroupChatText(input: {
+  messages: ChatCompletionMessage[];
+  providerConfig: ChatProviderConfig;
+  signal: AbortSignal;
+}): Promise<string> {
+  let result: AiGenerationResult;
+
+  try {
+    result = await generateText({
+      model: toAiModel(input.providerConfig),
+      messages: toAiMessages(input.messages),
+      signal: input.signal,
+    });
+  } catch (error) {
+    throw toChatAppError(error);
+  }
+
+  const text = result.message.content.trim();
+
+  if (text.length === 0) {
+    throw new AppError(
+      BizCode.SYSTEM_INTERNAL_ERROR,
+      "模型服务没有返回可用的回复内容",
+      503,
+    );
+  }
+
+  return text;
 }
 
 /** 本地长度收缩：trim 后截断到 maxLen，供补充回应控制篇幅，不做严格 token 控制。 */
@@ -407,7 +450,7 @@ export async function buildCrossAgentReply(input: {
     },
   ];
 
-  const text = await createGroupChatText({
+  const text = await generateGroupChatText({
     messages,
     providerConfig: input.providerConfig,
     signal: input.signal,

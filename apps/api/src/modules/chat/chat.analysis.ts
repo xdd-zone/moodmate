@@ -15,22 +15,16 @@ import {
 } from "@repo/contracts";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 
-import type { ChatProviderConfig } from "./chat.service";
+import { generateObject } from "@/infra/ai";
 
-type StructuredOutputMethod = "functionCalling" | "jsonSchema" | "jsonMode";
+import { fromLangChainMessages, toAiModel } from "./chat.ai-model";
+import type { ChatProviderConfig } from "./chat.service";
 
 type AnalysisMemory = { content: string; importance: number; type: string };
 
 type AnalysisRecentMessage = { content: string; role: "assistant" | "user" };
-
-const STRUCTURED_OUTPUT_METHODS: readonly StructuredOutputMethod[] = [
-  "functionCalling",
-  "jsonSchema",
-  "jsonMode",
-];
 
 const fallbackSafety: ConversationSafety = {
   safetyLevel: "caution",
@@ -308,17 +302,6 @@ const ConversationUnderstandingState = Annotation.Root({
   signal: Annotation<AbortSignal | undefined>(),
 });
 
-function buildLangChainChatModel(providerConfig: ChatProviderConfig) {
-  return new ChatOpenAI({
-    model: providerConfig.model,
-    apiKey: providerConfig.apiKey,
-    temperature: 0,
-    configuration: {
-      baseURL: providerConfig.baseURL.replace(/\/+$/, ""),
-    },
-  });
-}
-
 function normalizeStoredMessage(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -498,30 +481,28 @@ function normalizeConversationIntent(
 }
 
 async function invokeConversationSafetyAnalysis(params: {
-  method: StructuredOutputMethod;
   providerConfig: ChatProviderConfig;
   activeMemories: AnalysisMemory[];
   recentMessages: AnalysisRecentMessage[];
   userText: string;
   signal: AbortSignal;
 }) {
-  const model = buildLangChainChatModel(params.providerConfig);
-  const structuredModel = model.withStructuredOutput(ConversationSafetySchema, {
-    name: "conversation_safety_analysis",
-    method: params.method,
+  const messages = await conversationSafetyPrompt.formatMessages({
+    activeMemories: formatExistingMemories(params.activeMemories),
+    recentMessages: formatRecentMessages(params.recentMessages),
+    userText: params.userText,
   });
-  const chain = conversationSafetyPrompt.pipe(structuredModel);
 
-  const result = await chain.invoke(
-    {
-      activeMemories: formatExistingMemories(params.activeMemories),
-      recentMessages: formatRecentMessages(params.recentMessages),
-      userText: params.userText,
-    },
-    { signal: params.signal },
-  );
+  const { value } = await generateObject({
+    model: toAiModel(params.providerConfig),
+    messages: fromLangChainMessages(messages),
+    schema: ConversationSafetySchema,
+    schemaName: "conversation_safety_analysis",
+    temperature: 0,
+    signal: params.signal,
+  });
 
-  return normalizeConversationSafety(ConversationSafetySchema.parse(result));
+  return normalizeConversationSafety(value);
 }
 
 export async function analyzeConversationSafety(params: {
@@ -544,26 +525,18 @@ export async function analyzeConversationSafety(params: {
     });
   }
 
-  let lastError: unknown = null;
-
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      return await invokeConversationSafetyAnalysis({
-        ...params,
-        method,
-        userText,
-      });
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    return await invokeConversationSafetyAnalysis({
+      ...params,
+      userText,
+    });
+  } catch (error) {
+    console.warn("LangChain conversation safety analysis failed", error);
+    return normalizeConversationSafety(fallbackSafety);
   }
-
-  console.warn("LangChain conversation safety analysis failed", lastError);
-  return normalizeConversationSafety(fallbackSafety);
 }
 
 async function invokeConversationIntentAnalysis(params: {
-  method: StructuredOutputMethod;
   providerConfig: ChatProviderConfig;
   safety: ConversationSafety;
   activeMemories: AnalysisMemory[];
@@ -571,27 +544,23 @@ async function invokeConversationIntentAnalysis(params: {
   userText: string;
   signal?: AbortSignal;
 }) {
-  const model = buildLangChainChatModel(params.providerConfig);
-  const structuredModel = model.withStructuredOutput(ConversationIntentSchema, {
-    name: "conversation_intent_analysis",
-    method: params.method,
+  const messages = await conversationIntentPrompt.formatMessages({
+    safety: formatSafetyForPrompt(params.safety),
+    activeMemories: formatExistingMemories(params.activeMemories),
+    recentMessages: formatRecentMessages(params.recentMessages),
+    userText: params.userText,
   });
-  const chain = conversationIntentPrompt.pipe(structuredModel);
 
-  const result = await chain.invoke(
-    {
-      safety: formatSafetyForPrompt(params.safety),
-      activeMemories: formatExistingMemories(params.activeMemories),
-      recentMessages: formatRecentMessages(params.recentMessages),
-      userText: params.userText,
-    },
-    params.signal ? { signal: params.signal } : undefined,
-  );
+  const { value } = await generateObject({
+    model: toAiModel(params.providerConfig),
+    messages: fromLangChainMessages(messages),
+    schema: ConversationIntentSchema,
+    schemaName: "conversation_intent_analysis",
+    temperature: 0,
+    ...(params.signal ? { signal: params.signal } : {}),
+  });
 
-  return normalizeConversationIntent(
-    ConversationIntentSchema.parse(result),
-    params.safety,
-  );
+  return normalizeConversationIntent(value, params.safety);
 }
 
 async function classifyConversationIntentWithLangChain(params: {
@@ -602,18 +571,12 @@ async function classifyConversationIntentWithLangChain(params: {
   userText: string;
   signal?: AbortSignal;
 }): Promise<ConversationIntent> {
-  let lastError: unknown = null;
-
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      return await invokeConversationIntentAnalysis({ ...params, method });
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    return await invokeConversationIntentAnalysis(params);
+  } catch (error) {
+    console.warn("LangChain conversation intent analysis failed", error);
+    return normalizeConversationIntent(fallbackIntent, params.safety);
   }
-
-  console.warn("LangChain conversation intent analysis failed", lastError);
-  return normalizeConversationIntent(fallbackIntent, params.safety);
 }
 
 function normalizeConversationEmotion(
@@ -1142,7 +1105,6 @@ function buildReplyPolicy(params: {
 }
 
 async function invokeConversationEmotionAnalysis(params: {
-  method: StructuredOutputMethod;
   providerConfig: ChatProviderConfig;
   agentName: string;
   agentGuardrails: string | null;
@@ -1153,35 +1115,28 @@ async function invokeConversationEmotionAnalysis(params: {
   userText: string;
   signal?: AbortSignal;
 }) {
-  const model = buildLangChainChatModel(params.providerConfig);
-  const structuredModel = model.withStructuredOutput(
-    ConversationEmotionSchema,
-    {
-      name: "conversation_emotion_analysis",
-      method: params.method,
-    },
-  );
-  const chain = conversationEmotionPrompt.pipe(structuredModel);
+  const messages = await conversationEmotionPrompt.formatMessages({
+    agentName: params.agentName,
+    agentGuardrails: params.agentGuardrails ?? "暂无",
+    safety: formatSafetyForPrompt(params.safety),
+    intent: params.intent
+      ? formatIntentForPrompt(params.intent)
+      : "暂无意图判断",
+    activeMemories: formatExistingMemories(params.activeMemories),
+    recentMessages: formatRecentMessages(params.recentMessages),
+    userText: params.userText,
+  });
 
-  const result = await chain.invoke(
-    {
-      agentName: params.agentName,
-      agentGuardrails: params.agentGuardrails ?? "暂无",
-      safety: formatSafetyForPrompt(params.safety),
-      intent: params.intent
-        ? formatIntentForPrompt(params.intent)
-        : "暂无意图判断",
-      activeMemories: formatExistingMemories(params.activeMemories),
-      recentMessages: formatRecentMessages(params.recentMessages),
-      userText: params.userText,
-    },
-    params.signal ? { signal: params.signal } : undefined,
-  );
+  const { value } = await generateObject({
+    model: toAiModel(params.providerConfig),
+    messages: fromLangChainMessages(messages),
+    schema: ConversationEmotionSchema,
+    schemaName: "conversation_emotion_analysis",
+    temperature: 0,
+    ...(params.signal ? { signal: params.signal } : {}),
+  });
 
-  return normalizeConversationEmotion(
-    ConversationEmotionSchema.parse(result),
-    params.safety,
-  );
+  return normalizeConversationEmotion(value, params.safety);
 }
 
 async function detectConversationEmotionWithLangChain(params: {
@@ -1195,18 +1150,12 @@ async function detectConversationEmotionWithLangChain(params: {
   userText: string;
   signal?: AbortSignal;
 }): Promise<ConversationEmotion> {
-  let lastError: unknown = null;
-
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      return await invokeConversationEmotionAnalysis({ ...params, method });
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    return await invokeConversationEmotionAnalysis(params);
+  } catch (error) {
+    console.warn("LangChain conversation emotion analysis failed", error);
+    return normalizeConversationEmotion(fallbackEmotion, params.safety);
   }
-
-  console.warn("LangChain conversation emotion analysis failed", lastError);
-  return normalizeConversationEmotion(fallbackEmotion, params.safety);
 }
 
 function heuristicRelationshipStage(params: {
@@ -1370,7 +1319,6 @@ function normalizeRelationshipStage(
 }
 
 async function invokeRelationshipStageAnalysis(params: {
-  method: StructuredOutputMethod;
   providerConfig: ChatProviderConfig;
   agentName: string;
   agentGuardrails: string | null;
@@ -1384,45 +1332,38 @@ async function invokeRelationshipStageAnalysis(params: {
   userText: string;
   signal?: AbortSignal;
 }) {
-  const model = buildLangChainChatModel(params.providerConfig);
-  const structuredModel = model.withStructuredOutput(
-    ConversationRelationshipStageSchema,
-    {
-      name: "conversation_relationship_stage_analysis",
-      method: params.method,
-    },
-  );
-  const chain = conversationRelationshipStagePrompt.pipe(structuredModel);
+  const messages = await conversationRelationshipStagePrompt.formatMessages({
+    agentName: params.agentName,
+    agentGuardrails: params.agentGuardrails ?? "暂无",
+    messageCount: String(params.messageCount),
+    conversationSummary: params.conversationSummary?.trim() || "暂无",
+    safety: formatSafetyForPrompt(params.safety),
+    intent: params.intent
+      ? formatIntentForPrompt(params.intent)
+      : "暂无意图判断",
+    emotion: params.emotion
+      ? formatEmotionForPrompt(params.emotion)
+      : "暂无情绪判断",
+    activeMemories: formatExistingMemories(params.activeMemories),
+    recentMessages: formatRecentMessages(params.recentMessages),
+    userText: params.userText,
+  });
 
-  const result = await chain.invoke(
-    {
-      agentName: params.agentName,
-      agentGuardrails: params.agentGuardrails ?? "暂无",
-      messageCount: String(params.messageCount),
-      conversationSummary: params.conversationSummary?.trim() || "暂无",
-      safety: formatSafetyForPrompt(params.safety),
-      intent: params.intent
-        ? formatIntentForPrompt(params.intent)
-        : "暂无意图判断",
-      emotion: params.emotion
-        ? formatEmotionForPrompt(params.emotion)
-        : "暂无情绪判断",
-      activeMemories: formatExistingMemories(params.activeMemories),
-      recentMessages: formatRecentMessages(params.recentMessages),
-      userText: params.userText,
-    },
-    params.signal ? { signal: params.signal } : undefined,
-  );
+  const { value } = await generateObject({
+    model: toAiModel(params.providerConfig),
+    messages: fromLangChainMessages(messages),
+    schema: ConversationRelationshipStageSchema,
+    schemaName: "conversation_relationship_stage_analysis",
+    temperature: 0,
+    ...(params.signal ? { signal: params.signal } : {}),
+  });
 
-  return normalizeRelationshipStage(
-    ConversationRelationshipStageSchema.parse(result),
-    {
-      safety: params.safety,
-      intent: params.intent,
-      emotion: params.emotion,
-      messageCount: params.messageCount,
-    },
-  );
+  return normalizeRelationshipStage(value, {
+    safety: params.safety,
+    intent: params.intent,
+    emotion: params.emotion,
+    messageCount: params.messageCount,
+  });
 }
 
 async function analyzeRelationshipStageWithLangChain(params: {
@@ -1439,17 +1380,12 @@ async function analyzeRelationshipStageWithLangChain(params: {
   userText: string;
   signal?: AbortSignal;
 }): Promise<ConversationRelationshipStage> {
-  let lastError: unknown = null;
-
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      return await invokeRelationshipStageAnalysis({ ...params, method });
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    return await invokeRelationshipStageAnalysis(params);
+  } catch (error) {
+    console.warn("LangChain relationship stage analysis failed", error);
   }
 
-  console.warn("LangChain relationship stage analysis failed", lastError);
   return normalizeRelationshipStage(
     heuristicRelationshipStage({
       messageCount: params.messageCount,
@@ -2385,31 +2321,28 @@ export function shouldSkipMemoryCandidateFast(
 }
 
 async function invokeMemoryCandidateJudgement(params: {
-  method: StructuredOutputMethod;
   providerConfig: ChatProviderConfig;
   userText: string;
   assistantText: string;
   existingMemories: AnalysisMemory[];
   conversationSummary: string | null;
 }) {
-  const model = buildLangChainChatModel(params.providerConfig);
-  const structuredModel = model.withStructuredOutput(
-    CompanionMemoryCandidateSchema,
-    {
-      name: "companion_memory_candidate_judgement",
-      method: params.method,
-    },
-  );
-  const chain = memoryCandidatePrompt.pipe(structuredModel);
-
-  const result = await chain.invoke({
+  const messages = await memoryCandidatePrompt.formatMessages({
     existingMemories: formatExistingMemories(params.existingMemories),
     conversationSummary: params.conversationSummary?.trim() || "暂无",
     userText: params.userText,
     assistantText: params.assistantText,
   });
 
-  return normalizeMemoryCandidate(CompanionMemoryCandidateSchema.parse(result));
+  const { value } = await generateObject({
+    model: toAiModel(params.providerConfig),
+    messages: fromLangChainMessages(messages),
+    schema: CompanionMemoryCandidateSchema,
+    schemaName: "companion_memory_candidate_judgement",
+    temperature: 0,
+  });
+
+  return normalizeMemoryCandidate(value);
 }
 
 async function judgeMemoryCandidateWithLangChain(params: {
@@ -2419,20 +2352,14 @@ async function judgeMemoryCandidateWithLangChain(params: {
   existingMemories: AnalysisMemory[];
   conversationSummary: string | null;
 }): Promise<CompanionMemoryCandidate> {
-  let lastError: unknown = null;
-
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      return await invokeMemoryCandidateJudgement({ ...params, method });
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    return await invokeMemoryCandidateJudgement(params);
+  } catch (error) {
+    console.warn("LangChain memory candidate judgement failed", error);
+    return normalizeMemoryCandidate(
+      buildFallbackMemoryCandidate(params.userText),
+    );
   }
-
-  console.warn("LangChain memory candidate judgement failed", lastError);
-  return normalizeMemoryCandidate(
-    buildFallbackMemoryCandidate(params.userText),
-  );
 }
 
 export async function judgeCompanionMemoryCandidate(params: {
@@ -2456,23 +2383,12 @@ export async function judgeCompanionMemoryCandidate(params: {
 }
 
 async function invokeMemoryExtraction(params: {
-  method: StructuredOutputMethod;
   providerConfig: ChatProviderConfig;
   candidate: CompanionMemoryCandidate;
   userText: string;
   existingMemories: AnalysisMemory[];
 }) {
-  const model = buildLangChainChatModel(params.providerConfig);
-  const structuredModel = model.withStructuredOutput(
-    CompanionExtractedMemorySchema,
-    {
-      name: "companion_memory_extraction",
-      method: params.method,
-    },
-  );
-  const chain = memoryExtractionPrompt.pipe(structuredModel);
-
-  const result = await chain.invoke({
+  const messages = await memoryExtractionPrompt.formatMessages({
     category: params.candidate.category,
     stability: params.candidate.stability,
     importance: String(params.candidate.importance),
@@ -2487,7 +2403,15 @@ async function invokeMemoryExtraction(params: {
     userText: params.userText,
   });
 
-  return CompanionExtractedMemorySchema.parse(result).memories;
+  const { value } = await generateObject({
+    model: toAiModel(params.providerConfig),
+    messages: fromLangChainMessages(messages),
+    schema: CompanionExtractedMemorySchema,
+    schemaName: "companion_memory_extraction",
+    temperature: 0,
+  });
+
+  return value.memories;
 }
 
 export async function extractCompanionMemoriesWithLangChain(params: {
@@ -2496,16 +2420,10 @@ export async function extractCompanionMemoriesWithLangChain(params: {
   userText: string;
   existingMemories: AnalysisMemory[];
 }): Promise<CompanionExtractedMemory[] | null> {
-  let lastError: unknown = null;
-
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
-    try {
-      return await invokeMemoryExtraction({ ...params, method });
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    return await invokeMemoryExtraction(params);
+  } catch (error) {
+    console.warn("LangChain memory extraction failed", error);
+    return null;
   }
-
-  console.warn("LangChain memory extraction failed", lastError);
-  return null;
 }
