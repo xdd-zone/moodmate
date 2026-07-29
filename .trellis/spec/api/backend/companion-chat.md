@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-修改固定伴侣会话、聊天历史、长期记忆、会话前置分析（安全边界 / 意图 / 情绪 / 路由）、用户反馈闭环、主动关怀、companion 档案、平台 DeepSeek 配置、OpenAI-compatible Chat Completions 请求或 SSE 转纯文本流时使用本规范。实现位于 `apps/api/src/modules/chat/`，数据库迁移位于 `apps/api/migrations/`。
+修改固定伴侣会话、聊天历史、长期记忆、会话前置分析（安全边界 / 意图 / 情绪 / 路由）、用户反馈闭环、主动关怀、companion 档案、平台 DeepSeek 配置或单聊纯文本流时使用本规范。实现位于 `apps/api/src/modules/chat/`，数据库迁移位于 `apps/api/migrations/`。模型调用统一走 `@/infra/ai` runtime，业务模块不直接 `fetch` 上游、不构造 OpenAI SDK 类型（详见第 12 节）。
 
 ## 2. 公开签名
 
@@ -39,28 +39,30 @@ Authorization: Bearer <web access token>
 - 用户反馈闭环：点赞/点踩挂在 assistant 消息上，一条消息一条反馈，历史回显并注入下一轮 prompt（详见第 10 节）。
 - 请求级 `llmConfig` 优先；未提供时读取平台 `DEEPSEEK_*`。
 - `DEEPSEEK_API_KEY` 可选且敏感；`DEEPSEEK_BASE_URL` 默认 `https://api.deepseek.com`；`DEEPSEEK_MODEL` 默认 `deepseek-v4-flash`。
-- 平台请求发送 `thinking: { type: "disabled" }`；用户 Provider 只发送标准 `model`、`messages` 和 `stream`。
-- 上游 SSE 只读取 `choices[0].delta.content`，以 `data: [DONE]` 结束。
+- `disableThinking` 通过 `AiModel.providerOptions["openai-chat-completions"]` 传给 runtime，业务模块不拼原始 request body。
+- 单聊流式走 `streamText()`，`toTextByteStream()` 只把 `text-delta` 编码成 UTF-8 字节，SSE 解析和 `[DONE]` 收口都在 Provider 内部。
 - 成功响应必须设置 `cache-control: no-cache, no-transform` 和 `x-accel-buffering: no`。
-- 请求的 `AbortSignal` 必须传给上游 `fetch()`；90 秒超时覆盖响应头和正文流。
+- 请求的 `AbortSignal` 必须传给 `streamText()`；90 秒超时在 Provider 内部覆盖响应头和正文流。
 
 ## 4. 校验与错误矩阵
 
-| 条件                                          | 错误码                        | HTTP       |
-| --------------------------------------------- | ----------------------------- | ---------- |
-| 缺少或无效 Web access token                   | 现有 `AUTH.*`                 | 401        |
-| 请求 schema 或历史游标无效                    | `COMMON.INVALID_REQUEST`      | 400        |
-| `conversationId` 不是当前默认会话             | `COMMON.INVALID_REQUEST`      | 400        |
-| 所有 part 都没有非空文本                      | `COMMON.INVALID_REQUEST`      | 400        |
-| 记忆不存在、属于其他用户或已删除              | `COMMON.NOT_FOUND`            | 404        |
-| 反馈目标消息非当前用户的已完成 assistant 消息 | `COMMON.NOT_FOUND`            | 404        |
-| D1 未绑定或未应用迁移                         | `SYSTEM.DATABASE_UNAVAILABLE` | 503        |
-| 平台 Key 缺失                                 | `SYSTEM.INTERNAL_ERROR`       | 503        |
-| 上游连接失败或 HTTP 失败                      | `SYSTEM.INTERNAL_ERROR`       | 503        |
-| 上游响应头超时                                | `SYSTEM.UPSTREAM_TIMEOUT`     | 504        |
-| SSE JSON 损坏或没有文本                       | 终止纯文本流                  | 200 后断流 |
+| 条件                                                    | 错误码                        | HTTP       |
+| ------------------------------------------------------- | ----------------------------- | ---------- |
+| 缺少或无效 Web access token                             | 现有 `AUTH.*`                 | 401        |
+| 请求 schema 或历史游标无效                              | `COMMON.INVALID_REQUEST`      | 400        |
+| `conversationId` 不是当前默认会话                       | `COMMON.INVALID_REQUEST`      | 400        |
+| 所有 part 都没有非空文本                                | `COMMON.INVALID_REQUEST`      | 400        |
+| 记忆不存在、属于其他用户或已删除                        | `COMMON.NOT_FOUND`            | 404        |
+| 反馈目标消息非当前用户的已完成 assistant 消息           | `COMMON.NOT_FOUND`            | 404        |
+| D1 未绑定或未应用迁移                                   | `SYSTEM.DATABASE_UNAVAILABLE` | 503        |
+| 平台 Key 缺失                                           | `SYSTEM.INTERNAL_ERROR`       | 503        |
+| 首个 text-delta 前 `AiError`（连接 / 认证 / HTTP 失败） | `SYSTEM.INTERNAL_ERROR`       | 503        |
+| 首个 text-delta 前 `AiError`（`timeout`）               | `SYSTEM.UPSTREAM_TIMEOUT`     | 504        |
+| 首个 text-delta 后出错或空文本                          | 终止纯文本流                  | 200 后断流 |
 
-服务端日志只记录上游状态码，不记录 API Key、Authorization、请求正文或上游响应正文。
+`streamText()` 的 `AiError` 由 route 的 `createCompanionTextStream` 预取到首个 text-delta 前捕获，经 `toChatAppError`（`chat.ai-model.ts`）转成 `AppError`，走全局 `onError` 出干净 JSON：`timeout` → 504、`network` → 503「无法连接模型服务」、其余 → 503「模型请求失败」。`aborted` 保持取消语义向上抛，不转 503。首个 text-delta 后（响应头已提交 200）的错误与空文本仍在流内 `controller.error`，客户端已在 200 流中断。`toChatAppError` 的映射在单聊与群聊两条路径共用。
+
+服务端日志只记录可安全字段（上游状态码、providerName、model、requestId、durationMs），不记录 API Key、Authorization、请求正文或上游响应正文。
 
 ## 5. 正常、基础、错误案例
 
@@ -74,12 +76,13 @@ Authorization: Bearer <web access token>
 - 未登录请求断言：401、`AUTH.ACCESS_MISSING`、统一 meta。
 - D1 检查：默认会话唯一、历史从旧到新、40 条游标分页无重复、记忆软删除后不能查询或修改。
 - 用户隔离检查：会话、消息、记忆和来源消息都不能读取其他用户数据。
-- 发送检查：用户消息在上游请求前存在；失败时用户消息保留；正常流结束后完整 assistant 文本、摘要、计数和时间更新。
+- 发送检查：用户消息在生成前存在；失败时用户消息保留；正常流结束后完整 assistant 文本、摘要、计数和时间更新。
 - prompt 检查：最近 18 条、启用记忆 12 条、摘要和本轮输入顺序正确，本轮输入只出现一次。
 - 记忆检查：规则分类、重要度、单轮 2 条上限、50 条内完全相同内容去重和失败不影响聊天。
-- 本地 SSE Provider 断言：200、纯文本 Content-Type、禁缓存 header、Unicode 正文。
-- SSE 检查：分块行、CRLF、`[DONE]`、无 content 的 usage chunk、损坏 JSON 和空流。
-- 取消检查：客户端中止后，上游 `fetch()` 收到同一个取消信号。
+- 流断言：200、纯文本 Content-Type、禁缓存 header、Unicode 正文。
+- 连接级错误断言：首个 text-delta 前的 `AiError` 走 `toChatAppError` 出干净 JSON（timeout 504、network/其余 503），不落 200 断流。
+- 空文本断言：无 text-delta 时 `toTextByteStream` 默认 `errorOnEmpty` 断流，`onComplete` 不触发、不写库。
+- 取消检查：客户端中止后，`AbortSignal` 传给 `streamText()` 并向上传播；`aborted` 不转 503。
 
 ## 7. 错误与正确写法
 
@@ -105,8 +108,8 @@ await db
 
 - 安全边界判断 `analyzeConversationSafety` 先执行；安全通过后调用 `analyzeConversationUnderstanding` 跑完整理解图，返回 `{ intent, emotion, relationshipStage, route, replyPolicy }`。入参含 `conversationSummary`、`messageCount`（service 从会话记录取）。
 - LangGraph 图结构：`normalizeInput -> classifyIntent -> detectEmotion -> analyzeRelationshipStage -> routeEmotion -> buildReplyPolicy -> END`。intent、emotion、relationshipStage 走 LLM 结构化输出；route、replyPolicy 是纯代码规则（`buildEmotionRoute` / `buildReplyPolicy`），不调 LLM。关系阶段放在情绪识别之后、情绪路由之前，既用意图和情绪做输入，又影响后续 route 和 policy。
-- LLM 步骤都用当前 `providerConfig`（请求级 `llmConfig` 或平台 DeepSeek），走 `@langchain/openai` 的 `ChatOpenAI` + `withStructuredOutput`，`temperature: 0`。
-- 结构化输出按 `functionCalling -> jsonSchema -> jsonMode` 顺序重试；全部失败用保守 `fallbackSafety` / `fallbackEmotion`，不回退关键词规则。图整体 catch 时三层兜底：intent、emotion 归一化 fallback，route 由 `buildEmotionRoute` 从兜底 intent/emotion 推。
+- LLM 步骤都用当前 `providerConfig`（请求级 `llmConfig` 或平台 DeepSeek），走 `@/infra/ai` 的 `generateObject({ model, messages, schema, schemaName, temperature: 0, signal })`，`model` 由 `toAiModel(providerConfig)` 构造，prompt 用 `ChatPromptTemplate.formatMessages()` 生成后经 `fromLangChainMessages()`（`chat.ai-model.ts`）转成 `AiMessage[]`。不再用 `@langchain/openai` 的 `ChatOpenAI` + `withStructuredOutput`。
+- structured output 的 `json_schema -> function -> json_object` 方法轮询由 `generateObject` 内建，业务节点不再自循环三方法；单次调用失败即走保守 `fallbackSafety` / `fallbackEmotion`，不回退关键词规则。图整体 catch 时三层兜底：intent、emotion 归一化 fallback，route 由 `buildEmotionRoute` 从兜底 intent/emotion 推。
 - 分析 schema（`ConversationSafetySchema`、`ConversationIntentSchema`、`ConversationEmotionSchema`、`EmotionRouteSchema`、`ReplyPolicySchema`）定义在 `@repo/contracts`，service 和 analysis 都从 contracts 导入，不在 API 侧重复定义。
 
 情绪归一化与路由（代码治理层，不调 LLM）：
@@ -127,7 +130,7 @@ Reply Policy（代码治理层，不调 LLM，接在 route 之后）：
 
 关系阶段（`analyzeRelationshipStage` 节点，情绪之后、路由之前）：
 
-- `analyzeRelationshipStageWithLangChain` 结合 messageCount、会话摘要、最近对话、记忆、safety、intent、emotion 判断关系阶段，走 `withStructuredOutput` + 三种 method 兜底，全失败走 `heuristicRelationshipStage` 启发式兜底，两条路径都再过 `normalizeRelationshipStage`。
+- `analyzeRelationshipStageWithLangChain` 结合 messageCount、会话摘要、最近对话、记忆、safety、intent、emotion 判断关系阶段，走 `generateObject`（方法轮询内建），全失败走 `heuristicRelationshipStage` 启发式兜底，两条路径都再过 `normalizeRelationshipStage`。
 - `heuristicRelationshipStage`：`memoryScore`(记忆重要度和，上限 20) + `historyScore`(min(70, floor(messageCount\*1.6))) + `warmthScore`(seeking_closeness/affectionate 记 10，warming_up/playful 记 6) 算 closenessScore，按阈值从高到低分档：`messageCount>=80 && closeness>=75` close_bond；`>=36 && >=58` trusted_companion；`>=16 && >=38` comfortable_chat；`>=6` warming_up；否则 new_connection。
 - `normalizeRelationshipStage(stage, { safety, intent, emotion, messageCount })` 三条产品规则按顺序执行：messageCount<6 且不在 boundary_sensitive/dependency_watch/repairing 时拉回 new_connection；`emotional_dependency` 或 relationshipSignal `dependency_risk` 切 dependency_watch；conversation_repair / conflict / feeling_hurt / hurt / disappointed 切 repairing。末尾 `ConversationRelationshipStageSchema.parse`。启发式和 LLM 两条路径都要过这层。
 - 关系阶段对 route / policy 的具体修正见上面 `buildEmotionRoute` / `buildReplyPolicy` 两节。
@@ -158,7 +161,7 @@ companion 档案前置基础：
 结构化输出 prompt 契约（必做）：
 
 - 三个 LLM 分析 prompt（safety / intent / emotion）的 system 段必须显式列出 JSON 字段名、类型和允许的枚举值，并要求「只返回 JSON、不要 markdown 代码块或多余文字」。
-- 原因：DeepSeek 官方模型（`deepseek-v4-flash`）是推理模型，`functionCalling` / `jsonSchema` 在三方中转或部分场景会失败，最终落到 `jsonMode`；`jsonMode` 不会把 schema 结构喂给模型，缺字段契约时模型会自创字段名（如 `safety` / `intent` / `emotion`），导致 Zod parse 失败并全程走兜底。
+- 原因：DeepSeek 官方模型（`deepseek-v4-flash`）是推理模型，`json_schema` / `function` 在三方中转或部分场景会失败，最终落到 `json_object`；`json_object` 不会把 schema 结构喂给模型，缺字段契约时模型会自创字段名（如 `safety` / `intent` / `emotion`），导致 Zod parse 失败并全程走兜底。
 - 判定功能是否真正生效：查用户消息 `metadata_json`，真实结果的 `reason` / `emotionalCue` 是贴合内容的具体文案且 `confidence` 高；兜底恒为 `caution` / `other` / `unclear` / `0.3`、emotion 恒为 `neutral` + 固定 cue 文案。
 
 ## 9. 长期记忆候选判断 + 抽取器（两段式，安全边界之后）
@@ -196,10 +199,10 @@ Fast reject（`shouldSkipMemoryCandidateFast`，本地无 LLM，命中即终判 
 
 双层兜底：
 
-- 候选判断 LLM 三方法（`STRUCTURED_OUTPUT_METHODS`）全失败 -> `buildFallbackMemoryCandidate`：仅 `MEMORY_CANDIDATE_SIGNAL_PATTERN` 命中才 shouldExtract=true，否则退回 `fallbackMemoryCandidate`（shouldExtract=false）；结果仍过 `normalizeMemoryCandidate`。
+- 候选判断 `generateObject` 全方法失败 -> `buildFallbackMemoryCandidate`：仅 `MEMORY_CANDIDATE_SIGNAL_PATTERN` 命中才 shouldExtract=true，否则退回 `fallbackMemoryCandidate`（shouldExtract=false）；结果仍过 `normalizeMemoryCandidate`。
 - 抽取器 LLM 全失败 -> 返回 `null`，service 用 `extracted ?? extractCandidateMemories(userText)` 退回正则，保证不空转。
 
-Prompt 契约：候选判断和抽取器两个 prompt 的 system 段都显式列出字段名、类型、枚举值，并要求「不要输出多余字段、解释文字或 markdown 代码块」，理由同第 8 节末尾（jsonMode 缺字段契约会导致模型自创字段名、Zod parse 失败全程走兜底）。
+Prompt 契约：候选判断和抽取器两个 prompt 的 system 段都显式列出字段名、类型、枚举值，并要求「不要输出多余字段、解释文字或 markdown 代码块」，理由同第 8 节末尾（`json_object` 方法缺字段契约会导致模型自创字段名、Zod parse 失败全程走兜底）。
 
 不新增表、不新增迁移、不改 contract；候选判断是运行时决策，不落审计表。
 
@@ -259,3 +262,25 @@ MVP 边界：不接 Cron（仅算存 next_run_at_ms）、不接 LLM 文案（接
 Prompt 注入：`prepareCompanionChat` 读最近 5 条反馈（`listRecentCompanionMessageFeedbacks`，按 updatedAtMs desc），`getFeedbackSystemInstruction` 生成指令，`buildSystemPrompt` 在 `getReplyPolicySystemInstruction` 之后、记忆列表之前 join（`.filter(Boolean).join` 风格，空指令自动省略）。指令必须含「不要在回复中提到评分、点赞、点踩或反馈记录」，只做偏好校准，不绕过安全边界 / 意图 / 回复策略。反馈读取 `.catch()` 失败时跳过，不阻断回复。
 
 web：只对 `historicalAssistantMessageIdSet` 中的持久化 assistant 消息展示点赞 / 点踩按钮（避开流式临时 ID），带 `aria-label` / `aria-pressed`；提交成功后本地即时反映选中态并 invalidate 会话 query 回显。
+
+## 12. AI runtime 边界（单聊 / 群聊共用）
+
+模型调用统一走 `@/infra/ai` runtime，业务模块不直接 `fetch` 上游、不构造 OpenAI SDK 类型。业务与 runtime 的桥接集中在 `chat.ai-model.ts`，chat 与 group-chat 两条路径共用：
+
+- `toAiModel(config: ChatProviderConfig): AiModel`：`api` 取 `DEFAULT_LLM_CONFIG_API`（`ChatProviderConfig` 无 api 字段），`disableThinking` 映射到 `providerOptions["openai-chat-completions"]`。
+- `toAiMessages(ChatCompletionMessage[]): AiMessage[]`：按 role 显式收敛到联合类型（system / user / assistant）。
+- `toChatAppError(error): unknown`：`AiError` → `AppError`（timeout 504、network 503「无法连接模型服务」、其余上游 503「模型请求失败」）；`aborted` 原样返回 `AiError` 向上抛，非 `AiError` 原样抛出。
+
+单聊流式取消 fetch 后，连接级错误由 SDK 在异步迭代中以 `error` 事件懒暴露；若直接把事件流交给 `toTextByteStream`，错误会在 `c.body` 提交 200 之后才炸，拿不到干净 JSON。所以 route 的 `createCompanionTextStream` 做预取：
+
+- 先驱动 `streamText()` 的 iterator 到「首个 `text-delta`」或提前出现的 `error` / 流结束；`iterator.next()` 抛错或收到 `error` 事件时，经 `toChatAppError` 转 `AppError` 抛出，在写响应头前走全局 `onError` 出 JSON。
+- 预取阶段消费的事件（含首个 `text-delta`）先 push 进 `buffered`，再用 `replayEventStream(buffered, iterator)` 回放给 `toTextByteStream`：先 yield buffered、再从同一 iterator 续读，不重复消费也不丢事件。
+- 首个 `text-delta` 之后（响应头已提交 200）的错误与空文本仍走 `toTextByteStream` 的 `controller.error`，与迁移前 SSE 阶段一致。
+
+群聊回复是普通 async 函数，`generateGroupChatText` 直接 `try/catch` 调 `generateText()` 并用 `toChatAppError` 转换，无需预取；空文本仍抛 503「没有返回可用的回复内容」。
+
+### Gotcha：流式响应的连接级错误必须在 `c.body` 提交前处理
+
+> 全局 `onError` 只认 `AppError` 且只在响应头未提交时生效。SDK 流的连接、认证、超时错误在异步迭代中懒暴露，若在 `c.body(stream, 200, ...)` 之后才抛，客户端已收到 200，得不到干净 JSON 错误。
+>
+> 因此流式路径必须预取到首个 `text-delta` 前，把 `AiError` 转 `AppError` 抛出；确认有正文后再提交响应头。首个 delta 之后的错误只能留在流里 `controller.error`。

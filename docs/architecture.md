@@ -567,22 +567,53 @@ Web 和 Admin 上传文件时，API 检查文件类型、大小和归属。前�
 
 ### `llm`
 
-`llm` 负责调用上游模型。
+`llm` 负责配置和活动配置选择，不自己请求上游。上游调用统一走 AI 接入层 `apps/api/src/infra/ai`。
 
 这里放：
 
 - provider 配置。
 - Base URL。
 - 模型名。
-- Wire API 类型。
-- reasoning 参数。
-- 超时。
-- 重试次数。
-- 上游错误转换。
+- 协议标识（`api` 字段，当前为 `openai-chat-completions`）。
+- API Key 加密存储。
+- 活动配置选择。
+
+`resolveActiveLlmProviderConfig()` 返回 AI 接入层需要的 `AiModel` 连接形状。配置测试也调 AI 接入层的 `generateText()`，不再自己 `fetch` 上游。
 
 API 是唯一能读取模型 key 的地方。Web 和 Admin 只传业务参数，不传 key。
 
 LLM 返回空文本、HTML 页面或协议不匹配时，API 返回明确错误码。不要把失败消息伪装成正常回复。
+
+### AI 接入层
+
+`apps/api/src/infra/ai` 是调用上游模型的唯一位置。业务模块只调它的 runtime API，不直接用 `openai` SDK，也不解析 OpenAI 协议。
+
+分层职责：
+
+- Provider（`providers/openai-compatible`）：认证参数、协议请求、流解析、90 秒超时、取消和上游错误规范化。唯一能引用 `openai` SDK 的目录。
+- runtime（`runtime/*`）：文本生成、结构化输出、工具执行循环和统一事件，不知道具体协议字段。
+- registry（`provider-registry.ts`）：按 `AiModel.api` 选 Provider 实现的只读映射。
+
+依赖只能这样走：
+
+```text
+chat / group-chat / llm-config / LangGraph 节点
+  -> apps/api/src/infra/ai（index.ts 入口）
+
+infra/ai/runtime
+  -> infra/ai/provider-registry
+  -> infra/ai/types
+
+infra/ai/providers/openai-compatible
+  -> openai SDK
+  -> infra/ai/types
+
+infra/ai
+  -> 不 import modules/chat、modules/group-chat、modules/llm-config
+  -> 不 import Hono、D1、AppError、contracts DTO
+```
+
+`AiError` 由业务边界转成 `BizCode` 和中文文案，不进 Provider。目录、错误 code、配置测试和新增协议步骤见 `docs/apps/api.md` 的「AI 接入层」。
 
 ### 后续模块
 

@@ -34,7 +34,7 @@ Authorization: Bearer <web access token>
 - 记忆隔离：每个 Agent 回复只注入自己的 `listActiveAgentMemories({ userId, agentId, limit: 6 })`，禁止跨 Agent 记忆污染。
 - 生成方式由编排 `selection.mode` 决定：`single`/`multi_serial` 串行生成，把已生成回复累积进下一轮 `recentMessages`（`[...recent, userMsg, ...已生成 agentMsgs]`），让后一个 Agent 看到同轮前面 Agent 说了什么；`multi_parallel`（明确"分别/各自/轮流"类意图）才用 `Promise.all` 并发，各 Agent 只看 `[...recent, userMsg]`，互不可见。默认路径仍是串行。
 - 单 Agent 失败降级：某个 Agent 的 LLM 调用失败时，该条落 `status: 'failed'` + 占位文案，不中断整轮，其余 Agent 继续。
-- provider：`resolveActiveLlmProviderConfig(bindings)` 解析一次平台默认配置，循环复用。`createGroupChatText` 用 `stream: false` 调 `{baseURL}/chat/completions`，解析 `choices[0].message.content`。
+- 模型调用：`resolveActiveLlmProviderConfig(bindings)` 解析一次平台默认配置，循环复用。`buildAgentReply` / `buildCrossAgentReply` 走 `group-chat.reply.ts` 内部的 `generateGroupChatText`，用 `@/infra/ai` 的 `generateText()` 非流式生成，`toAiModel` / `toAiMessages`（`chat.ai-model.ts`）做类型转换。返回文本 `trim()` 后为空抛 503「没有返回可用的回复内容」；`AiError` 经 `toChatAppError` 转 `AppError`（timeout 504、其余 503），`aborted` 向上抛。业务模块不直接 `fetch` 上游、不构造 OpenAI SDK 类型。
 - 落库：一轮内 1 条 user + N 条 agent 用 `insertGroupChatMessages` 批量 `db.batch` 一次写入；同轮消息 `createdAtMs` 逐条 +1ms 递增，配合 `(created_at_ms, id)` 索引保证回看顺序稳定；共用同一 `turnIndex = (recent.at(-1)?.turnIndex ?? 0) + 1`。
 - 统计更新：`updateGroupChatStats` 只更新 `messageCount(+本轮条数)` / `lastMessageAtMs` / `updatedAtMs`，**不动 summary，不抽记忆**。
 - 消息 metadata：user 记 `source: group_chat_user`；agent 记 `source: group_chat_agent` / `selectedBy`（正常编排 `langgraph_v1`，整图兜底 `v1_rules_fallback`）/ `model` / `providerName` / `orchestration: { intent, selection, quality, crossReplyPlan, speakingContext }`（编排轨迹只进 metadata，不入契约；`speakingContext` 见 8.7）/ 每条 agent 消息另记 `replyKind`（`primary` / `cross_agent`）/ `respondToAgentId` / `crossReplyReason` / `crossReplyRound`（补充回应见 8.6）。补充回应**不新增 `selectedBy` 取值**，靠 `replyKind: cross_agent` 区分。**无 wireApi**，该字段是 bobo 结构，moodmate provider 不存在。
@@ -134,7 +134,7 @@ orchestrateGroupChatReplies(params: {
 
 ### 8.3 三个决策节点
 
-- 结构化输出复用 `chat.analysis.ts` 范式：`ChatPromptTemplate.pipe(model.withStructuredOutput(schema, { name, method }))`，method 走**固定顺序** `["functionCalling","jsonSchema","jsonMode"]` 循环回退。`buildLangChainChatModel` 用最简构造（model/apiKey/temperature:0/configuration.baseURL），**不加 wireApi/reasoning 分支**（moodmate 的 `ChatProviderConfig` 无这些字段）。
+- 结构化输出复用 `chat.analysis.ts` 范式：`ChatPromptTemplate.formatMessages()` 生成消息，经 `fromLangChainMessages()` 转 `AiMessage[]`，再调 `generateObject({ model: toAiModel(providerConfig), messages, schema, schemaName, temperature: 0, signal })`。方法轮询（`json_schema -> function -> json_object`）由 runtime 内建，业务节点不再自循环三方法、不再构造 `ChatOpenAI`。`generateObject` 只有遇到「方法不被支持」（Provider 映射的 `invalid_response`）或 `invalid_output` 才切下一种；认证/限流/超时/取消/网络错误立即向上抛。
 - `classifyIntent`：输出意图枚举 + `targetAgentNames` + `shouldUseMultipleAgents` + `replyMode` + confidence。`normalizeGroupChatIntent` 把 LLM 输出拉回产品规则——只有明确多人表达（`shouldUseMultipleAgents` / 点名>1 / 命中 `GROUP_QUESTION_PATTERN`）才放开多人，多人默认 `multi_serial`，仅命中 `GROUP_PARALLEL_PATTERN`（`分别|各自|各说|轮流|逐个|每个人`）才 `multi_parallel`；confidence 夹 0-1；targetAgentNames 去重截断到 6。
 - `selectAgents`：输出 `selectedAgentIds`（≤ `groupReplyAgentLimit`）+ mode。`normalizeAgentSelection` 校验 id 真实存在于当前成员、去重截断到 3，过滤后为空则回退 `selectAgentsForReply`。这是"模型可参与判断但不能突破系统边界"的护栏。
 - `checkQuality`：LLM 结构化检查越界项（暴露系统提示/冒充真人/替他人发言/过长说教刷屏/偏离意图/违反角色边界），返回 `approved/score/issues/revisions/reason`。**保守应用**：只有某 Agent 有非空 `revision` 文本时才替换其回复，否则保留原文。补充回应上线后同一 Agent 一轮可能有 2 条消息（首轮 + cross_agent），`applyQualityRevisions` 先按 `agentId` 统计条数，**只有该 Agent 本轮恰好 1 条回复时才允许 revision 覆盖**，多条时整体跳过，避免首轮与补充回应被同一段修订文本混改（本次按 Agent 粒度保守处理，未做 replyId 级精修）。
@@ -150,7 +150,7 @@ orchestrateGroupChatReplies(params: {
 
 > **Warning**: 每一处 catch 都要先判 `signal.aborted`，命中就 `throw error`，不能走 fallback。
 >
-> 用户主动取消（`c.req.raw.signal` abort）和 LLM 真实失败都会进 catch。若不区分：单 Agent catch 会落 `status: failed` 占位并入库；整图 catch 会 abort 后再跑 `runFallbackOrchestration` 重新生成——都违背"取消不应触发降级生成"。所以 intent/selection 重试循环、单 Agent 生成、整图顶层四处 catch 都加 `if (signal?.aborted) throw error`。abort 抛到 service 层后，`insertGroupChatMessages` / `updateGroupChatStats` 被跳过，不写半截数据。checkQuality 循环失败已落 `quality=null`，取消由顶层守卫兜住。
+> 用户主动取消（`c.req.raw.signal` abort）和 LLM 真实失败都会进 catch。若不区分：单 Agent catch 会落 `status: failed` 占位并入库；整图 catch 会 abort 后再跑 `runFallbackOrchestration` 重新生成——都违背"取消不应触发降级生成"。structured output 迁到 `generateObject()` 后，五个 LLM 决策节点的取消判定统一走 `isAbortError(error, signal)`（`signal.aborted || AiError.code === "aborted"`），比原来的裸 `signal.aborted` 多覆盖 runtime 抛出的 `aborted`；单 Agent 生成、整图顶层仍用 `signal.aborted` 原逻辑。abort 抛到 service 层后，`insertGroupChatMessages` / `updateGroupChatStats` 被跳过，不写半截数据。checkQuality 循环失败已落 `quality=null`，取消由顶层守卫兜住。
 
 ### 8.6 Agent 间补充回应（generateCrossReplies）
 
@@ -172,7 +172,7 @@ orchestrateGroupChatReplies(params: {
 发言权判断从「点名 + 关键词」升级为多信号调度：选 Agent 前先跑轻量情绪识别，把用户情绪 + 每个 Agent 的关系阶段 / 最近发言频率汇总成发言权上下文，同时喂给 LLM 选择器和本地打分 fallback。能力全在编排层，前端协议不变。相关代码在 `group-chat.speaking.ts`（新文件，纯函数 + schema，不 import orchestration，避免循环依赖）。
 
 - 会话统计来源：`listActiveMembers` 加 `leftJoin(agentConversations)`（`userId` + `agentId` 双条件，走 `agent_conversations_user_agent_idx`），行增 `conversationMessageCount`（`coalesce(...,0)`）/ `conversationLastMessageAtMs`。这两字段**不进前端契约**（`presentMember` 不透传），仅供发言权判断。
-- 情绪识别 `detectGroupUserEmotionWithLangChain`：独立 schema `GroupChatUserEmotionSchema`（`primaryEmotion` 11 态 / `intensity` / `needsComfort` / `needsAdvice` / `needsDeescalation` / `socialEnergy` / `reason`），三法轮询，失败回 `buildFallbackGroupUserEmotion`（关键词兜底），`signal.aborted` 向上抛不吞。**不复用单聊 `ConversationEmotion`**——`needsAdvice` / `socialEnergy` 是打分直接要用的信号，单聊 schema 没有。
+- 情绪识别 `detectGroupUserEmotionWithLangChain`：独立 schema `GroupChatUserEmotionSchema`（`primaryEmotion` 11 态 / `intensity` / `needsComfort` / `needsAdvice` / `needsDeescalation` / `socialEnergy` / `reason`），走 `generateObject`（方法轮询 runtime 内建），失败回 `buildFallbackGroupUserEmotion`（关键词兜底），`isAbortError` 命中向上抛不吞。**不复用单聊 `ConversationEmotion`**——`needsAdvice` / `socialEnergy` 是打分直接要用的信号，单聊 schema 没有。
 - 关系阶段：`getRelationshipStageFromMessageCount` 用一对一消息数 4 档启发式（`>=80` close_bond / `>=30` trusted / `>=8` warming_up / else new_connection），`getRelationshipScore` 映射到分值。**非完整关系阶段模型**（不复用单聊 8 态 LLM 链路），是有意保留的轻量边界。
 - 新鲜度：从 `recentMessages` 取最近 18 条 agent 消息，`freshnessScore = max(0, min(1, lastSpokeTurnsAgo/6) - min(0.75, recentReplyCount*0.16))`；刚发过话（`lastSpokeTurnsAgo===0`）打分再 -0.9，避免连续抢话。
 - `buildGroupSpeakingContext`：纯函数、无 LLM、无 DB，`userEmotion` 缺省用关键词兜底。`detectEmotion` 节点调它，结果进 `state.speakingContext`，喂 `selectAgents` 的 prompt（`formatSpeakingContextForPrompt`）。

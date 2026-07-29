@@ -39,6 +39,70 @@ apps/api/src/
 
 认证表 migration 位于 `apps/api/migrations`，本地认证数据位于 `apps/api/dev/seed.sql`。migration 继续由 Wrangler 管理；Drizzle 只负责运行期 schema 和查询。开发 seed 只执行到带 `--local` 的数据库。
 
+## AI 接入层
+
+调用上游模型的代码放在 `apps/api/src/infra/ai`。业务模块只负责 prompt、业务流程和结果处理，不自己创建模型客户端，也不解析 OpenAI 协议。
+
+```text
+apps/api/src/infra/ai/
+├── index.ts                 # 唯一对外入口，业务只从这里 import
+├── types.ts                 # 规范化消息、模型连接、生成选项、结果、事件、工具
+├── errors.ts                # AiError 和稳定错误 code
+├── provider-registry.ts     # 按 api 选实现的只读映射
+├── stream.ts                # 事件流工具和转纯文本字节流的适配器
+├── runtime/
+│   ├── generate-text.ts     # generateText / streamText
+│   ├── generate-object.ts   # generateObject
+│   └── execute-tools.ts     # 工具执行循环
+└── providers/
+    └── openai-compatible/   # 唯一引用 openai SDK 的目录
+        ├── index.ts
+        ├── openai-compatible.provider.ts
+        └── openai-compatible.mapper.ts
+```
+
+业务只从 `@/infra/ai` import，用这三个 runtime 入口：
+
+- `streamText()`：流式文本，配 `toTextByteStream()` 转成 chat route 需要的纯文本字节流。单聊用这条。
+- `generateText()`：非流式文本，传入 `tools` 时进入工具执行循环。群聊回复用这条。
+- `generateObject()`：结构化输出，传 Zod schema，返回后再用同一 schema 校验。`chat.analysis.ts` 和 `group-chat.orchestration.ts` 的 LangGraph 节点用这条。
+
+规则：
+
+- 只有 `providers/openai-compatible` 目录能引用 `openai` SDK，SDK 类型不越过这个目录。
+- 业务模块不 import `openai`，不构造 `ChatCompletionMessageParam`，不拼原始 request body。
+- `provider-registry.ts` 按 `AiModel.api` 选实现，不按 `providerName` 写分支。
+- `disableThinking` 只通过 `AiModel.providerOptions["openai-chat-completions"]` 传，映射为上游的 `thinking: { type: "disabled" }`。
+
+`llm-config` 继续负责配置持久化、API Key 加密和活动配置选择，`resolveActiveLlmProviderConfig()` 返回 `AiModel` 连接形状交给 AI 模块。AI 模块不读 D1。
+
+### 配置测试会产生少量 token
+
+`POST /rpc/admin/llm-configs/test` 走 `generateText()` 发一次 `maxTokens: 1` 的最小非流式请求，验证认证、协议和模型是否可用。这次请求会在上游产生极少量 token。测试超时 15 秒，超时或失败返回管理端可读的中文短句，不暴露 API Key 和上游原始错误体。
+
+### 错误排查
+
+Provider 把 SDK error 和 HTTP status 转成 `AiError`，稳定 code：`invalid_config`、`authentication`、`permission_denied`、`rate_limited`、`timeout`、`aborted`、`network`、`invalid_response`、`invalid_output`、`tool_not_found`、`tool_invalid_arguments`、`tool_execution_failed`、`max_steps`、`upstream_error`。
+
+`chat`、`group-chat` 和 `llm-config` service 在业务边界把 `AiError` 转成 `BizCode`、HTTP status 和中文文案。`aborted` 保持取消语义向上抛，不转成 503。
+
+排查上游问题时看 `AiError.metadata` 里的 `providerName`、`model`、`status`、`requestId`、`durationMs`。日志只记录这些字段，不记录 API Key、Authorization、完整 prompt、完整工具参数、完整工具结果或原始上游错误体。工具执行日志只记录名称、耗时和结果状态。
+
+### 新增协议
+
+要接入除 OpenAI Chat Completions 以外的协议，按顺序：
+
+1. 在 `types.ts` 的 `AiApi` 加协议标识。
+2. 在 `providers/<new-protocol>` 实现 `AiProvider`，边界把 SDK 类型转成 `types.ts` 里的内部类型。
+3. 在 `provider-registry.ts` 的 `PROVIDERS` 静态注册新实现。
+4. 引入测试框架后补该协议的 Provider contract test。
+
+业务模块不需要改动。registry 是只读映射，没有运行时注册方法。
+
+### 测试覆盖
+
+项目当前没有 API 测试框架。Provider mapper、流事件合并、structured output 方法切换和工具执行循环写成了可单测的纯逻辑，但没有自动化用例覆盖，只靠类型检查、lint 和手动开发环境请求验证。引入 Vitest 后优先补：SDK 响应到内部结果的映射、分段文本与并行 tool call chunk 的事件合并、finish reason 与 SDK error 映射、structured output 成功和方法切换、工具未注册和参数无效、纯文本流适配器的 `text-delta` 累计。
+
 ## Contracts
 
 `@repo/contracts` 放前后端共用的类型和 schema。
