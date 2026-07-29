@@ -4,18 +4,18 @@
 
 ## 设计上下文
 
-- 目标用户：想记录当天情绪、原因和下一步行动的普通用户。
-- 主要场景：打开首页，理解 moodmate 是什么；进入应用，开始记录。
+- 目标用户：需要有人陪伴聊天的普通用户。
+- 主要场景：从首页进入 MoodMate，继续单聊或群聊；管理朋友、资料和设置。
 - 界面气质：安静、温和、清楚。保留一点技术感，但不要像后台。
 
-moodmate 不是产品官网模板。首页要直接说明能做什么，并给出进入应用的入口。
+moodmate 不是产品官网模板。首页直接展示欢迎状态，点击“进入 MoodMate”后再显示登录方式。
 
 ## 页面规则
 
 - 公开首页放在 `apps/web/app/(site)/page.tsx`。
-- 应用页面放在 `apps/web/app/(app)`。
-- 首页第一屏必须出现：产品名、用途、开始记录入口、服务状态入口。
-- 应用入口页先说明当前只是入口，不要提前写未完成的复杂表单。
+- 登录后的页面放在 `apps/web/app/(app)`：`/chats`、`/chats/[kind]/[id]`、`/friends`、`/friends/[id]` 和 `/settings`。
+- GitHub 回调状态页放在 `apps/web/app/(auth)/auth/callback/github/page.tsx`，只展示静态未开放状态。
+- 旧 `/login`、`/app`、`/group-chats`、`/agents` 和 `/login/github/callback` 不保留页面、别名或重定向。
 - 页面默认写服务端组件。只有需要浏览器事件、状态或本地存储时，才加 `"use client"`。
 
 ## 样式规则
@@ -27,7 +27,7 @@ moodmate 不是产品官网模板。首页要直接说明能做什么，并给�
 - 通用颜色、圆角和阴影从 `@repo/ui/theme.css` 导入。
 - 主题只支持 Latte 和 Mocha；`app/layout.tsx` 在首次绘制前读取 `moodmate-theme:v1`，页面使用 `@repo/ui/theme-toggle` 切换。
 - Web 专用的情绪色、环境背景和页面动画留在 `apps/web/app/globals.css`。
-- 页面使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token。
+- 页面使用 `background`、`surface`、`foreground`、`border`、`primary`、`focus` 等语义 token；MoodMate IM 专用 token 只放在 `.moodmate` 组件样式中。
 - 色值只写在 token 定义里，不在页面和组件中直接写颜色。
 - 卡片只用于独立内容块，不要把整页 section 都包成卡片。
 - 通用按钮、卡片和标签分别使用 `@repo/ui/button`、`@repo/ui/card` 和 `@repo/ui/badge`。
@@ -36,7 +36,7 @@ moodmate 不是产品官网模板。首页要直接说明能做什么，并给�
 ## 文字规则
 
 - 默认中文短句。
-- 按钮写动作和对象，比如“开始记录”“查看服务状态”。
+- 按钮写动作和对象，比如“进入 MoodMate”“开始聊天”“认识新朋友”。
 - 空状态写当前没有什么。
 - 报错写失败位置和下一步。
 - 不写夸张宣传语。
@@ -60,7 +60,16 @@ moodmate 不是产品官网模板。首页要直接说明能做什么，并给�
 改 web 页面或样式后至少看这些点：
 
 - `/` 在手机宽度能读完。
-- `/app` 能打开。
-- Latte 和 Mocha 都能看清文字和按钮，刷新后保留当前主题。
+- `/chats`、`/friends` 和 `/settings` 需要本地登录状态才能打开；登录后可从主导航互相到达。
+- Latte 和 Mocha 都能看清文字和按钮，刷新后通过 `moodmate-theme:v1` 保留当前主题。
 - 键盘能聚焦主要按钮。
 - 页面没有 Next starter 的文案、图片和样式。
+
+## 验证命令
+
+```bash
+pnpm check-types
+pnpm lint
+pnpm format:check
+pnpm --filter web build
+```

@@ -1,6 +1,6 @@
 "use client";
 
-import type { WebSession, WebUserProfile } from "@repo/contracts";
+import type { WebUserProfile } from "@repo/contracts";
 import {
   Heart,
   Layers3,
@@ -33,7 +33,6 @@ type SettingsPanelId = "profile" | "general" | "memory" | "care" | "appearance";
 
 type SettingsWorkspaceProps = {
   profile: WebUserProfile;
-  session: WebSession;
 };
 
 const settingsItems = [
@@ -57,10 +56,7 @@ function getSettingsUserProfile(profile: WebUserProfile): MoodmateProfile {
   };
 }
 
-export function SettingsWorkspace({
-  profile,
-  session,
-}: SettingsWorkspaceProps) {
+export function SettingsWorkspace({ profile }: SettingsWorkspaceProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [activePanel, setActivePanel] = useState<SettingsPanelId>("profile");
   const [visitedPanels, setVisitedPanels] = useState<Set<SettingsPanelId>>(
@@ -175,11 +171,7 @@ export function SettingsWorkspace({
         >
           {visitedPanels.has("profile") ? (
             <div hidden={activePanel !== "profile"}>
-              <ProfilePanel
-                onLogout={handleLogout}
-                profile={profile}
-                session={session}
-              />
+              <ProfilePanel onLogout={handleLogout} profile={profile} />
             </div>
           ) : null}
           {visitedPanels.has("general") ? (

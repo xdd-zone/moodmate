@@ -27,7 +27,7 @@ export function MoodmateInfoPanel({
           onSurface
           profile={profile}
           showStatus={!isGroup}
-          size="lg"
+          size="xl"
         />
         <h2 className="moodmate-info__name">{profile.name}</h2>
         <p className="moodmate-info__headline">{profile.headline}</p>

@@ -79,10 +79,13 @@ export function GroupChatPane({
       : null,
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const groupProfile = getGroupProfile(detail.groupChat);
   const activeMembers = detail.members.filter(
     (member) => member.status === "active",
   );
+  const groupProfile = {
+    ...getGroupProfile(detail.groupChat),
+    headline: `${activeMembers.length} 位成员`,
+  };
   const canSend = draft.trim().length > 0 && !sendMutation.isPending;
 
   useEffect(() => {
@@ -326,6 +329,10 @@ export function GroupChatInformation({
   const activeMembers = detail.members.filter(
     (member) => member.status === "active",
   );
+  const groupProfile = {
+    ...getGroupProfile(detail.groupChat),
+    headline: `${activeMembers.length} 位成员`,
+  };
 
   async function handleRemove(member: AgentGroupChatMember) {
     if (!window.confirm(`确认移除成员「${member.name}」？`)) return;
@@ -335,7 +342,7 @@ export function GroupChatInformation({
 
   return (
     <>
-      <MoodmateInfoPanel isGroup profile={getGroupProfile(detail.groupChat)}>
+      <MoodmateInfoPanel isGroup profile={groupProfile}>
         <MoodmateInfoSection title="群简介">
           <p>
             {detail.groupChat.summary?.trim() ||

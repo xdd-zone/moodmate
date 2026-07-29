@@ -1,6 +1,6 @@
 "use client";
 
-import type { WebSession, WebUserProfile } from "@repo/contracts";
+import type { WebUserProfile } from "@repo/contracts";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -14,7 +14,6 @@ import { SettingsWorkspace } from "./settings-workspace";
 
 type SettingsSession = {
   profile: WebUserProfile;
-  session: WebSession;
 };
 
 function isAbortError(error: unknown) {
@@ -55,7 +54,6 @@ export function SettingsGuard() {
 
         setSettingsSession({
           profile,
-          session: latestSession.session,
         });
       } catch (error) {
         if (isAbortError(error)) return;

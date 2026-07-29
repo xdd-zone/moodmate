@@ -402,8 +402,8 @@ function renderInformation({
         <MoodmateInfoPanel profile={companionProfile}>
           <MoodmateInfoSection title="关于">
             <p>
-              {conversation.summary?.trim() ||
-                "在这里聊聊最近发生的事，也可以从一句简单的问候开始。"}
+              愿意听你慢慢说，不急着给建议。会记住你在意的人和事，
+              在你需要时轻轻提起。
             </p>
           </MoodmateInfoSection>
           <MoodmateInfoSection title="关系">

@@ -9,7 +9,6 @@ import type {
   CompanionMemory,
   UpdateCompanionMemoryRequest,
   UpsertCompanionCarePlanRequest,
-  WebSession,
   WebUserProfile,
 } from "@repo/contracts";
 import { Button } from "@repo/ui/button";
@@ -65,23 +64,12 @@ function PanelShell({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-1 py-4 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4">
-      <dt className="text-muted">{label}</dt>
-      <dd className="break-words sm:text-right">{value}</dd>
-    </div>
-  );
-}
-
 export function ProfilePanel({
   onLogout,
   profile,
-  session,
 }: {
   onLogout: () => void;
   profile: WebUserProfile;
-  session: WebSession;
 }) {
   const userProfile = {
     headline: profile.email,
@@ -92,7 +80,7 @@ export function ProfilePanel({
 
   return (
     <PanelShell
-      description="这些信息用于登录后的个人菜单和聊天界面。"
+      description="这些信息只用于你和朋友的对话体验，不对外公开。"
       title="个人资料"
     >
       <div className="moodmate-settings-profile">
@@ -104,24 +92,32 @@ export function ProfilePanel({
           <p>头像修改暂未接入。</p>
         </div>
       </div>
-      <dl className="moodmate-settings-profile__details">
-        <InfoRow label="昵称" value={profile.displayName} />
-        <InfoRow label="邮箱" value={profile.email} />
-        <InfoRow label="身份" value={profile.roles.join("、")} />
-        <InfoRow
-          label="会话有效期"
-          value={dateTimeFormatter.format(new Date(session.expiresAtMs))}
-        />
-      </dl>
-      <Button
-        className="moodmate-settings-logout"
-        onClick={onLogout}
-        type="button"
-        variant="danger"
-      >
-        <LogOut aria-hidden="true" className="size-4" />
-        退出登录
-      </Button>
+      <label className="moodmate-settings-profile-field">
+        <span>昵称</span>
+        <input readOnly value={profile.displayName} />
+      </label>
+      <label className="moodmate-settings-profile-field">
+        <span>邮箱</span>
+        <input readOnly value={profile.email} />
+      </label>
+      <div className="moodmate-setting-row">
+        <div>
+          <p className="label">账户角色</p>
+          <p className="desc">当前账户的权限组</p>
+        </div>
+        <span className="moodmate-settings-role">
+          {profile.roles.join("、")}
+        </span>
+      </div>
+      <div className="moodmate-settings-profile-actions">
+        <Button disabled type="button">
+          保存修改
+        </Button>
+        <Button onClick={onLogout} type="button" variant="danger">
+          <LogOut aria-hidden="true" className="size-4" />
+          退出登录
+        </Button>
+      </div>
     </PanelShell>
   );
 }

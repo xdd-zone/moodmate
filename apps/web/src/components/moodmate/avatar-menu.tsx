@@ -134,6 +134,7 @@ export function MoodmateAvatarMenu({
       </button>
       <div
         aria-label={label}
+        aria-hidden={!isOpen}
         className={classNames(
           "moodmate-context-menu",
           isOpen && "moodmate-context-menu--open",
@@ -142,6 +143,7 @@ export function MoodmateAvatarMenu({
         ref={menuRef}
         role="menu"
         style={position ?? undefined}
+        hidden={!isOpen}
       >
         {items.map((item) => {
           const Icon = item.icon;

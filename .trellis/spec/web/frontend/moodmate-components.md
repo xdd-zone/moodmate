@@ -61,6 +61,8 @@
 - 会话条目使用语义路由 `href`，当前项传 `active`，不要在组件里读路由或请求数据。
 - 图标按钮使用 lucide 图标并提供 `aria-label` 或 `title`。
 - 菜单和 dialog 可以用 Escape 关闭；菜单靠近视口边缘时不能溢出。
+- 资料栏的“关于”只使用短的展示文案，不直接渲染 `conversation.summary` 等完整聊天记录；群聊标题下的成员数必须来自当前 `active` 成员。
+- 头像菜单关闭时同时设置 `hidden` 和 `aria-hidden="true"`，避免隐藏菜单进入可访问树和键盘焦点顺序。
 - 改动后依次运行 `pnpm check-types`、`pnpm lint`、`pnpm format:check` 和 `pnpm --filter web build`。
 
 ## 设置工作区
