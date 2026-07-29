@@ -1,0 +1,33 @@
+{
+  "id": "rebuild-web-from-open-design",
+  "name": "rebuild-web-from-open-design",
+  "title": "按 Open Design 原型重构 Web 端",
+  "description": "按 Open Design 原型重构 Web，并采用统一聊天工作区和新的语义路由。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": "web",
+  "package": "web",
+  "priority": "P2",
+  "creator": "喜东东",
+  "assignee": "喜东东",
+  "createdAt": "2026-07-29",
+  "completedAt": "2026-07-29",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-29-web-prototype-foundation",
+    "07-29-web-auth-entry",
+    "07-29-web-chat-pages",
+    "07-29-web-friends-pages",
+    "07-29-web-settings-page",
+    "07-29-web-integration-verification"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
