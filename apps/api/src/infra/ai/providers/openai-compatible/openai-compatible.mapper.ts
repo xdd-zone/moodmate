@@ -1,22 +1,10 @@
 /**
  * OpenAI-compatible 协议的边界转换。
  *
- * 这里是唯一允许引用 `openai` SDK 类型的位置之一（另一处是 provider 文件）。
- * 所有导出函数只接收或返回 MoodMate 内部类型与 SDK 类型之间的转换结果；
- * SDK 类型不会通过目录 `index.ts` 对外导出。
+ * 所有导出函数只接收或返回 MoodMate 内部类型与 Chat Completions SDK 类型之间的
+ * 转换结果；SDK 类型不会通过目录 `index.ts` 对外导出。
  */
 
-import {
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  APIError,
-  APIUserAbortError,
-  AuthenticationError,
-  BadRequestError,
-  PermissionDeniedError,
-  RateLimitError,
-  UnprocessableEntityError,
-} from "openai";
 import type {
   ChatCompletionMessageParam,
   ChatCompletionTool,
@@ -25,8 +13,6 @@ import type {
 } from "openai/resources/chat/completions";
 import type { CompletionUsage } from "openai/resources/completions";
 
-import { AiError } from "../../errors";
-import type { AiErrorCode, AiErrorMetadata } from "../../errors";
 import type {
   AiAssistantMessage,
   AiFinishReason,
@@ -213,90 +199,4 @@ export function toAssistantMessage(input: {
     content: input.content ?? "",
     ...(toolCalls.length > 0 ? { toolCalls } : {}),
   };
-}
-
-/**
- * SDK error 转 AiError。只保留可安全记录的 status / requestId，
- * 不写入 apiKey、Authorization、完整 prompt、完整工具参数或原始上游错误体。
- */
-export function mapSdkError(
-  error: unknown,
-  context: {
-    signal?: AbortSignal;
-    providerName: string;
-    model: string;
-    durationMs: number;
-  },
-): AiError {
-  const baseMetadata: AiErrorMetadata = {
-    providerName: context.providerName,
-    model: context.model,
-    durationMs: context.durationMs,
-  };
-
-  // 用户主动取消优先判断：保持取消语义，不转成上游错误。
-  if (context.signal?.aborted || error instanceof APIUserAbortError) {
-    return new AiError("aborted", "请求已取消", {
-      metadata: baseMetadata,
-      cause: error,
-    });
-  }
-
-  if (error instanceof APIConnectionTimeoutError) {
-    return new AiError("timeout", "模型服务响应超时", {
-      metadata: baseMetadata,
-      cause: error,
-    });
-  }
-
-  if (error instanceof APIConnectionError) {
-    return new AiError("network", "无法连接模型服务", {
-      metadata: baseMetadata,
-      cause: error,
-    });
-  }
-
-  if (error instanceof APIError) {
-    const metadata: AiErrorMetadata = {
-      ...baseMetadata,
-      status: typeof error.status === "number" ? error.status : undefined,
-      requestId: error.requestID ?? undefined,
-    };
-
-    const { code, message } = classifyApiError(error);
-    return new AiError(code, message, { metadata, cause: error });
-  }
-
-  return new AiError("upstream_error", "模型服务返回未知错误", {
-    metadata: baseMetadata,
-    cause: error,
-  });
-}
-
-function classifyApiError(error: APIError): {
-  code: AiErrorCode;
-  message: string;
-} {
-  if (error instanceof AuthenticationError) {
-    return { code: "authentication", message: "模型服务认证失败" };
-  }
-
-  if (error instanceof PermissionDeniedError) {
-    return { code: "permission_denied", message: "模型服务拒绝访问" };
-  }
-
-  if (error instanceof RateLimitError) {
-    return { code: "rate_limited", message: "模型服务触发限流" };
-  }
-
-  // 400 / 422 通常意味着请求形状或 structured output 方法不被支持，
-  // 交给 runtime 决定是否切换到下一种 structured output 方法。
-  if (
-    error instanceof BadRequestError ||
-    error instanceof UnprocessableEntityError
-  ) {
-    return { code: "invalid_response", message: "模型服务无法处理该请求" };
-  }
-
-  return { code: "upstream_error", message: "模型服务返回错误" };
 }

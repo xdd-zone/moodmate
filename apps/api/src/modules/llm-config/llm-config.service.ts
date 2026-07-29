@@ -76,7 +76,7 @@ export async function createLlmConfig(input: {
     apiKeyLast4: apiKeyLast4(input.payload.apiKey),
     baseUrl: normalizeBaseURL(input.payload.baseURL),
     database: input.bindings.DB,
-    disableThinking: input.payload.disableThinking,
+    disableThinking: input.payload.disableThinking ?? false,
     model: input.payload.model,
     name: input.payload.name,
     nowMs,
@@ -274,17 +274,23 @@ export async function resolveActiveLlmProviderConfig(
     iv: record.apiKeyIv,
   });
 
+  const api = normalizeLlmConfigApi(record.api);
+
   return {
-    api: normalizeLlmConfigApi(record.api),
+    api,
     providerName: record.providerName,
     model: record.model,
     baseURL: record.baseUrl,
     apiKey,
-    providerOptions: {
-      "openai-chat-completions": {
-        disableThinking: record.disableThinking === 1,
-      },
-    },
+    ...(api === "openai-chat-completions"
+      ? {
+          providerOptions: {
+            "openai-chat-completions": {
+              disableThinking: record.disableThinking === 1,
+            },
+          },
+        }
+      : {}),
   };
 }
 

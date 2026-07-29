@@ -96,7 +96,11 @@ export async function generateObject<T>(
 
       // 只有「方法不被支持」才换方法；其余错误立即向上抛。
       if (error.code === "invalid_response") {
-        lastError = error;
+        // 已有模型输出但未通过 Zod 时，保留更具体的 invalid_output；
+        // 后续协议能力不支持不应覆盖模型实际返回的无效结果。
+        if (lastError?.code !== "invalid_output") {
+          lastError = error;
+        }
         continue;
       }
 

@@ -1,4 +1,4 @@
-import { BizCode, DEFAULT_LLM_CONFIG_API } from "@repo/contracts";
+import { BizCode } from "@repo/contracts";
 import type { BaseMessage } from "@langchain/core/messages";
 
 import { isAiError, type AiMessage, type AiModel } from "@/infra/ai";
@@ -8,21 +8,25 @@ import type { ChatCompletionMessage, ChatProviderConfig } from "./chat.service";
 
 /**
  * 把业务侧的 ChatProviderConfig 转成 AI runtime 的 AiModel。
- * ChatProviderConfig 无 api 字段，统一用 DEFAULT_LLM_CONFIG_API；
- * disableThinking 映射到 openai-chat-completions 的受控 Provider 选项。
+ * api 决定 registry 使用的协议实现；disableThinking 只映射到
+ * openai-chat-completions 的受控 Provider 选项。
  */
 export function toAiModel(config: ChatProviderConfig): AiModel {
   return {
-    api: DEFAULT_LLM_CONFIG_API,
+    api: config.api,
     providerName: config.providerName,
     model: config.model,
     baseURL: config.baseURL,
     apiKey: config.apiKey,
-    providerOptions: {
-      "openai-chat-completions": {
-        disableThinking: config.disableThinking,
-      },
-    },
+    ...(config.api === "openai-chat-completions"
+      ? {
+          providerOptions: {
+            "openai-chat-completions": {
+              disableThinking: config.disableThinking,
+            },
+          },
+        }
+      : {}),
   };
 }
 

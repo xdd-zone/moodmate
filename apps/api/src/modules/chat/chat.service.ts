@@ -15,6 +15,7 @@ import {
   type ConversationRelationshipStage,
   type ConversationSafety,
   type EmotionRoute,
+  type LlmConfigApi,
   type ReplyPolicy,
   type SubmitCompanionMessageFeedbackRequest,
   type UpdateCompanionMemoryRequest,
@@ -73,6 +74,7 @@ export interface ChatCompletionMessage {
 }
 
 export interface ChatProviderConfig extends CompanionChatLlmConfig {
+  api: LlmConfigApi;
   disableThinking: boolean;
 }
 
@@ -1082,6 +1084,7 @@ async function resolveProviderConfig(
   const active = await resolveActiveLlmProviderConfig(bindings);
 
   return {
+    api: active.api,
     providerName: active.providerName,
     baseURL: normalizeBaseURL(active.baseURL),
     model: active.model,

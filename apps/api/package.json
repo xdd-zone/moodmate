@@ -12,6 +12,7 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "catalog:",
     "@hono/zod-validator": "catalog:",
     "@langchain/core": "catalog:",
     "@langchain/langgraph": "catalog:",

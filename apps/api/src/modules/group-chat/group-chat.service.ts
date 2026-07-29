@@ -348,6 +348,7 @@ async function resolveGroupChatProviderConfig(
   const active = await resolveActiveLlmProviderConfig(bindings);
 
   return {
+    api: active.api,
     apiKey: active.apiKey,
     baseURL: active.baseURL.trim().replace(/\/+$/, ""),
     disableThinking:

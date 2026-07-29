@@ -1,8 +1,8 @@
 /**
  * OpenAI Chat Completions 兼容协议的 Provider 实现。
  *
- * 唯一允许创建官方 `openai` SDK client 的位置。使用 `chat.completions.create()`
- * 处理普通与流式生成；边界的类型转换集中在 openai-compatible.mapper.ts。
+ * 使用 `chat.completions.create()` 处理普通与流式生成；边界的类型转换集中在
+ * openai-compatible.mapper.ts。
  *
  * 约束：
  * - 只依赖 openai SDK 与 infra/ai/types、infra/ai/errors，不 import chat /
@@ -30,9 +30,9 @@ import type {
   AiToolCall,
   AiUsage,
 } from "../../types";
+import { mapOpenAiSdkError } from "../openai-sdk-error";
 import {
   mapFinishReason,
-  mapSdkError,
   mapUsage,
   toAssistantMessage,
   toChatMessages,
@@ -135,7 +135,7 @@ async function generate(
       throw error;
     }
 
-    throw mapSdkError(error, {
+    throw mapOpenAiSdkError(error, {
       signal: request.options?.signal,
       providerName: request.model.providerName,
       model: request.model.model,
@@ -255,7 +255,7 @@ async function* streamGenerator(
   } catch (error) {
     yield {
       type: "error",
-      error: mapSdkError(error, {
+      error: mapOpenAiSdkError(error, {
         signal: request.options?.signal,
         providerName: request.model.providerName,
         model: request.model.model,

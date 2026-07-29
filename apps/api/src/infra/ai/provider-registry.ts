@@ -1,5 +1,7 @@
 import { AiError } from "./errors";
+import { anthropicMessagesProvider } from "./providers/anthropic-messages";
 import { openAiCompatibleProvider } from "./providers/openai-compatible";
+import { openAiResponsesProvider } from "./providers/openai-responses";
 import type { AiApi, AiProvider } from "./types";
 
 /**
@@ -14,7 +16,9 @@ type ProviderMap = {
 };
 
 const PROVIDERS: ProviderMap = {
+  "anthropic-messages": anthropicMessagesProvider,
   "openai-chat-completions": openAiCompatibleProvider,
+  "openai-responses": openAiResponsesProvider,
 };
 
 /**

@@ -6,16 +6,19 @@ import type { AiError } from "./errors";
  * AI 模块内部类型定义。
  *
  * 描述模型请求与结果的规范化形状。业务层（chat / group-chat / LangGraph 节点）
- * 只使用这里的类型，不构造 OpenAI SDK 类型；只有 providers/openai-compatible
- * 目录可以在边界把这些内部类型转换为 SDK 类型。
+ * 只使用这里的类型，不构造具体 SDK 类型；只有对应的 providers/* 目录
+ * 可以在边界把这些内部类型转换为上游协议类型。
  */
 
 // ---------------------------------------------------------------------------
 // Protocol and model connection
 // ---------------------------------------------------------------------------
 
-/** 协议标识。首版只有 OpenAI Chat Completions；registry 以此为 key 选择实现。 */
-export type AiApi = "openai-chat-completions";
+/** 协议标识。registry 以此为 key 选择实现。 */
+export type AiApi =
+  | "openai-chat-completions"
+  | "anthropic-messages"
+  | "openai-responses";
 
 /** 各协议特有的、受控的 Provider 选项。 */
 export interface AiProviderOptions {
@@ -130,7 +133,7 @@ export interface AiResponseFormat {
   method: AiStructuredOutputMethod;
 }
 
-/** OpenAI-compatible 服务的 structured output 兼容策略。 */
+/** runtime 统一尝试的 structured output 方法。 */
 export type AiStructuredOutputMethod =
   | "json_schema"
   | "function"

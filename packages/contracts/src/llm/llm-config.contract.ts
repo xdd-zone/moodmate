@@ -7,7 +7,11 @@ export const LlmConfigBaseUrlSchema = z
     message: "Base URL 必须使用 HTTP 或 HTTPS",
   });
 
-export const LlmConfigApiSchema = z.enum(["openai-chat-completions"]);
+export const LlmConfigApiSchema = z.enum([
+  "openai-chat-completions",
+  "anthropic-messages",
+  "openai-responses",
+]);
 
 export type LlmConfigApi = z.infer<typeof LlmConfigApiSchema>;
 
@@ -42,7 +46,7 @@ export const LlmConfigCreateRequestSchema = z.object({
   baseURL: LlmConfigBaseUrlSchema,
   model: z.string().trim().min(1).max(120),
   apiKey: z.string().trim().min(1).max(400),
-  disableThinking: z.boolean().default(false),
+  disableThinking: z.boolean().optional(),
 });
 
 export type LlmConfigCreateRequest = z.infer<
