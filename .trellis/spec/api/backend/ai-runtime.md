@@ -20,7 +20,10 @@ apps/api/src/infra/ai/
 │   ├── generate-object.ts   # generateObject
 │   └── execute-tools.ts     # 工具执行循环
 └── providers/
-    └── openai-compatible/   # 唯一引用 openai SDK 的目录
+    ├── anthropic-messages/  # Anthropic Messages SDK 边界
+    ├── openai-compatible/   # OpenAI Chat Completions SDK 边界
+    ├── openai-responses/    # OpenAI Responses SDK 边界
+    └── openai-sdk-error.ts  # 两种 OpenAI 协议共用的 SDK 错误映射
 ```
 
 公开 runtime API（业务唯一入口）：
@@ -52,7 +55,7 @@ getAiProvider<TApi extends AiApi>(api: TApi): AiProvider<TApi>; // 未注册抛 
 
 ```ts
 interface AiModel {
-  api: AiApi; // registry key，当前只有 "openai-chat-completions"
+  api: "openai-chat-completions" | "anthropic-messages" | "openai-responses"; // registry key
   providerName: string; // 仅用于日志和识别，不参与实现选择
   model: string;
   baseURL: string;
@@ -65,9 +68,22 @@ interface AiModel {
 
 - registry 按 `AiModel.api` 选实现，不按 `providerName` 写分支。
 - `disableThinking` 只通过 `providerOptions["openai-chat-completions"]` 传，Provider 映射为上游 `thinking: { type: "disabled" }`。业务模块不拼原始 request body。
+- `packages/contracts` 的 `LlmConfigApiSchema` 使用同样的三个协议值。create、update 和 test 请求可以传 `api`；省略时使用 `openai-chat-completions`。
+- Admin 创建、编辑和连接测试都传所选 `api`。`disableThinking` 只在 `openai-chat-completions` 下显示和发送；其他协议不构造该字段或 Provider option。
+- `resolveActiveLlmProviderConfig()`、单聊和群聊必须保留已保存的 `api`，不能在业务层重新写成默认协议。
 - Provider 向 SDK 显式传 90 秒 timeout、`maxRetries: 0` 和调用方 `AbortSignal`。
 
 结构化输出：`generateObject()` 接收 Zod schema，转 JSON Schema 交给 Provider，返回后再用同一 Zod schema 校验。方法按固定顺序 `json_schema -> function -> json_object` 轮询，切换逻辑在 runtime，Provider 只忠实应用当前 method。
+
+协议能力：
+
+| 协议                      | 文本与工具调用                           | structured output                                    | 请求约束                                      |
+| ------------------------- | ---------------------------------------- | ---------------------------------------------------- | --------------------------------------------- |
+| `openai-chat-completions` | Chat Completions message / tool call     | `json_schema`、`function`、`json_object`             | 保留既有 `disableThinking` 行为               |
+| `anthropic-messages`      | `tool_use` / `tool_result`               | 只支持强制 `function`；其他方法抛 `invalid_response` | `max_tokens` 默认 4096                        |
+| `openai-responses`        | `function_call` / `function_call_output` | `json_schema`、强制 `function`、`json_object`        | `store: false`；`max_output_tokens` 最小为 16 |
+
+Anthropic 流只从 `input_json_delta.partial_json` 累加工具参数；`content_block_start.input` 不作为参数增量重复拼接。OpenAI Responses 收到 `response.function_call_arguments.done` 或 `response.output_item.done` 时，要补发尚未出现的参数尾部，再发最终 `tool-call`。两种协议都必须先看到正常终止事件，才能发内部 `finish`；流提前结束时返回 `invalid_response`。
 
 ## 4. 校验与错误矩阵
 
@@ -100,15 +116,15 @@ interface AiModel {
 ## 5. 正常、基础、错误案例
 
 - 正常：单聊 `streamText()` + `toTextByteStream()` 逐字输出，流结束 `onComplete` 写库；群聊 `generateText()` 返回文本 `trim()` 后落库；`generateObject()` 首个方法即过 Zod。
-- 基础：`generateObject()` 首方法返回无法过 Zod 的文本，切下一种方法后成功。
-- 错误：错误 Key 抛 `authentication`；错误 baseURL 抛 `network`；上游 90 秒无响应抛 `timeout`；取消抛 `aborted`；工具连续 5 轮只返回 tool call 抛 `max_steps`。
+- 基础：旧配置省略 `api` 时继续走 `openai-chat-completions`；Anthropic structured output 跳过不支持的方法后走强制 function；Responses 把 refusal 内容作为文本返回。
+- 错误：错误 Key 抛 `authentication`；错误 baseURL 抛 `network`；上游 90 秒无响应抛 `timeout`；取消抛 `aborted`；工具连续 5 轮只返回 tool call 抛 `max_steps`；协议流没有终止事件时抛 `invalid_response`。
 
 ## 6. 需要的测试
 
 项目当前无 API 测试框架，以下为引入 Vitest 后优先补的纯逻辑用例与断言点：
 
-- mapper：SDK 响应 → `AiGenerationResult`，断言 content、toolCalls、usage、finishReason。
-- 流事件合并：分段文本与并行 tool call chunk，断言按 index 合并出完整 `AiToolCall`。
+- mapper：分别覆盖 Chat Completions、Anthropic Messages 和 OpenAI Responses，断言 content、toolCalls、usage、finishReason；Responses 还要覆盖 refusal 内容。
+- 流事件合并：Anthropic 断言 `input_json_delta` 不重复；Responses 断言 arguments delta、arguments done 和 output item done 只组成一份完整 JSON；两者都断言 `start -> delta/tool -> usage -> finish`。
 - error 映射：各 SDK error 类型 → 对应 `AiError` code，断言 metadata 只含安全字段。
 - structured output：首方法成功、方法不被支持时切换、全部方法用尽抛 `invalid_output`。
 - 工具循环：未注册、参数无效转失败 tool result；取消抛 `aborted`；5 轮上限抛 `max_steps`。
@@ -140,6 +156,7 @@ const result = await generateText({ model, messages, maxTokens: 1, signal });
 1. 在 `types.ts` 的 `AiApi` 加协议标识。
 2. 在 `providers/<new-protocol>` 实现 `AiProvider`，边界把 SDK 类型转成 `types.ts` 内部类型，SDK 类型不越过该目录。
 3. 在 `provider-registry.ts` 的 `PROVIDERS` 静态注册新实现。
-4. 补该协议的 Provider contract test。
+4. 在 `LlmConfigApiSchema` 和 Admin 协议选项增加同一标识，确认 create、update、test 和活动配置解析都保留该值。
+5. 补该协议的 Provider contract test，至少覆盖消息、工具、structured output、usage、finish reason、正常终止和提前断流。
 
 registry 是只读映射，没有运行时注册方法。业务模块不需要改动。
