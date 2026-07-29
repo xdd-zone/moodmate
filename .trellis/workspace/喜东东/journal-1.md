@@ -1167,3 +1167,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 35: API AI Provider 架构：阶段 7 文档与质量门禁
+
+**Date**: 2026-07-29
+**Task**: API AI Provider 架构：阶段 7 文档与质量门禁
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+完成 api-ai-provider-architecture 阶段 7：补 docs/architecture.md 与 docs/apps/api.md 的 AI 接入层说明，新建 .trellis/spec/api/backend/ai-runtime.md 并挂载 index.md。全量质量门禁 check-types/lint 通过，改动文件 format 通过。任务改动分四个 commit 提交（feat(ai)/feat(llm-config)/refactor(chat,group-chat)/docs(ai)）后归档。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6bda5e1` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
