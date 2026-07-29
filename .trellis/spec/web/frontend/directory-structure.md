@@ -1,16 +1,16 @@
 # Web 目录与数据边界
 
-`apps/web` 是用户端 Next.js App Router 应用。当前已经实现公开首页和应用入口，业务请求层尚未建立。
+`apps/web` 是用户端 Next.js App Router 应用。公开首页同时是唯一登录入口，登录后的业务页面按语义路由逐步迁移。
 
 ## 页面目录
 
-- `app/(site)/`：公开页面。当前 `/` 在 `app/(site)/page.tsx`。
-- `app/(app)/`：登录后的应用页面。当前 `/app` 在 `app/(app)/app/page.tsx`。
-- `app/(auth)/`：登录和回调，需要实现鉴权时再创建。
+- `app/(site)/`：公开页面。当前 `/` 在 `app/(site)/page.tsx`，挂载欢迎和邮箱登录组件。
+- `app/(auth)/`：认证回调状态页。当前 `/auth/callback/github` 只说明 GitHub 登录暂未开放，不处理 ticket。
+- `app/(app)/`：登录后的业务页面。重构期间仍包含旧页面，后续子任务迁移到 `/chats`、`/friends` 和 `/settings`。
 - `app/layout.tsx`：Maple Mono、本地字体、全局 metadata 和 HTML 语言。
 - `app/globals.css`：Tailwind 4 入口、设计 token 和基础样式。
 
-路由组只组织页面，不改变 URL。不要把公开首页和应用页面重新合并到根 `app/page.tsx`。
+路由组只组织页面，不改变 URL。不要把公开首页和应用页面重新合并到根 `app/page.tsx`，也不要恢复 `/login` 别名或重定向。
 
 ## 业务代码目录
 

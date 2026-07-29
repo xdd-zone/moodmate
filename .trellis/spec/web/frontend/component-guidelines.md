@@ -8,13 +8,13 @@
 
 ## 页面内容
 
-公开首页必须保留产品名、实际用途、开始记录入口和服务状态入口。当前实现位于 `apps/web/app/(site)/page.tsx`，服务状态 URL 从 `getWebClientEnv()` 返回的 `NEXT_PUBLIC_API_BASE_URL` 生成；变量缺失或格式错误时停止渲染。
+公开首页按 Open Design `login.html` 实现，当前位于 `apps/web/app/(site)/page.tsx`。首屏只显示欢迎文案和“进入 MoodMate”；登录面板在用户点击后出现，Escape 和“返回”恢复欢迎状态。
 
-应用入口当前只说明尚未实现的区域。新增真实功能后再替换对应占位说明，不提前渲染无法提交的表单或虚构数据入口。
+邮箱密码继续调用 `loginWeb`，成功后进入 `/chats`。GitHub 和 Google 按钮只显示“暂未开放”，不能发起 OAuth 请求。`/auth/callback/github` 是静态说明页，不读取 ticket、state 或其他查询参数。
 
 ## 链接与交互
 
-- 站内导航使用 `next/link` 的 `Link`，参考首页到 `/app` 的链接。
+- 站内导航使用 `next/link` 的 `Link`。
 - 指向 API 健康检查的外部地址使用 `<a>`。
 - 主要链接和按钮必须有可见的 `focus-visible` 样式。
 - 触摸目标尽量达到 `44px`；当前主要 CTA 使用 `min-h-11`。

@@ -228,7 +228,7 @@ function CompanionChatAppInner({
 
   function handleLogout() {
     clearClientSession();
-    window.location.replace("/login");
+    window.location.replace("/");
   }
 
   async function loadMoreHistory() {

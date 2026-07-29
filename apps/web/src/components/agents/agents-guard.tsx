@@ -14,7 +14,7 @@ export function AgentsGuard() {
     const storedSession = readClientSession();
 
     if (!storedSession) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 

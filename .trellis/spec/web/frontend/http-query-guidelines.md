@@ -117,7 +117,7 @@ GET /rpc/user/profile;
 - 登录后刷新浏览器，受保护页面能从经过 schema 校验的 session 恢复。
 - access 到期时 Network 中只有一个 `/auth/web/token/refresh`，原业务请求最多重试一次。
 - refresh 成功后本地 access token 和 refresh token 都变化。
-- refresh 失败后 `/app` 清除 session 并替换到 `/login`。
+- refresh 失败后清除 session，并把当前受保护页面替换到唯一登录入口 `/`。
 - 显式 Authorization、服务端请求、非过期业务错误和 AbortError 不触发 refresh。
 - 依次运行 `pnpm check-types`、`pnpm lint`、`pnpm format:check` 和 `pnpm --filter web build`。
 

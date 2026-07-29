@@ -33,7 +33,7 @@ export function WebDashboardGuard() {
     const storedSession = readClientSession();
 
     if (!storedSession) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -47,7 +47,7 @@ export function WebDashboardGuard() {
         const latestSession = readClientSession();
 
         if (!latestSession) {
-          router.replace("/login");
+          router.replace("/");
           return;
         }
 
@@ -58,7 +58,7 @@ export function WebDashboardGuard() {
         }
 
         clearClientSession();
-        router.replace("/login");
+        router.replace("/");
       }
     }
 

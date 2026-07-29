@@ -841,3 +841,592 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.moodmate-auth {
+  min-width: 320px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--mm-bg);
+}
+
+.moodmate-auth button {
+  cursor: pointer;
+}
+
+.moodmate-auth button:disabled {
+  cursor: wait;
+}
+
+.moodmate-auth__container {
+  width: min(100%, 1180px);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 48px);
+}
+
+.moodmate-auth__topnav {
+  position: relative;
+  z-index: 20;
+  border-bottom: 1px solid var(--mm-border);
+  background: color-mix(in oklch, var(--mm-bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.moodmate-auth__topnav-inner {
+  display: flex;
+  min-height: 74px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.moodmate-auth__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--mm-fg);
+  font-weight: 700;
+}
+
+.moodmate-auth__brand-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  box-shadow: 0 8px 24px color-mix(in oklch, var(--mm-bg) 56%, transparent);
+  font-family: var(--mm-font-display);
+  font-size: 18px;
+}
+
+.moodmate-auth__theme-toggle[data-slot="button"] {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  color: var(--mm-muted);
+  box-shadow: none;
+}
+
+.moodmate-auth__theme-toggle[data-slot="button"]:hover {
+  border-color: var(--mm-border);
+  background: var(--mm-surface);
+  color: var(--mm-fg);
+}
+
+.moodmate-auth__theme-toggle svg {
+  width: 19px;
+  height: 19px;
+}
+
+.moodmate-auth__stage {
+  position: relative;
+  display: grid;
+  min-height: calc(100vh - 74px);
+  min-height: calc(100dvh - 74px);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.moodmate-auth__stage::before,
+.moodmate-auth__stage::after {
+  position: absolute;
+  z-index: -1;
+  top: 13%;
+  bottom: 13%;
+  width: 1px;
+  background: var(--mm-border);
+  content: "";
+}
+
+.moodmate-auth__stage::before {
+  left: clamp(28px, 8vw, 140px);
+}
+
+.moodmate-auth__stage::after {
+  right: clamp(28px, 8vw, 140px);
+}
+
+.moodmate-auth__hero,
+.moodmate-auth__status-wrap {
+  display: grid;
+  width: 100%;
+  place-items: center;
+  padding-block: clamp(40px, 6vw, 72px) 96px;
+}
+
+.moodmate-auth__hero {
+  max-width: 856px;
+  text-align: center;
+}
+
+.moodmate-auth__presence {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--mm-muted);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-auth__presence--left {
+  bottom: 17%;
+  left: clamp(52px, 10vw, 172px);
+}
+
+.moodmate-auth__presence--right {
+  top: 18%;
+  right: clamp(52px, 10vw, 172px);
+}
+
+.moodmate-auth__presence-line {
+  width: 36px;
+  height: 1px;
+  background: var(--mm-border);
+}
+
+.moodmate-auth__welcome {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  animation: moodmate-auth-copy-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.moodmate-auth__eyebrow,
+.moodmate-auth__panel-kicker {
+  color: var(--mm-accent);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-auth__eyebrow {
+  margin: 0 0 20px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.moodmate-auth__welcome h1,
+.moodmate-auth__panel h1,
+.moodmate-auth__status-panel h1 {
+  margin: 0;
+  font-family: var(--mm-font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.moodmate-auth__welcome h1 {
+  font-size: clamp(42px, 6vw, 76px);
+  line-height: 1.04;
+}
+
+.moodmate-auth__lead {
+  max-width: 48ch;
+  margin: 20px auto 0;
+  color: var(--mm-muted);
+  font-size: clamp(17px, 2vw, 20px);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.moodmate-auth__hero-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.moodmate-auth__primary-button[data-slot="button"] {
+  min-height: 48px;
+  padding: 11px 20px;
+  border: 1px solid var(--mm-accent);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-accent);
+  box-shadow: 0 10px 24px color-mix(in oklch, var(--mm-accent) 28%, transparent);
+  color: var(--mm-accent-fg);
+  font-size: 15px;
+  font-weight: 650;
+  transition:
+    transform 120ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.moodmate-auth__primary-button[data-slot="button"]:hover {
+  background: var(--mm-accent-hover);
+  box-shadow: 0 13px 30px color-mix(in oklch, var(--mm-accent) 36%, transparent);
+  transform: translateY(-1px);
+}
+
+.moodmate-auth__primary-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.moodmate-auth__quiet-note {
+  margin: 14px 0 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-auth__panel {
+  width: min(100%, 480px);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-lg);
+  background: var(--mm-surface);
+  box-shadow: 0 24px 70px color-mix(in oklch, var(--mm-bg) 72%, transparent);
+  text-align: left;
+  animation: moodmate-auth-panel-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-theme="latte"] .moodmate-auth__panel {
+  box-shadow: 0 24px 70px color-mix(in oklch, var(--mm-fg) 13%, transparent);
+}
+
+.moodmate-auth__panel-head {
+  padding: clamp(24px, 5vw, 36px) clamp(22px, 5vw, 36px) 22px;
+}
+
+.moodmate-auth__panel-kicker {
+  margin: 0 0 14px;
+  color: var(--mm-muted);
+}
+
+.moodmate-auth__panel h1 {
+  margin-bottom: 10px;
+  font-size: clamp(30px, 4vw, 42px);
+  line-height: 1.12;
+}
+
+.moodmate-auth__panel-head > p:last-child,
+.moodmate-auth__status-panel > p {
+  margin: 0;
+  color: var(--mm-muted);
+  line-height: 1.6;
+}
+
+.moodmate-auth__panel-body {
+  padding: 0 clamp(22px, 5vw, 36px) clamp(24px, 5vw, 36px);
+}
+
+.moodmate-auth__providers {
+  display: grid;
+  gap: 12px;
+}
+
+.moodmate-auth__provider[data-slot="button"] {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto 16px;
+  width: 100%;
+  min-height: 52px;
+  padding: 11px 15px;
+  align-items: center;
+  gap: 9px;
+  border-color: var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface-2);
+  box-shadow: none;
+  color: var(--mm-fg);
+  text-align: left;
+}
+
+.moodmate-auth__provider[data-slot="button"]:hover {
+  border-color: var(--mm-fg);
+  background: var(--mm-surface-3);
+  transform: translateY(-1px);
+}
+
+.moodmate-auth__provider > svg {
+  width: 20px;
+  height: 20px;
+}
+
+.moodmate-auth__provider > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.moodmate-auth__provider > small {
+  color: var(--mm-muted);
+  font-family: var(--mm-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.moodmate-auth__provider > svg:last-child {
+  width: 16px;
+  height: 16px;
+  color: var(--mm-muted);
+}
+
+.moodmate-auth__notice[data-slot="alert"] {
+  margin-top: 14px;
+  border-color: var(--mm-accent-line);
+  background: var(--mm-accent-soft);
+  color: var(--mm-fg);
+}
+
+.moodmate-auth__form .moodmate-auth__notice[data-slot="alert"] {
+  margin-top: 0;
+}
+
+.moodmate-auth__form .moodmate-auth__notice[data-slot="alert"][role="alert"] {
+  border-color: color-mix(in oklch, var(--mm-danger) 42%, transparent);
+  background: var(--mm-danger-soft);
+  color: var(--mm-danger);
+}
+
+.moodmate-auth__divider {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-block: 20px 18px;
+  color: var(--mm-muted);
+  font-family: var(--mm-font-mono);
+  font-size: 11px;
+}
+
+.moodmate-auth__divider > span:first-child,
+.moodmate-auth__divider > span:last-child {
+  height: 1px;
+  background: var(--mm-border);
+}
+
+.moodmate-auth__form {
+  display: grid;
+  gap: 16px;
+}
+
+.moodmate-auth__form [data-slot="field-label"] {
+  color: var(--mm-fg);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-auth__input[data-slot="input"] {
+  height: 44px;
+  min-height: 44px;
+  border-color: var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-bg);
+  color: var(--mm-fg);
+}
+
+.moodmate-auth__input[data-slot="input"]::placeholder {
+  color: var(--mm-muted);
+}
+
+.moodmate-auth__input[data-slot="input"]:focus-visible {
+  border-color: var(--mm-accent);
+  box-shadow: none;
+}
+
+.moodmate-auth__form [data-slot="field-error"] {
+  color: var(--mm-danger);
+}
+
+.moodmate-auth__submit[data-slot="button"] {
+  min-height: 48px;
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-accent);
+  color: var(--mm-accent-fg);
+}
+
+.moodmate-auth__submit[data-slot="button"]:hover {
+  background: var(--mm-accent-hover);
+}
+
+.moodmate-auth__terms {
+  margin: 16px 0 0;
+  color: var(--mm-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.moodmate-auth__panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px clamp(22px, 5vw, 36px);
+  border-top: 1px solid var(--mm-border);
+}
+
+.moodmate-auth__back {
+  display: inline-flex;
+  min-height: 44px;
+  padding: 8px 0;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+
+.moodmate-auth__back:hover {
+  color: var(--mm-fg);
+}
+
+.moodmate-auth__back svg,
+.moodmate-auth__secure-note svg {
+  width: 14px;
+  height: 14px;
+}
+
+.moodmate-auth__secure-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mm-muted);
+  font-size: 12px;
+}
+
+.moodmate-auth__page-foot {
+  position: absolute;
+  right: clamp(20px, 4vw, 48px);
+  bottom: 18px;
+  left: clamp(20px, 4vw, 48px);
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  color: var(--mm-muted);
+  font-family: var(--mm-font-mono);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.moodmate-auth__stage--status::before,
+.moodmate-auth__stage--status::after {
+  display: none;
+}
+
+.moodmate-auth__status-wrap {
+  max-width: 640px;
+}
+
+.moodmate-auth__status-panel {
+  display: flex;
+  max-width: 520px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.moodmate-auth__status-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 24px;
+  place-items: center;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  color: var(--mm-fg);
+}
+
+.moodmate-auth__status-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.moodmate-auth__status-panel h1 {
+  margin-bottom: 14px;
+  font-size: clamp(36px, 5vw, 56px);
+  line-height: 1.08;
+}
+
+.moodmate-auth__status-panel > .moodmate-auth__primary-button {
+  margin-top: 28px;
+}
+
+.moodmate-auth__status-panel > .moodmate-auth__secure-note {
+  margin-top: 18px;
+}
+
+@keyframes moodmate-auth-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes moodmate-auth-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .moodmate-auth__topnav-inner {
+    min-height: 66px;
+  }
+
+  .moodmate-auth__stage {
+    min-height: calc(100vh - 66px);
+    min-height: calc(100dvh - 66px);
+  }
+
+  .moodmate-auth__stage::before,
+  .moodmate-auth__stage::after,
+  .moodmate-auth__presence {
+    display: none;
+  }
+
+  .moodmate-auth__hero,
+  .moodmate-auth__status-wrap {
+    padding-block: 32px 88px;
+  }
+
+  .moodmate-auth__lead {
+    max-width: 31ch;
+  }
+
+  .moodmate-auth__hero-action,
+  .moodmate-auth__hero-action .moodmate-auth__primary-button {
+    width: 100%;
+  }
+
+  .moodmate-auth__page-foot {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .moodmate-auth__page-foot span:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .moodmate-auth__provider[data-slot="button"] {
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+  }
+
+  .moodmate-auth__provider > svg:last-child {
+    display: none;
+  }
+}
+
+@media (max-height: 650px) and (min-width: 761px) {
+  .moodmate-auth__hero,
+  .moodmate-auth__status-wrap {
+    align-items: start;
+    padding-block: 40px 76px;
+  }
+
+  .moodmate-auth__presence {
+    display: none;
+  }
+}

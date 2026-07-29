@@ -311,7 +311,7 @@ export const fetchWithClientSession: typeof fetch = async (input, init) => {
   ) {
     if (response.status === 401 && initialRequest.usesClientSession) {
       clearClientSession();
-      window.location.replace("/login");
+      window.location.replace("/");
     }
 
     return response;
@@ -326,14 +326,14 @@ export const fetchWithClientSession: typeof fetch = async (input, init) => {
 
     if (retryResponse.status === 401) {
       clearClientSession();
-      window.location.replace("/login");
+      window.location.replace("/");
     }
 
     return retryResponse;
   } catch (error) {
     if (!isAbortError(error)) {
       clearClientSession();
-      window.location.replace("/login");
+      window.location.replace("/");
     }
 
     throw error;
