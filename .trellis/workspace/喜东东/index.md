@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 35
+- **Total Sessions**: 36
 - **Last Active**: 2026-07-29
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1203 | Active |
+| `journal-1.md` | ~1239 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -30,6 +30,7 @@
 
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 36 | 2026-07-29 | 实现 Anthropic Messages 与 OpenAI Responses | `2f587f3`, `6fa14fa`, `9cf84c1` | `main` |
 | 35 | 2026-07-29 | API AI Provider 架构：阶段 7 文档与质量门禁 | `6bda5e1` | `main` |
 | 34 | 2026-07-27 | 群聊 Agent 间互相回应（cross-agent replies） | `7338a47` | `main` |
 | 33 | 2026-07-27 | 群聊 LangGraph 回复编排 | `292f8f2` | `main` |

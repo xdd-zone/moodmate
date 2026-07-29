@@ -1201,3 +1201,39 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 36: 实现 Anthropic Messages 与 OpenAI Responses
+
+**Date**: 2026-07-29
+**Task**: 实现 Anthropic Messages 与 OpenAI Responses
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 api 选择协议；Admin 增加协议选择并完成类型、Lint、构建、Worker 打包和协议事件验证。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2f587f3` | (see git log) |
+| `6fa14fa` | (see git log) |
+| `9cf84c1` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
