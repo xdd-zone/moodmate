@@ -228,6 +228,8 @@ export type {
   WebTokenRefreshResponse,
 } from "./auth/web-refresh.contract";
 export {
+  DEFAULT_LLM_CONFIG_API,
+  LlmConfigApiSchema,
   LlmConfigBaseUrlSchema,
   LlmConfigCreateRequestSchema,
   LlmConfigDeleteResponseSchema,
@@ -239,6 +241,7 @@ export {
   LlmConfigUpdateRequestSchema,
 } from "./llm/llm-config.contract";
 export type {
+  LlmConfigApi,
   LlmConfigCreateRequest,
   LlmConfigDeleteResponse,
   LlmConfigItem,

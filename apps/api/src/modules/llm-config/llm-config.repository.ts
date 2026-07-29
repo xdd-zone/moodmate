@@ -40,6 +40,7 @@ export async function findActiveLlmConfig(database: D1Database | undefined) {
 }
 
 export async function insertLlmConfig(input: {
+  api: string;
   apiKeyCiphertext: string;
   apiKeyIv: string;
   apiKeyLast4: string;
@@ -55,6 +56,7 @@ export async function insertLlmConfig(input: {
   const id = uuidv7();
 
   await db.insert(llmProviderConfigs).values({
+    api: input.api,
     apiKeyCiphertext: input.apiKeyCiphertext,
     apiKeyIv: input.apiKeyIv,
     apiKeyLast4: input.apiKeyLast4,
@@ -73,6 +75,7 @@ export async function insertLlmConfig(input: {
 }
 
 export async function updateLlmConfig(input: {
+  api?: string;
   apiKeyCiphertext?: string;
   apiKeyIv?: string;
   apiKeyLast4?: string;
@@ -91,6 +94,7 @@ export async function updateLlmConfig(input: {
     .update(llmProviderConfigs)
     .set({
       ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.api !== undefined ? { api: input.api } : {}),
       ...(input.providerName !== undefined
         ? { providerName: input.providerName }
         : {}),

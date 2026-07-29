@@ -13,6 +13,7 @@ export const llmProviderConfigs = sqliteTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    api: text("api").notNull().default("openai-chat-completions"),
     providerName: text("provider_name").notNull(),
     baseUrl: text("base_url").notNull(),
     model: text("model").notNull(),

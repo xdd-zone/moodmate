@@ -7,9 +7,16 @@ export const LlmConfigBaseUrlSchema = z
     message: "Base URL 必须使用 HTTP 或 HTTPS",
   });
 
+export const LlmConfigApiSchema = z.enum(["openai-chat-completions"]);
+
+export type LlmConfigApi = z.infer<typeof LlmConfigApiSchema>;
+
+export const DEFAULT_LLM_CONFIG_API: LlmConfigApi = "openai-chat-completions";
+
 export const LlmConfigItemSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1).max(80),
+  api: LlmConfigApiSchema,
   providerName: z.string().min(1).max(80),
   baseURL: z.string().min(1),
   model: z.string().min(1).max(120),
@@ -30,6 +37,7 @@ export type LlmConfigListResponse = z.infer<typeof LlmConfigListResponseSchema>;
 
 export const LlmConfigCreateRequestSchema = z.object({
   name: z.string().trim().min(1).max(80),
+  api: LlmConfigApiSchema.optional(),
   providerName: z.string().trim().min(1).max(80),
   baseURL: LlmConfigBaseUrlSchema,
   model: z.string().trim().min(1).max(120),
@@ -44,6 +52,7 @@ export type LlmConfigCreateRequest = z.infer<
 export const LlmConfigUpdateRequestSchema = z
   .object({
     name: z.string().trim().min(1).max(80).optional(),
+    api: LlmConfigApiSchema.optional(),
     providerName: z.string().trim().min(1).max(80).optional(),
     baseURL: LlmConfigBaseUrlSchema.optional(),
     model: z.string().trim().min(1).max(120).optional(),
@@ -77,6 +86,7 @@ export type LlmConfigDeleteResponse = z.infer<
 export const LlmConfigTestRequestSchema = z
   .object({
     configId: z.uuid().optional(),
+    api: LlmConfigApiSchema.optional(),
     providerName: z.string().trim().min(1).max(80),
     baseURL: LlmConfigBaseUrlSchema,
     model: z.string().trim().min(1).max(120),

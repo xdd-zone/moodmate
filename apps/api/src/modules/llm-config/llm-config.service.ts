@@ -1,5 +1,8 @@
 import {
   BizCode,
+  DEFAULT_LLM_CONFIG_API,
+  type LlmConfigApi,
+  LlmConfigApiSchema,
   type LlmConfigCreateRequest,
   type LlmConfigListResponse,
   type LlmConfigMutationResponse,
@@ -8,6 +11,7 @@ import {
   type LlmConfigUpdateRequest,
 } from "@repo/contracts";
 
+import { AiError, generateText } from "@/infra/ai";
 import { AppError } from "@/shared/app-error";
 import { getApiEnv } from "@/shared/env";
 import type { ApiBindings } from "@/shared/hono-env";
@@ -27,12 +31,22 @@ import type { LlmProviderConfigRecord } from "./llm-config.schema";
 
 const TEST_TIMEOUT_MS = 15_000;
 
-export interface ActiveLlmProviderConfig {
-  apiKey: string;
-  baseURL: string;
-  disableThinking: boolean;
-  model: string;
+/**
+ * 已解密的活动模型连接形状，字段与 design.md 的 AiModel 对齐。
+ * 阶段 2 建好 `@/infra/ai` 类型后，可再对齐或替换为 AiModel。
+ * apiKey 只存在于请求期内存，不写入事件、错误 metadata 或持久化日志。
+ */
+export interface ResolvedLlmConnection {
+  api: LlmConfigApi;
   providerName: string;
+  model: string;
+  baseURL: string;
+  apiKey: string;
+  providerOptions?: {
+    "openai-chat-completions"?: {
+      disableThinking?: boolean;
+    };
+  };
 }
 
 export async function listLlmConfigs(input: {
@@ -56,6 +70,7 @@ export async function createLlmConfig(input: {
   const nowMs = Date.now();
 
   const id = await insertLlmConfig({
+    api: input.payload.api ?? DEFAULT_LLM_CONFIG_API,
     apiKeyCiphertext: encrypted.ciphertext,
     apiKeyIv: encrypted.iv,
     apiKeyLast4: apiKeyLast4(input.payload.apiKey),
@@ -109,6 +124,7 @@ export async function updateLlmConfigById(input: {
 
   await updateLlmConfig({
     ...encryptedFields,
+    api: input.payload.api,
     baseUrl:
       input.payload.baseURL !== undefined
         ? normalizeBaseURL(input.payload.baseURL)
@@ -165,58 +181,83 @@ export async function testLlmConfig(input: {
 }): Promise<LlmConfigTestResponse> {
   assertCanManageLlmConfig(input.adminRoles);
   const apiKey = await resolveTestApiKey(input.bindings, input.payload);
-  const baseURL = normalizeBaseURL(input.payload.baseURL);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
   const startedAt = Date.now();
 
   try {
-    const response = await fetch(`${baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
+    // 用最小非流式生成请求走 AI runtime，验证认证、协议和模型可用；
+    // 不再在 llm-config 里自行 fetch 上游。
+    await generateText({
+      model: {
+        api: input.payload.api ?? DEFAULT_LLM_CONFIG_API,
+        providerName: input.payload.providerName,
         model: input.payload.model,
-        messages: [{ role: "user", content: "ping" }],
-        max_tokens: 1,
-        stream: false,
-      }),
+        baseURL: normalizeBaseURL(input.payload.baseURL),
+        apiKey,
+      },
+      messages: [{ role: "user", content: "ping" }],
+      maxTokens: 1,
       signal: controller.signal,
     });
-    const latencyMs = Date.now() - startedAt;
 
-    if (!response.ok) {
-      const detail = await safeReadError(response);
-      return {
-        ok: false,
-        latencyMs,
-        message: `上游返回 ${response.status}${detail ? `：${detail}` : ""}`,
-      };
-    }
-
-    return { ok: true, latencyMs, message: "连接成功" };
+    return { ok: true, latencyMs: Date.now() - startedAt, message: "连接成功" };
   } catch (error) {
-    if (controller.signal.aborted) {
-      return { ok: false, message: "连接超时，请检查 Base URL 与网络" };
-    }
-
-    return {
-      ok: false,
-      message:
-        error instanceof Error && error.message
-          ? error.message
-          : "无法连接模型服务",
-    };
+    return toTestFailureResponse(error, controller.signal);
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
+/** 把连接测试异常转成管理端可读的失败响应，不暴露 API Key 与上游原始错误体。 */
+function toTestFailureResponse(
+  error: unknown,
+  signal: AbortSignal,
+): LlmConfigTestResponse {
+  if (signal.aborted) {
+    return { ok: false, message: "连接超时，请检查 Base URL 与网络" };
+  }
+
+  if (error instanceof AiError) {
+    return { ok: false, message: describeAiError(error) };
+  }
+
+  return {
+    ok: false,
+    message:
+      error instanceof Error && error.message
+        ? error.message
+        : "无法连接模型服务",
+  };
+}
+
+/** AiError 转管理端可读的中文短句。 */
+function describeAiError(error: AiError): string {
+  switch (error.code) {
+    case "authentication":
+      return "认证失败，请检查 API Key";
+    case "permission_denied":
+      return "模型服务拒绝访问，请检查权限与模型名";
+    case "rate_limited":
+      return "触发限流，请稍后重试";
+    case "timeout":
+      return "连接超时，请检查 Base URL 与网络";
+    case "network":
+      return "无法连接模型服务，请检查 Base URL 与网络";
+    case "aborted":
+      return "连接已取消";
+    case "invalid_response":
+      return `模型服务无法处理该请求${error.metadata.status ? `（${error.metadata.status}）` : ""}`;
+    case "invalid_config":
+      return "模型配置无效，请检查协议与参数";
+    default:
+      return `模型服务返回错误${error.metadata.status ? `（${error.metadata.status}）` : ""}`;
+  }
+}
+
 export async function resolveActiveLlmProviderConfig(
   bindings: ApiBindings,
-): Promise<ActiveLlmProviderConfig> {
+): Promise<ResolvedLlmConnection> {
   const record = await findActiveLlmConfig(bindings.DB);
 
   if (!record) {
@@ -234,11 +275,16 @@ export async function resolveActiveLlmProviderConfig(
   });
 
   return {
-    apiKey,
-    baseURL: record.baseUrl,
-    disableThinking: record.disableThinking === 1,
-    model: record.model,
+    api: normalizeLlmConfigApi(record.api),
     providerName: record.providerName,
+    model: record.model,
+    baseURL: record.baseUrl,
+    apiKey,
+    providerOptions: {
+      "openai-chat-completions": {
+        disableThinking: record.disableThinking === 1,
+      },
+    },
   };
 }
 
@@ -294,11 +340,8 @@ function normalizeBaseURL(value: string): string {
   return value.trim().replace(/\/+$/, "");
 }
 
-async function safeReadError(response: Response): Promise<string> {
-  try {
-    const text = await response.text();
-    return text.slice(0, 200);
-  } catch {
-    return "";
-  }
+function normalizeLlmConfigApi(value: string): LlmConfigApi {
+  const parsed = LlmConfigApiSchema.safeParse(value);
+
+  return parsed.success ? parsed.data : DEFAULT_LLM_CONFIG_API;
 }
