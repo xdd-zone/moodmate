@@ -1,8 +1,11 @@
 "use client";
 
 import {
+  DEFAULT_LLM_CONFIG_API,
+  LlmConfigApiSchema,
   LlmConfigCreateRequestSchema,
   type LlmConfigCreateRequest,
+  type LlmConfigApi,
   type LlmConfigItem,
   type LlmConfigUpdateRequest,
 } from "@repo/contracts";
@@ -13,6 +16,7 @@ import { Input } from "@repo/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
+  ChevronDown,
   Plug,
   Plus,
   Power,
@@ -34,6 +38,25 @@ import {
   adminLlmConfigKeys,
   adminLlmConfigsQueryOptions,
 } from "@/src/api/llm-configs.query";
+
+const LLM_API_OPTIONS: ReadonlyArray<{
+  label: string;
+  value: LlmConfigApi;
+}> = [
+  { label: "OpenAI Chat Completions", value: "openai-chat-completions" },
+  { label: "Anthropic Messages", value: "anthropic-messages" },
+  { label: "OpenAI Responses", value: "openai-responses" },
+];
+
+function getLlmApiLabel(api: LlmConfigApi): string {
+  return LLM_API_OPTIONS.find((option) => option.value === api)?.label ?? api;
+}
+
+function getLlmApiBaseUrlPlaceholder(api: LlmConfigApi): string {
+  return api === "anthropic-messages"
+    ? "https://api.anthropic.com"
+    : "https://api.openai.com/v1";
+}
 
 function toErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -113,7 +136,7 @@ export function LlmConfigsPage() {
         <div>
           <h1 className="text-xl font-semibold sm:text-2xl">模型配置</h1>
           <p className="mt-1 text-xs leading-6 text-muted sm:text-sm">
-            管理 OpenAI 协议模型配置，激活的配置用于用户端聊天与安全意图分析
+            管理模型协议与连接参数，激活的配置用于用户端聊天与安全意图分析
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-2">
@@ -213,11 +236,18 @@ function ConfigCard({
           ) : (
             <Badge variant="outline">未激活</Badge>
           )}
-          {config.disableThinking ? (
+          {config.api === "openai-chat-completions" &&
+          config.disableThinking ? (
             <Badge variant="outline">禁用 thinking</Badge>
           ) : null}
         </div>
         <dl className="mt-2 grid gap-1 text-xs text-muted">
+          <div className="flex gap-2">
+            <dt className="w-16 shrink-0">协议</dt>
+            <dd className="min-w-0 break-words">
+              {getLlmApiLabel(config.api)}
+            </dd>
+          </div>
           <div className="flex gap-2">
             <dt className="w-16 shrink-0">Provider</dt>
             <dd className="min-w-0 break-words">{config.providerName}</dd>
@@ -282,6 +312,7 @@ function ConfigCard({
 }
 
 interface ConfigFormState {
+  api: LlmConfigApi;
   name: string;
   providerName: string;
   baseURL: string;
@@ -292,6 +323,7 @@ interface ConfigFormState {
 
 function createFormState(config: LlmConfigItem | null): ConfigFormState {
   return {
+    api: config?.api ?? DEFAULT_LLM_CONFIG_API,
     apiKey: "",
     baseURL: config?.baseURL ?? "",
     disableThinking: config?.disableThinking ?? false,
@@ -384,9 +416,12 @@ function ConfigDrawer({
 
   function buildCreatePayload(): LlmConfigCreateRequest | null {
     const parsed = LlmConfigCreateRequestSchema.safeParse({
+      api: form.api,
       apiKey: form.apiKey,
       baseURL: form.baseURL,
-      disableThinking: form.disableThinking,
+      ...(form.api === "openai-chat-completions"
+        ? { disableThinking: form.disableThinking }
+        : {}),
       model: form.model,
       name: form.name,
       providerName: form.providerName,
@@ -413,8 +448,11 @@ function ConfigDrawer({
     }
 
     const payload: LlmConfigUpdateRequest = {
+      api: form.api,
       baseURL: trimmedBaseURL,
-      disableThinking: form.disableThinking,
+      ...(form.api === "openai-chat-completions"
+        ? { disableThinking: form.disableThinking }
+        : {}),
       model: trimmedModel,
       name: trimmedName,
       providerName: trimmedProvider,
@@ -466,6 +504,7 @@ function ConfigDrawer({
     }
 
     testMutation.mutate({
+      api: form.api,
       baseURL: form.baseURL.trim(),
       model: form.model.trim(),
       providerName: form.providerName.trim(),
@@ -495,7 +534,8 @@ function ConfigDrawer({
               {isEdit ? "编辑模型配置" : "新建模型配置"}
             </h2>
             <p className="mt-0.5 text-xs text-muted">
-              仅支持 OpenAI 协议模型（OpenAI、DeepSeek、GLM 等兼容服务）。
+              支持 OpenAI Chat Completions、Anthropic Messages 和 OpenAI
+              Responses。
             </p>
           </div>
           <Button
@@ -512,6 +552,29 @@ function ConfigDrawer({
 
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
           <div className="flex-1 space-y-3 overflow-y-auto p-5">
+            <FormField htmlFor="configApi" label="协议">
+              <div className="relative">
+                <select
+                  className="h-9 w-full appearance-none rounded-md border border-border bg-background pr-8 pl-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  id="configApi"
+                  onChange={(event) =>
+                    updateField(
+                      "api",
+                      LlmConfigApiSchema.parse(event.target.value),
+                    )
+                  }
+                  value={form.api}
+                >
+                  {LLM_API_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
+              </div>
+            </FormField>
+
             <FormField htmlFor="configName" label="配置名称">
               <Input
                 autoComplete="off"
@@ -546,7 +609,7 @@ function ConfigDrawer({
                 id="configBaseUrl"
                 maxLength={300}
                 onChange={(event) => updateField("baseURL", event.target.value)}
-                placeholder="https://api.deepseek.com"
+                placeholder={getLlmApiBaseUrlPlaceholder(form.api)}
                 value={form.baseURL}
               />
             </FormField>
@@ -579,22 +642,26 @@ function ConfigDrawer({
               />
             </FormField>
 
-            <label className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface px-3 py-2.5">
-              <span className="min-w-0">
-                <span className="block text-xs font-medium">禁用 thinking</span>
-                <span className="mt-0.5 block text-[0.6875rem] leading-4 text-muted">
-                  对支持 thinking 的模型（如 DeepSeek）关闭思考输出。
+            {form.api === "openai-chat-completions" ? (
+              <label className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface px-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium">
+                    禁用 thinking
+                  </span>
+                  <span className="mt-0.5 block text-[0.6875rem] leading-4 text-muted">
+                    对支持 thinking 的模型（如 DeepSeek）关闭思考输出。
+                  </span>
                 </span>
-              </span>
-              <input
-                checked={form.disableThinking}
-                className="size-4 accent-primary"
-                onChange={(event) =>
-                  updateField("disableThinking", event.currentTarget.checked)
-                }
-                type="checkbox"
-              />
-            </label>
+                <input
+                  checked={form.disableThinking}
+                  className="size-4 accent-primary"
+                  onChange={(event) =>
+                    updateField("disableThinking", event.currentTarget.checked)
+                  }
+                  type="checkbox"
+                />
+              </label>
+            ) : null}
 
             <div className="rounded-md border border-border bg-surface p-3">
               <div className="flex items-center justify-between gap-2">
