@@ -1339,3 +1339,37 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 ### Next Steps
 
 - None - task complete
+
+
+## Session 40: 完成 Web 朋友列表与档案路由
+
+**Date**: 2026-07-29
+**Task**: 完成 Web 朋友列表与档案路由
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+实现 /friends 与 /friends/[id]，保留朋友 CRUD，删除旧 /agents 路由；类型、Lint、Web Format 和 Web build 通过，浏览器验证按用户要求交由手动。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7bcee62` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
