@@ -39,6 +39,8 @@ import {
   generateCompanionCareEventMutationOptions,
   updateCompanionCarePlanMutationOptions,
 } from "@/src/api/chat.query";
+import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
+import { getMoodmateAvatarPalette } from "@/src/components/moodmate/models";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
@@ -55,13 +57,9 @@ function PanelShell({
   title: string;
 }) {
   return (
-    <section className="mx-auto w-full max-w-2xl px-4 py-7 sm:px-6 sm:py-10">
-      <div className="border-b border-border pb-5">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        {description ? (
-          <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
-        ) : null}
-      </div>
+    <section className="moodmate-settings-section">
+      <h2>{title}</h2>
+      {description ? <p className="sub">{description}</p> : null}
       {children}
     </section>
   );
@@ -85,9 +83,28 @@ export function ProfilePanel({
   profile: WebUserProfile;
   session: WebSession;
 }) {
+  const userProfile = {
+    headline: profile.email,
+    id: profile.userId,
+    name: profile.displayName,
+    palette: getMoodmateAvatarPalette(profile.userId),
+  };
+
   return (
-    <PanelShell description="当前登录信息" title="个人资料">
-      <dl className="divide-y divide-border py-3 text-sm">
+    <PanelShell
+      description="这些信息用于登录后的个人菜单和聊天界面。"
+      title="个人资料"
+    >
+      <div className="moodmate-settings-profile">
+        <MoodmateAvatar onSurface profile={userProfile} size="lg" />
+        <div>
+          <Button disabled type="button" variant="outline">
+            更换头像
+          </Button>
+          <p>头像修改暂未接入。</p>
+        </div>
+      </div>
+      <dl className="moodmate-settings-profile__details">
         <InfoRow label="昵称" value={profile.displayName} />
         <InfoRow label="邮箱" value={profile.email} />
         <InfoRow label="身份" value={profile.roles.join("、")} />
@@ -97,7 +114,7 @@ export function ProfilePanel({
         />
       </dl>
       <Button
-        className="mt-5 min-h-11"
+        className="moodmate-settings-logout"
         onClick={onLogout}
         type="button"
         variant="danger"
@@ -110,28 +127,178 @@ export function ProfilePanel({
 }
 
 export function GeneralPanel() {
+  const [preferences, setPreferences] = useState({
+    desktopNotifications: false,
+    enterToSend: true,
+    readReceipts: true,
+    streamingOutput: true,
+  });
+
+  function togglePreference(key: keyof typeof preferences) {
+    setPreferences((current) => ({ ...current, [key]: !current[key] }));
+  }
+
   return (
-    <PanelShell description="通用偏好设置。更多选项陆续开放。" title="General">
-      <p className="py-6 text-sm leading-6 text-muted">
-        暂无可调整的通用选项。
+    <PanelShell description="对话与通知的基础行为。" title="通用">
+      <p className="moodmate-settings-local-note">
+        以下选项只在当前页面生效，刷新后会恢复默认值。
       </p>
+      <SettingRow
+        action={
+          <SettingsSwitch
+            checked={preferences.enterToSend}
+            label="Enter 发送消息"
+            onChange={() => togglePreference("enterToSend")}
+          />
+        }
+        description="关闭后用 Enter 换行，Cmd/Ctrl+Enter 发送"
+        label="Enter 发送消息"
+      />
+      <SettingRow
+        action={
+          <SettingsSwitch
+            checked={preferences.streamingOutput}
+            label="打字机流式输出"
+            onChange={() => togglePreference("streamingOutput")}
+          />
+        }
+        description="朋友的回复逐字显示"
+        label="打字机流式输出"
+      />
+      <SettingRow
+        action={
+          <SettingsSwitch
+            checked={preferences.desktopNotifications}
+            label="桌面通知"
+            onChange={() => togglePreference("desktopNotifications")}
+          />
+        }
+        description="收到朋友消息时弹出系统通知"
+        label="桌面通知"
+      />
+      <SettingRow
+        action={
+          <SettingsSwitch
+            checked={preferences.readReceipts}
+            label="发送已读回执"
+            onChange={() => togglePreference("readReceipts")}
+          />
+        }
+        description="让群聊成员看到你已读"
+        label="发送已读回执"
+      />
+      <label className="moodmate-settings-field">
+        <span>界面语言</span>
+        <select defaultValue="zh-CN">
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+        </select>
+      </label>
     </PanelShell>
   );
 }
 
 export function AppearancePanel() {
   return (
-    <PanelShell description="调整界面主题外观。" title="Appearance">
-      <div className="flex items-center justify-between gap-4 border-b border-border py-5">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">主题</p>
-          <p className="mt-1 text-xs leading-5 text-muted">
-            在浅色和深色之间切换。
-          </p>
+    <PanelShell
+      description="选择你偏好的主题。设置会记住在本设备。"
+      title="外观"
+    >
+      <div className="moodmate-settings-appearance">
+        <div aria-label="主题预览" className="moodmate-theme-cards">
+          <div className="moodmate-theme-card moodmate-theme-card--mocha">
+            <div className="moodmate-theme-preview moodmate-theme-preview--mocha">
+              <span className="moodmate-theme-preview__rail" />
+              <span className="moodmate-theme-preview__list" />
+              <span className="moodmate-theme-preview__main">
+                <span />
+              </span>
+            </div>
+            <span>Mocha 暗色</span>
+          </div>
+          <div className="moodmate-theme-card moodmate-theme-card--latte">
+            <div className="moodmate-theme-preview moodmate-theme-preview--latte">
+              <span className="moodmate-theme-preview__rail" />
+              <span className="moodmate-theme-preview__list" />
+              <span className="moodmate-theme-preview__main">
+                <span />
+              </span>
+            </div>
+            <span>Latte 亮色</span>
+          </div>
         </div>
-        <ThemeToggle />
+        <SettingRow
+          action={
+            <ThemeToggle
+              className="moodmate-settings-theme-toggle"
+              variant="outline"
+            />
+          }
+          description="切换后立即生效，并在刷新后保留"
+          label="界面主题"
+        />
+        <SettingRow
+          action={
+            <SettingsSwitch
+              checked={false}
+              disabled
+              label="气泡紧凑模式"
+              onChange={() => undefined}
+            />
+          }
+          description="紧凑模式暂未接入"
+          label="气泡紧凑模式"
+        />
       </div>
     </PanelShell>
+  );
+}
+
+function SettingRow({
+  action,
+  description,
+  label,
+}: {
+  action: React.ReactNode;
+  description: string;
+  label: string;
+}) {
+  return (
+    <div className="moodmate-setting-row">
+      <div>
+        <p className="label">{label}</p>
+        <p className="desc">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function SettingsSwitch({
+  checked,
+  disabled = false,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      aria-checked={checked}
+      aria-label={label}
+      className={
+        checked
+          ? "moodmate-settings-switch moodmate-settings-switch--checked"
+          : "moodmate-settings-switch"
+      }
+      disabled={disabled}
+      onClick={onChange}
+      role="switch"
+      type="button"
+    />
   );
 }
 
@@ -157,7 +324,10 @@ export function MemoryPanel() {
   });
 
   return (
-    <PanelShell description="当前账号保存的偏好、边界和关系目标。" title="记忆">
+    <PanelShell
+      description="当前账号保存的偏好、边界和关系目标。"
+      title="记忆管理"
+    >
       {memoriesQuery.isPending ? (
         <div
           className="flex min-h-32 items-center justify-center gap-2 text-sm text-muted"

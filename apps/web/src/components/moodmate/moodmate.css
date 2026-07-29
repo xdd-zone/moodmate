@@ -2910,3 +2910,406 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ============================================================
+   设置
+   ============================================================ */
+.moodmate-settings-app .moodmate-main,
+.moodmate-settings {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.moodmate-settings-menu__header .moodmate-list__title-row {
+  margin-bottom: 0;
+}
+
+.moodmate-settings-menu {
+  display: grid;
+  gap: 2px;
+  padding: 12px 8px;
+}
+
+.moodmate-settings-menu__item {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: var(--mm-radius-xs);
+  background: transparent;
+  color: var(--mm-fg);
+  font-size: var(--mm-fs-md);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 120ms,
+    color 120ms;
+}
+
+.moodmate-settings-menu__item svg {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  color: var(--mm-muted);
+}
+
+.moodmate-settings-menu__item:hover {
+  background: var(--mm-surface);
+}
+
+.moodmate-settings-menu__item--active {
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+  font-weight: 650;
+}
+
+.moodmate-settings-menu__item--active svg {
+  color: var(--mm-accent);
+}
+
+.moodmate-settings-mobile-menu {
+  display: none;
+}
+
+.moodmate-settings__body {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
+.moodmate-settings-section {
+  width: min(100%, 720px);
+  padding: 28px 32px 56px;
+}
+
+.moodmate-settings-section > h2 {
+  margin: 0 0 4px;
+  font-size: var(--mm-fs-lg);
+  font-weight: 700;
+}
+
+.moodmate-settings-section > .sub {
+  margin: 0 0 18px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.6;
+}
+
+.moodmate-settings-section input,
+.moodmate-settings-section select,
+.moodmate-settings-section textarea {
+  border-color: var(--mm-border);
+  background: var(--mm-surface);
+  color: var(--mm-fg);
+}
+
+.moodmate-settings-section input:focus,
+.moodmate-settings-section select:focus,
+.moodmate-settings-section textarea:focus {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 2px var(--mm-accent-soft);
+}
+
+.moodmate-settings-profile {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.moodmate-settings-profile > div:last-child {
+  min-width: 0;
+}
+
+.moodmate-settings-profile p {
+  margin: 8px 0 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-settings-profile__details {
+  margin: 0;
+  border-top: 1px solid var(--mm-border);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-settings-profile__details > div {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.moodmate-settings-profile__details dt {
+  color: var(--mm-muted);
+}
+
+.moodmate-settings-profile__details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.moodmate-settings-logout {
+  min-height: 44px;
+  margin-top: 20px;
+}
+
+.moodmate-settings-local-note {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-xs);
+  background: var(--mm-surface);
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+  line-height: 1.6;
+}
+
+.moodmate-setting-row {
+  display: flex;
+  min-height: 68px;
+  padding: 14px 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.moodmate-setting-row > div {
+  min-width: 0;
+}
+
+.moodmate-setting-row p {
+  margin: 0;
+}
+
+.moodmate-setting-row .label {
+  font-size: var(--mm-fs-md);
+  font-weight: 650;
+}
+
+.moodmate-setting-row .desc {
+  margin-top: 2px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.5;
+}
+
+.moodmate-settings-switch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mm-radius-full);
+  background: var(--mm-border);
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.moodmate-settings-switch::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  transform: translateX(0);
+  border-radius: var(--mm-radius-full);
+  background: #f8f8fc;
+  content: "";
+  transition: transform 150ms;
+}
+
+.moodmate-settings-switch--checked {
+  background: var(--mm-accent);
+}
+
+.moodmate-settings-switch--checked::after {
+  transform: translateX(18px);
+}
+
+.moodmate-settings-switch:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.moodmate-settings-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 20px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-settings-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-xs);
+  outline: 0;
+  font-size: var(--mm-fs-md);
+}
+
+.moodmate-theme-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.moodmate-theme-card {
+  min-width: 0;
+  padding: 4px;
+  border: 2px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  transition: border-color 150ms;
+}
+
+.moodmate-theme-card > span {
+  display: block;
+  padding: 10px 8px 6px;
+  font-size: var(--mm-fs-sm);
+  font-weight: 650;
+  text-align: center;
+}
+
+.moodmate-settings-appearance:has(
+    .moodmate-settings-theme-toggle[aria-pressed="true"]
+  )
+  .moodmate-theme-card--mocha,
+.moodmate-settings-appearance:has(
+    .moodmate-settings-theme-toggle[aria-pressed="false"]
+  )
+  .moodmate-theme-card--latte {
+  border-color: var(--mm-accent);
+}
+
+.moodmate-theme-preview {
+  display: flex;
+  height: 96px;
+  overflow: hidden;
+  border-radius: var(--mm-radius-xs);
+}
+
+.moodmate-theme-preview__rail {
+  width: 20%;
+}
+
+.moodmate-theme-preview__list {
+  width: 32%;
+}
+
+.moodmate-theme-preview__main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  padding: 8px;
+  align-items: flex-end;
+}
+
+.moodmate-theme-preview__main > span {
+  width: 60%;
+  height: 14px;
+  border-radius: var(--mm-radius-xs);
+}
+
+.moodmate-theme-preview--mocha {
+  background: #14151c;
+}
+
+.moodmate-theme-preview--mocha .moodmate-theme-preview__rail {
+  background: #0f1016;
+}
+
+.moodmate-theme-preview--mocha .moodmate-theme-preview__list {
+  background: #1a1c25;
+}
+
+.moodmate-theme-preview--mocha .moodmate-theme-preview__main > span {
+  background: #7c6bf5;
+}
+
+.moodmate-theme-preview--latte {
+  background: #f3f4f9;
+}
+
+.moodmate-theme-preview--latte .moodmate-theme-preview__rail {
+  background: #e4e6ef;
+}
+
+.moodmate-theme-preview--latte .moodmate-theme-preview__list {
+  background: #fafbff;
+}
+
+.moodmate-theme-preview--latte .moodmate-theme-preview__main > span {
+  background: #6b58e8;
+}
+
+.moodmate-settings-theme-toggle {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .moodmate-settings-mobile-menu {
+    display: flex;
+    min-height: 52px;
+    flex: none;
+    gap: 4px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--mm-border);
+    background: var(--mm-surface);
+    scrollbar-width: none;
+  }
+
+  .moodmate-settings-mobile-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .moodmate-settings-mobile-menu__item {
+    min-height: 36px;
+    padding: 7px 12px;
+    flex: none;
+    border: 0;
+    border-radius: var(--mm-radius-full);
+    background: transparent;
+    color: var(--mm-muted);
+    font-size: var(--mm-fs-sm);
+    white-space: nowrap;
+  }
+
+  .moodmate-settings-mobile-menu__item--active {
+    background: var(--mm-accent-soft);
+    color: var(--mm-accent);
+    font-weight: 650;
+  }
+
+  .moodmate-settings-section {
+    padding: 24px 18px 48px;
+  }
+}
+
+@media (max-width: 420px) {
+  .moodmate-settings-profile__details > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .moodmate-settings-profile__details dd {
+    text-align: left;
+  }
+
+  .moodmate-theme-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

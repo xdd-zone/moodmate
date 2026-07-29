@@ -62,3 +62,12 @@
 - 图标按钮使用 lucide 图标并提供 `aria-label` 或 `title`。
 - 菜单和 dialog 可以用 Escape 关闭；菜单靠近视口边缘时不能溢出。
 - 改动后依次运行 `pnpm check-types`、`pnpm lint`、`pnpm format:check` 和 `pnpm --filter web build`。
+
+## 设置工作区
+
+- `/settings` 的 `page.tsx` 保持服务端组件，只挂载 `SettingsGuard`。Guard 用 `readClientSession()` 恢复 session，再调用 `getWebUserProfile()`；session 缺失或 profile 请求失败时清除登录态并进入 `/`。
+- 设置页使用 `MoodmateAppShell` 的 `default` 布局：导航栏、340px 设置菜单和自适应内容区。640px 以下隐藏导航栏与设置菜单，内容区顶部显示可横向滚动的设置分组。
+- 设置分组状态留在 `SettingsWorkspace`。面板首次访问时挂载，之后只通过 `hidden` 切换，避免用户切走后丢失尚未提交的表单和当前页面内开关状态。
+- 切换分组时调用设置内容容器的 `scrollTo({ top: 0 })`，桌面菜单和移动菜单都用 `aria-current="page"` 标识当前项。
+- 个人资料继续读取现有 profile；记忆管理和主动关怀继续调用 `chat.query.ts` 与 `chat.api.ts` 的既有 query、mutation 和 cache key，不能复制请求或另建缓存。
+- 通用选项只用 React state，并在页面说明刷新后恢复默认值。外观只用 `ThemeToggle`、`data-theme="latte|mocha"` 和 `moodmate-theme:v1`，不能增加设置页专用主题状态或存储 key。
