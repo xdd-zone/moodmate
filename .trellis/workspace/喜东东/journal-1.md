@@ -1271,3 +1271,37 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 ### Next Steps
 
 - None - task complete
+
+
+## Session 38: 完成 Web 登录欢迎入口
+
+**Date**: 2026-07-29
+**Task**: 完成 Web 登录欢迎入口
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+按 Open Design 重构根欢迎页和登录面板，保留邮箱登录，移除旧认证路由与 Web GitHub OAuth 客户端，新增静态 GitHub 回调状态页，并完成响应式与浏览器验收。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9282a75` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
