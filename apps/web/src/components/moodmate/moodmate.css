@@ -2132,3 +2132,781 @@
     display: none;
   }
 }
+
+/* ============================================================
+   朋友列表与朋友档案
+   ============================================================ */
+.moodmate-friends,
+.moodmate-friend-detail {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--mm-bg);
+}
+
+.moodmate-page-header {
+  display: flex;
+  min-height: 64px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--mm-border);
+  background: var(--mm-bg);
+}
+
+.moodmate-page-header--sticky {
+  position: relative;
+  z-index: 2;
+  background: color-mix(in oklch, var(--mm-bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.moodmate-page-header h1 {
+  margin: 0;
+  font-size: var(--mm-fs-xl);
+  font-weight: 700;
+}
+
+.moodmate-page-header__title,
+.moodmate-page-header__actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.moodmate-page-header__actions {
+  justify-content: flex-end;
+}
+
+.moodmate-friends-search {
+  display: flex;
+  width: min(260px, 30vw);
+  min-height: 40px;
+  padding: 8px 14px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-full);
+  background: var(--mm-surface);
+  color: var(--mm-muted);
+}
+
+.moodmate-friends-search svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.moodmate-friends-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--mm-fg);
+}
+
+.moodmate-friends-search input::placeholder {
+  color: var(--mm-muted);
+}
+
+.moodmate-friends-search:focus-within {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 2px var(--mm-accent-soft);
+}
+
+.moodmate-friends-tabs {
+  display: flex;
+  min-height: 56px;
+  flex: none;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 12px 24px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.moodmate-friends-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.moodmate-friends-tab {
+  display: inline-flex;
+  min-height: 34px;
+  padding: 7px 14px;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--mm-radius-full);
+  background: transparent;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.moodmate-friends-tab:hover {
+  background: var(--mm-surface);
+  color: var(--mm-fg);
+}
+
+.moodmate-friends-tab span {
+  color: var(--mm-faint);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-friends-tab--active {
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+  font-weight: 650;
+}
+
+.moodmate-friends-tab--active span {
+  color: var(--mm-accent);
+}
+
+.moodmate-friends-alert {
+  display: flex;
+  margin: 0 24px 4px;
+  padding: 9px 12px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in oklch, var(--mm-danger) 40%, transparent);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-danger-soft);
+  color: var(--mm-danger);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-friends-alert p {
+  min-width: 0;
+  margin: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.moodmate-friends-alert button {
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--mm-radius-xs);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.moodmate-friends-alert button:hover {
+  background: var(--mm-danger-soft);
+}
+
+.moodmate-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  padding: 16px 24px 28px;
+}
+
+.moodmate-contact-card {
+  display: flex;
+  min-width: 0;
+  min-height: 206px;
+  padding: 18px;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  background: var(--mm-surface);
+  box-shadow: var(--mm-shadow-card);
+  transition:
+    border-color 150ms,
+    transform 150ms;
+}
+
+.moodmate-contact-card:hover {
+  border-color: var(--mm-accent-line);
+  transform: translateY(-2px);
+}
+
+.moodmate-contact-card__head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.moodmate-contact-card__head > div:last-child {
+  min-width: 0;
+}
+
+.moodmate-contact-card__head a {
+  display: block;
+  overflow: hidden;
+  color: var(--mm-fg);
+  font-size: var(--mm-fs-lg);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodmate-contact-card__head a:hover {
+  color: var(--mm-accent);
+}
+
+.moodmate-contact-card__head p {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodmate-contact-card__description {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.moodmate-contact-card__footer {
+  display: flex;
+  min-width: 0;
+  margin-top: auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.moodmate-relationship-pill,
+.moodmate-friend-tags span {
+  display: inline-flex;
+  min-height: 24px;
+  padding: 3px 9px;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--mm-radius-full);
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+  font-size: var(--mm-fs-xs);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.moodmate-relationship-pill svg {
+  width: 13px;
+  height: 13px;
+}
+
+.moodmate-contact-card__updated {
+  margin-left: auto;
+  color: var(--mm-muted);
+  font-family: var(--mm-font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.moodmate-contact-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.moodmate-contact-card__actions .moodmate-icon-button,
+.moodmate-contact-card__open {
+  width: 32px;
+  height: 32px;
+}
+
+.moodmate-contact-card__open {
+  display: grid;
+  place-items: center;
+  border-radius: var(--mm-radius-xs);
+  color: var(--mm-muted);
+}
+
+.moodmate-contact-card__open:hover {
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+}
+
+.moodmate-icon-button--danger:hover {
+  background: var(--mm-danger-soft);
+  color: var(--mm-danger);
+}
+
+.moodmate-contact-card__actions svg,
+.moodmate-contact-card__open svg {
+  width: 16px;
+  height: 16px;
+}
+
+.moodmate-friends-state,
+.moodmate-friend-detail-state {
+  display: grid;
+  width: 100%;
+  min-height: 240px;
+  padding: 32px 24px;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: var(--mm-muted);
+  text-align: center;
+}
+
+.moodmate-friends-state {
+  grid-column: 1 / -1;
+}
+
+.moodmate-friends-state > svg,
+.moodmate-friend-detail-state > svg {
+  width: 32px;
+  height: 32px;
+}
+
+.moodmate-friends-state p,
+.moodmate-friend-detail-state p {
+  margin: 0;
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-button {
+  transition:
+    background 150ms,
+    border-color 150ms,
+    color 150ms,
+    transform 150ms;
+}
+
+.moodmate-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.moodmate-button--danger {
+  border-color: color-mix(in oklch, var(--mm-danger) 48%, var(--mm-border));
+  background: var(--mm-danger-soft);
+  color: var(--mm-danger);
+}
+
+.moodmate-button--danger:hover:not(:disabled) {
+  border-color: var(--mm-danger);
+  background: color-mix(in oklch, var(--mm-danger) 24%, transparent);
+}
+
+.moodmate-button svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.moodmate-friend-detail-state {
+  min-height: 100%;
+}
+
+.moodmate-friend-detail__body {
+  min-height: 0;
+  flex: 1;
+}
+
+.moodmate-friend-detail__content {
+  width: min(100%, 840px);
+  margin: 0 auto;
+  padding: 32px 32px 72px;
+}
+
+.moodmate-friend-identity {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.moodmate-friend-identity > div:last-child {
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.moodmate-friend-identity__title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.moodmate-friend-identity h2 {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--mm-font-display);
+  font-size: clamp(28px, 4vw, 32px);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.moodmate-friend-identity p {
+  margin: 6px 0 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-lg);
+  overflow-wrap: anywhere;
+}
+
+.moodmate-friend-tags {
+  display: flex;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.moodmate-friend-tags span {
+  background: var(--mm-surface-2);
+  color: var(--mm-muted);
+  font-weight: 500;
+}
+
+.moodmate-friend-tags span.is-primary {
+  background: var(--mm-accent-soft);
+  color: var(--mm-accent);
+}
+
+.moodmate-friend-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.moodmate-friend-placeholder-label {
+  margin: 0 0 8px;
+  color: var(--mm-faint);
+  font-family: var(--mm-font-mono);
+  font-size: 10px;
+}
+
+.moodmate-friend-stat {
+  padding: 16px 18px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  box-shadow: var(--mm-shadow-card);
+}
+
+.moodmate-friend-stat strong,
+.moodmate-friend-stat span {
+  display: block;
+}
+
+.moodmate-friend-stat strong {
+  font-family: var(--mm-font-mono);
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+.moodmate-friend-stat span {
+  margin-top: 5px;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+}
+
+.moodmate-friend-section {
+  margin-bottom: 28px;
+}
+
+.moodmate-friend-section--last {
+  margin-bottom: 0;
+}
+
+.moodmate-friend-eyebrow {
+  margin: 0 0 10px;
+  color: var(--mm-faint);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.moodmate-friend-copy {
+  margin: 0;
+  color: var(--mm-fg);
+  font-size: var(--mm-fs-md);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.moodmate-friend-config-list {
+  display: grid;
+  gap: 12px;
+}
+
+.moodmate-friend-config-card {
+  padding: 16px 18px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+}
+
+.moodmate-friend-config-card > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--mm-accent);
+  font-family: var(--mm-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.moodmate-friend-config-card p {
+  margin: 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.moodmate-friend-section__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.moodmate-friend-section__heading .moodmate-friend-eyebrow {
+  margin-bottom: 4px;
+}
+
+.moodmate-friend-section__note {
+  margin: 0;
+  color: var(--mm-muted);
+  font-size: var(--mm-fs-xs);
+}
+
+.moodmate-memory-list {
+  border-top: 1px solid var(--mm-border);
+}
+
+.moodmate-memory-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.moodmate-memory-item__importance {
+  width: 4px;
+  flex: none;
+  border-radius: var(--mm-radius-full);
+  background: linear-gradient(
+    var(--mm-accent),
+    color-mix(in oklch, var(--mm-accent) 40%, transparent)
+  );
+}
+
+.moodmate-memory-item > div {
+  min-width: 0;
+}
+
+.moodmate-memory-item__type {
+  color: var(--mm-accent);
+  font-family: var(--mm-font-mono);
+  font-size: 10px;
+}
+
+.moodmate-memory-item p {
+  margin: 3px 0 0;
+  font-size: var(--mm-fs-sm);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.moodmate-friend-form {
+  display: grid;
+  gap: 18px;
+}
+
+.moodmate-field {
+  margin: 0;
+}
+
+.moodmate-field input,
+.moodmate-field textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  outline: 0;
+  background: var(--mm-bg);
+  color: var(--mm-fg);
+  font-size: var(--mm-fs-md);
+}
+
+.moodmate-field input:focus,
+.moodmate-field textarea:focus {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 2px var(--mm-accent-soft);
+}
+
+.moodmate-field textarea {
+  min-height: 86px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.moodmate-field input::placeholder,
+.moodmate-field textarea::placeholder {
+  color: var(--mm-muted);
+}
+
+.moodmate-form-submit {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.moodmate-form-error {
+  margin: 0;
+  color: var(--mm-danger);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.5;
+}
+
+.moodmate-spin {
+  animation: moodmate-spin 0.9s linear infinite;
+}
+
+@keyframes moodmate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .moodmate-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .moodmate-page-header__actions {
+    width: 100%;
+  }
+
+  .moodmate-friends-search {
+    width: 100%;
+    flex: 1;
+  }
+
+  .moodmate-contact-grid {
+    padding-inline: 16px;
+  }
+
+  .moodmate-friends-tabs {
+    padding-inline: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .moodmate-page-header--sticky {
+    align-items: center;
+    flex-direction: row;
+    padding: 10px;
+  }
+
+  .moodmate-page-header--sticky .moodmate-page-header__actions {
+    width: auto;
+  }
+
+  .moodmate-page-header--sticky .moodmate-button {
+    min-width: 38px;
+    padding-inline: 10px;
+  }
+
+  .moodmate-friend-detail__content {
+    padding: 24px 18px 56px;
+  }
+
+  .moodmate-friend-identity {
+    gap: 16px;
+  }
+
+  .moodmate-avatar--xl {
+    width: 76px;
+    height: 76px;
+    font-size: 28px;
+  }
+
+  .moodmate-friend-identity h2 {
+    font-size: 28px;
+  }
+
+  .moodmate-friend-identity p {
+    font-size: var(--mm-fs-md);
+  }
+
+  .moodmate-friend-stats {
+    gap: 8px;
+  }
+
+  .moodmate-friend-stat {
+    padding: 13px 10px;
+  }
+
+  .moodmate-friend-stat strong {
+    font-size: 20px;
+  }
+
+  .moodmate-friend-stat span {
+    font-size: 11px;
+  }
+
+  .moodmate-friend-section__heading {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 420px) {
+  .moodmate-page-header--sticky .moodmate-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .moodmate-page-header:not(.moodmate-page-header--sticky) {
+    gap: 12px;
+  }
+
+  .moodmate-page-header:not(.moodmate-page-header--sticky)
+    .moodmate-page-header__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .moodmate-page-header:not(.moodmate-page-header--sticky)
+    .moodmate-button--primary {
+    width: 100%;
+  }
+
+  .moodmate-contact-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

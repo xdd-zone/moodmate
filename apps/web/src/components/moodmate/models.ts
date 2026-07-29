@@ -28,6 +28,25 @@ export type MoodmateConversation = {
   unreadCount?: number;
 };
 
+const defaultAvatarPalette = { start: "#7c6bf5", end: "#22d3ee" };
+
+const avatarPalettes = [
+  defaultAvatarPalette,
+  { start: "#f472b6", end: "#8b5cf6" },
+  { start: "#34d399", end: "#0ea5e9" },
+  { start: "#f59e0b", end: "#ef4444" },
+] satisfies MoodmateAvatarPalette[];
+
+export function getMoodmateAvatarPalette(value: string): MoodmateAvatarPalette {
+  let hash = 0;
+
+  for (const character of value) {
+    hash = (hash * 31 + (character.codePointAt(0) ?? 0)) >>> 0;
+  }
+
+  return avatarPalettes[hash % avatarPalettes.length] ?? defaultAvatarPalette;
+}
+
 export const moodmatePrototypeProfiles = {
   linXi: {
     headline: "陪伴倾听型 · 温柔而有分寸",

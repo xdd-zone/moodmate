@@ -13,6 +13,11 @@
 
 这些文件不能调用 `src/api`、读取 session 或维护 query cache。业务请求和 mutation 留在聊天、朋友、设置业务组件中。
 
+## 展示模型复用
+
+- `MoodmateProfile.palette` 统一由 `models.ts` 的 `getMoodmateAvatarPalette(value)` 生成；聊天和朋友业务组件只负责把 API 响应映射为 `MoodmateProfile`，不要各自复制哈希和颜色表。
+- `GET /rpc/agents` 当前只返回 `active` 朋友。朋友页的“已归档”页签只能筛选当前已加载数据；没有归档数据接口时显示空状态，不在前端伪造归档记录。
+
 ## 主题契约
 
 根布局继续使用 `ThemeScript`、`data-theme="latte|mocha"` 和 `moodmate-theme:v1`。不要增加 `light`、`dark` 或新的 localStorage key。

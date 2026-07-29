@@ -5,35 +5,16 @@ import type {
 } from "@repo/contracts";
 
 import type {
-  MoodmateAvatarPalette,
   MoodmateConversation,
   MoodmateProfile,
 } from "@/src/components/moodmate/models";
-
-const defaultAvatarPalette = { start: "#7c6bf5", end: "#22d3ee" };
-
-const avatarPalettes = [
-  defaultAvatarPalette,
-  { start: "#f472b6", end: "#8b5cf6" },
-  { start: "#34d399", end: "#0ea5e9" },
-  { start: "#f59e0b", end: "#ef4444" },
-] satisfies MoodmateAvatarPalette[];
+import { getMoodmateAvatarPalette } from "@/src/components/moodmate/models";
 
 const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
   hour: "2-digit",
   hour12: false,
   minute: "2-digit",
 });
-
-function getPalette(value: string): MoodmateAvatarPalette {
-  let hash = 0;
-
-  for (const character of value) {
-    hash = (hash * 31 + (character.codePointAt(0) ?? 0)) >>> 0;
-  }
-
-  return avatarPalettes[hash % avatarPalettes.length] ?? defaultAvatarPalette;
-}
 
 function formatTime(value: number | null | undefined) {
   return value ? timeFormatter.format(new Date(value)) : "";
@@ -58,7 +39,7 @@ export function getCompanionProfile(
     headline: "你的 AI 伴侣",
     id: conversation.conversationId,
     name,
-    palette: getPalette(conversation.conversationId),
+    palette: getMoodmateAvatarPalette(conversation.conversationId),
     status: "online",
   };
 }
@@ -70,7 +51,7 @@ export function getCurrentUserProfile(
     headline: profile.email,
     id: profile.userId,
     name: profile.displayName,
-    palette: getPalette(profile.userId),
+    palette: getMoodmateAvatarPalette(profile.userId),
   };
 }
 
@@ -81,7 +62,7 @@ export function getGroupProfile(
     headline: `${groupChat.memberCount} 位成员`,
     id: groupChat.id,
     name: groupChat.title,
-    palette: getPalette(groupChat.id),
+    palette: getMoodmateAvatarPalette(groupChat.id),
   };
 }
 
@@ -94,7 +75,7 @@ export function getMemberProfile(input: {
     headline: input.headline?.trim() || "群聊成员",
     id: input.id,
     name: input.name,
-    palette: getPalette(input.id),
+    palette: getMoodmateAvatarPalette(input.id),
     status: "online",
   };
 }

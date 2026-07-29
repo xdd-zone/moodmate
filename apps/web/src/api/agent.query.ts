@@ -49,15 +49,24 @@ export function updateUserAgentMutationOptions(queryClient: QueryClient) {
   return mutationOptions({
     mutationFn: (input: { agentId: string; patch: UpdateUserAgentRequest }) =>
       updateUserAgent(input.agentId, input.patch),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: userAgentKeys.list() }),
+    onSuccess: (response) => {
+      queryClient.setQueryData(
+        userAgentKeys.detail(response.agent.id),
+        response,
+      );
+
+      return queryClient.invalidateQueries({ queryKey: userAgentKeys.list() });
+    },
   });
 }
 
 export function deleteUserAgentMutationOptions(queryClient: QueryClient) {
   return mutationOptions({
     mutationFn: (agentId: string) => deleteUserAgent(agentId),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: userAgentKeys.list() }),
+    onSuccess: (_response, agentId) => {
+      queryClient.removeQueries({ queryKey: userAgentKeys.detail(agentId) });
+
+      return queryClient.invalidateQueries({ queryKey: userAgentKeys.list() });
+    },
   });
 }
