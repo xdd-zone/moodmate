@@ -15,10 +15,10 @@
     "@hono/zod-validator": "catalog:",
     "@langchain/core": "catalog:",
     "@langchain/langgraph": "catalog:",
-    "@langchain/openai": "catalog:",
     "@repo/contracts": "workspace:*",
     "drizzle-orm": "catalog:",
     "jose": "catalog:",
+    "openai": "catalog:",
     "uuidv7": "catalog:",
     "hono": "^4.12.23",
     "zod": "catalog:"
