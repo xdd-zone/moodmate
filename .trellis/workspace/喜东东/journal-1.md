@@ -1441,3 +1441,37 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 ### Next Steps
 
 - None - task complete
+
+
+## Session 43: 优化 Web 聊天布局与界面细节
+
+**Date**: 2026-07-30
+**Task**: 优化 Web 聊天布局与界面细节
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+用 Next.js 两层 Layout 保留登录后导航与聊天列表，默认隐藏聊天详情，调整输入聚焦和滚动条样式，并移除聊天页无意义的根滚动条。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `221cbee` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
