@@ -178,11 +178,8 @@ export function ChatConversation({
   ]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({
-      behavior: reducedMotion ? "auto" : "smooth",
-      block: "end",
-    });
-  }, [messages, reducedMotion, status, visibleAssistantTextById]);
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, status, visibleAssistantTextById]);
 
   const latestMessage = messages.at(-1);
   const latestAssistantText =
