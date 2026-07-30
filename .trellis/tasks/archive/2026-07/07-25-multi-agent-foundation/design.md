@@ -14,24 +14,25 @@
 
 ### user_agents（用户创建的多个 Agent）
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| id | text PK | uuid |
-| user_id | text NN FK→users cascade | 归属用户 |
-| name | text NN | Agent 昵称 |
-| headline | text | 一句话简介 |
-| description | text | 角色说明 |
-| story_background | text | 故事背景（群聊 prompt 用） |
-| persona_prompt | text | 人设/性格提示词 |
-| tone_prompt | text | 语气提示词 |
-| guardrails_prompt | text | 角色边界提示词 |
-| default_prompt | text | 默认系统提示词 |
-| image_key | text | 头像 key，可空 |
-| status | text NN | `active` / `archived` |
-| created_at_ms | integer NN | |
-| updated_at_ms | integer NN | |
+| 列                | 类型                     | 说明                       |
+| ----------------- | ------------------------ | -------------------------- |
+| id                | text PK                  | uuid                       |
+| user_id           | text NN FK→users cascade | 归属用户                   |
+| name              | text NN                  | Agent 昵称                 |
+| headline          | text                     | 一句话简介                 |
+| description       | text                     | 角色说明                   |
+| story_background  | text                     | 故事背景（群聊 prompt 用） |
+| persona_prompt    | text                     | 人设/性格提示词            |
+| tone_prompt       | text                     | 语气提示词                 |
+| guardrails_prompt | text                     | 角色边界提示词             |
+| default_prompt    | text                     | 默认系统提示词             |
+| image_key         | text                     | 头像 key，可空             |
+| status            | text NN                  | `active` / `archived`      |
+| created_at_ms     | integer NN               |                            |
+| updated_at_ms     | integer NN               |                            |
 
 约束与索引：
+
 - `CHECK(status IN ('active','archived'))`
 - `CHECK(updated_at_ms >= created_at_ms)`
 - `INDEX user_agents_user_status_idx (user_id, status, updated_at_ms)`
@@ -40,19 +41,20 @@
 
 ### agent_conversations（用户与某个 Agent 的一对一会话，按 Agent 维度）
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| id | text PK | |
-| user_id | text NN FK→users cascade | |
-| agent_id | text NN FK→user_agents cascade | |
-| title | text | |
-| summary | text | |
-| message_count | integer NN default 0 | |
-| last_message_at_ms | integer | 群聊关系阶段/发言频率会读 |
-| created_at_ms | integer NN | |
-| updated_at_ms | integer NN | |
+| 列                 | 类型                           | 说明                      |
+| ------------------ | ------------------------------ | ------------------------- |
+| id                 | text PK                        |                           |
+| user_id            | text NN FK→users cascade       |                           |
+| agent_id           | text NN FK→user_agents cascade |                           |
+| title              | text                           |                           |
+| summary            | text                           |                           |
+| message_count      | integer NN default 0           |                           |
+| last_message_at_ms | integer                        | 群聊关系阶段/发言频率会读 |
+| created_at_ms      | integer NN                     |                           |
+| updated_at_ms      | integer NN                     |                           |
 
 约束与索引：
+
 - `UNIQUE(user_id, agent_id)` — 每个用户对每个 Agent 一个一对一会话
 - `CHECK(message_count >= 0)`
 - `CHECK(updated_at_ms >= created_at_ms)`
@@ -64,20 +66,21 @@
 
 结构对齐 `companion_memories`，但多一个 `agent_id`：
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| id | text PK | |
-| user_id | text NN FK→users cascade | |
-| agent_id | text NN FK→user_agents cascade | |
-| type | text NN | |
-| content | text NN | |
-| importance | integer NN default 3 | |
-| status | text NN | `active`/`disabled`/`deleted` |
-| source_message_id | text | 可空，暂不加 FK（多 Agent 一对一消息表本批次不建），留 text 记录 |
-| created_at_ms | integer NN | |
-| updated_at_ms | integer NN | |
+| 列                | 类型                           | 说明                                                             |
+| ----------------- | ------------------------------ | ---------------------------------------------------------------- |
+| id                | text PK                        |                                                                  |
+| user_id           | text NN FK→users cascade       |                                                                  |
+| agent_id          | text NN FK→user_agents cascade |                                                                  |
+| type              | text NN                        |                                                                  |
+| content           | text NN                        |                                                                  |
+| importance        | integer NN default 3           |                                                                  |
+| status            | text NN                        | `active`/`disabled`/`deleted`                                    |
+| source_message_id | text                           | 可空，暂不加 FK（多 Agent 一对一消息表本批次不建），留 text 记录 |
+| created_at_ms     | integer NN                     |                                                                  |
+| updated_at_ms     | integer NN                     |                                                                  |
 
 约束与索引：
+
 - `CHECK(importance BETWEEN 1 AND 5)`
 - `CHECK(status IN ('active','disabled','deleted'))`
 - `CHECK(updated_at_ms >= created_at_ms)`
@@ -104,13 +107,13 @@
 
 ### API 端点
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/rpc/agents` | 列出当前用户的 active Agent |
-| POST | `/rpc/agents` | 创建 Agent |
-| GET | `/rpc/agents/:agentId` | Agent 详情 |
-| PATCH | `/rpc/agents/:agentId` | 编辑 Agent（名称/人设等） |
-| DELETE | `/rpc/agents/:agentId` | 软归档（status=archived） |
+| 方法   | 路径                   | 说明                        |
+| ------ | ---------------------- | --------------------------- |
+| GET    | `/rpc/agents`          | 列出当前用户的 active Agent |
+| POST   | `/rpc/agents`          | 创建 Agent                  |
+| GET    | `/rpc/agents/:agentId` | Agent 详情                  |
+| PATCH  | `/rpc/agents/:agentId` | 编辑 Agent（名称/人设等）   |
+| DELETE | `/rpc/agents/:agentId` | 软归档（status=archived）   |
 
 路由注册：`apps/api/src/routes/index.ts` 加 `.route("/", createAgentsRoute())`。
 

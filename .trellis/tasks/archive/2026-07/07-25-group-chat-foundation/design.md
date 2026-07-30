@@ -32,6 +32,7 @@ index.ts                   export { createGroupChatRoute }
 照 `0012` / `0013` 风格：反引号标识符、`text`/`integer` 列、显式 `FOREIGN KEY ... ON DELETE`、`CONSTRAINT ... CHECK`、独立 `CREATE INDEX`。同时在 `group-chat.schema.ts` 写 drizzle 定义（与迁移 SQL 一一对应）。
 
 ### agent_group_chats（群聊主表）
+
 - `id` text PK
 - `user_id` text NOT NULL → users.id ON DELETE cascade
 - `title` text NOT NULL
@@ -43,6 +44,7 @@ index.ts                   export { createGroupChatRoute }
 - INDEX：`(user_id, updated_at_ms)`（按用户列群聊）
 
 ### agent_group_chat_members（成员表，软移除）
+
 - `id` text PK
 - `group_chat_id` text NOT NULL → agent_group_chats.id ON DELETE cascade
 - `agent_id` text NOT NULL → user_agents.id ON DELETE cascade
@@ -58,6 +60,7 @@ index.ts                   export { createGroupChatRoute }
 > 成员表 agent 外键用 cascade：agent 归档≠删除（agents 是软归档 `status=archived`，不删行），真正删行的级联清理成员是合理的。消息表的 agent_id 才需要 set null（见下）。
 
 ### agent_group_chat_messages（消息表）
+
 - `id` text PK
 - `group_chat_id` text NOT NULL → agent_group_chats.id ON DELETE cascade
 - `sender_type` text NOT NULL：`user` / `agent` / `system`
@@ -92,23 +95,25 @@ index.ts                   export { createGroupChatRoute }
 
 ## API（端点前缀 /rpc/chat/group）
 
-| 方法 | 路径 | service | 校验要点 |
-| --- | --- | --- | --- |
-| GET | `/rpc/chat/group` | `listGroupChatsForUser` | requireWebAccess |
-| POST | `/rpc/chat/group` | `createGroupChatForUser` | agentIds 去重后 1-6；`listOwnedUserAgentsByIds` 校验全部属己，缺失→403 |
-| GET | `/rpc/chat/group/:groupChatId` | `getGroupChatDetail` | 群聊必须属当前用户，否则 403 |
-| GET | `/rpc/chat/group/:groupChatId/messages?cursor=` | `getGroupChatMessages` | cursor 为上一页最早 `createdAtMs`，可选；归属校验 |
-| POST | `/rpc/chat/group/:groupChatId/members` | `addGroupChatMembers` | 归属校验；`现有 active + 新增去重 > 6` → 422 |
-| DELETE | `/rpc/chat/group/:groupChatId/members/:memberId` | `removeGroupChatMember` | 归属校验；软移除（status=removed, removed_at_ms） |
+| 方法   | 路径                                             | service                  | 校验要点                                                               |
+| ------ | ------------------------------------------------ | ------------------------ | ---------------------------------------------------------------------- |
+| GET    | `/rpc/chat/group`                                | `listGroupChatsForUser`  | requireWebAccess                                                       |
+| POST   | `/rpc/chat/group`                                | `createGroupChatForUser` | agentIds 去重后 1-6；`listOwnedUserAgentsByIds` 校验全部属己，缺失→403 |
+| GET    | `/rpc/chat/group/:groupChatId`                   | `getGroupChatDetail`     | 群聊必须属当前用户，否则 403                                           |
+| GET    | `/rpc/chat/group/:groupChatId/messages?cursor=`  | `getGroupChatMessages`   | cursor 为上一页最早 `createdAtMs`，可选；归属校验                      |
+| POST   | `/rpc/chat/group/:groupChatId/members`           | `addGroupChatMembers`    | 归属校验；`现有 active + 新增去重 > 6` → 422                           |
+| DELETE | `/rpc/chat/group/:groupChatId/members/:memberId` | `removeGroupChatMember`  | 归属校验；软移除（status=removed, removed_at_ms）                      |
 
 越权 403 复用 agents 的 `AppError(BizCode.AUTH_FORBIDDEN, ..., 403)`；422 用 `BizCode.COMMON_INVALID_REQUEST` + 422（成员超限属业务规则拒绝）。route 层对 param（`groupChatId`/`memberId` 用 `z.uuid()` 或 `z.string().min(1)`）与 query（cursor 用 `z.coerce.number().int().nonnegative().optional()`）做 zValidator。
 
 ### 创建群聊事务（db.batch）
+
 1. 校验 agentIds 去重、数量 1-6、全部属己（`listOwnedUserAgentsByIds` 返回数量 = 去重后数量，否则 403）。
 2. `db.batch`：插主表 1 行 + 按 agentIds 顺序插 N 行成员（`display_order` = index，`status=active`，`user_id` 冗余写入）。
 3. 返回 `{ groupChat }`（或按 contract 返回 detail）。
 
 ### 添加成员上限兜底
+
 - 查现有 `active` 成员数 → 与去重后新增合并 → 若已存在 `removed` 行则复活（update status/removed_at_ms=null/display_order 续接），否则插新行。
 - 合并后 `active` 总数 > 6 → 抛 422，不写库。
 - 新增 agentIds 必须属己，否则 403。

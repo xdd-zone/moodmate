@@ -43,7 +43,8 @@ const newlyActivated = childIds.filter((id) => {
   const row = existingByChild.get(id);
   return !row || row.status !== "active";
 });
-if (activeCount + newlyActivated.length > MAX_MEMBERS) throw memberLimitExceeded(); // 422
+if (activeCount + newlyActivated.length > MAX_MEMBERS)
+  throw memberLimitExceeded(); // 422
 
 // repository 层：existingMemberId 有值走 update 复活，否则 insert
 for (const m of members) {

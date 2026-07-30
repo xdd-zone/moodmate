@@ -73,7 +73,9 @@ const GroupChatCrossReplyPlanSchema = z.object({
     .max(groupCrossReplyLimit),
   reason: z.string().trim().max(500),
 });
-export type GroupChatCrossReplyPlan = z.infer<typeof GroupChatCrossReplyPlanSchema>;
+export type GroupChatCrossReplyPlan = z.infer<
+  typeof GroupChatCrossReplyPlanSchema
+>;
 ```
 
 注意 `plans` 用的 `agentId` 是群成员的 `member.agentId`（与 selection 保持一致），不是群成员关系行 `member.id`。prompt 里 roster 也用 `agent.agentId` 呈现（复用 `formatAgentRoster`）。
@@ -141,7 +143,10 @@ crossReplyPlan: Annotation<GroupChatCrossReplyPlan | null>(),
 ```ts
 const replyCountByAgentId = new Map<string, number>();
 for (const reply of replies) {
-  replyCountByAgentId.set(reply.agent.agentId, (replyCountByAgentId.get(reply.agent.agentId) ?? 0) + 1);
+  replyCountByAgentId.set(
+    reply.agent.agentId,
+    (replyCountByAgentId.get(reply.agent.agentId) ?? 0) + 1,
+  );
 }
 // revisionByAgentId 额外过滤 replyCountByAgentId.get(agentId) === 1
 ```

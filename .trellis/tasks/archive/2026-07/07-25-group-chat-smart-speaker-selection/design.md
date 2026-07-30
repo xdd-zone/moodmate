@@ -29,7 +29,7 @@ classifyIntent -> detectEmotion -> selectAgents -> generateReplies -> generateCr
 `GroupChatMemberWithAgentRow` 增两字段：
 
 ```ts
-conversationMessageCount: number;      // coalesce 到 0
+conversationMessageCount: number; // coalesce 到 0
 conversationLastMessageAtMs: number | null;
 ```
 
@@ -47,7 +47,9 @@ conversationLastMessageAtMs: agentConversations.lastMessageAtMs,
 ### 4.1 类型
 
 ```ts
-export type GroupChatUserEmotion = { /* 见 orchestration schema 推导类型 */ };
+export type GroupChatUserEmotion = {
+  /* 见 orchestration schema 推导类型 */
+};
 
 export interface AgentSpeakingContext {
   agentId: string;
@@ -79,11 +81,11 @@ getRelationshipScore(stage): close_bond 0.95 / trusted 0.78 / warming_up 0.52 / 
 从 `recentMessages` 取 `senderType==='agent' && agentId` 的最近 18 条。对每个 Agent：
 
 ```ts
-lastSpokeTurnsAgo = lastMsg ? max(0, maxTurnIndex - lastMsg.turnIndex) : null
-freshnessBase = lastSpokeTurnsAgo === null ? 1 : min(1, lastSpokeTurnsAgo / 6)
-freshnessPenalty = min(0.75, msgsByAgent.length * 0.16)
-freshnessScore = max(0, round2(freshnessBase - freshnessPenalty))
-recentReplyCount = msgsByAgent.length
+lastSpokeTurnsAgo = lastMsg ? max(0, maxTurnIndex - lastMsg.turnIndex) : null;
+freshnessBase = lastSpokeTurnsAgo === null ? 1 : min(1, lastSpokeTurnsAgo / 6);
+freshnessPenalty = min(0.75, msgsByAgent.length * 0.16);
+freshnessScore = max(0, round2(freshnessBase - freshnessPenalty));
+recentReplyCount = msgsByAgent.length;
 ```
 
 ### 4.4 buildGroupSpeakingContext
@@ -93,16 +95,19 @@ recentReplyCount = msgsByAgent.length
 ### 4.5 fallback 打分 scoreAgentForFallbackSelection
 
 ```ts
-score = 0
+score = 0;
 if (context) {
-  score += relationshipScore * 1.6
-  score += freshnessScore * 1.8
-  score -= recentReplyCount * 0.45
-  if (lastSpokeTurnsAgo === 0) score -= 0.9
+  score += relationshipScore * 1.6;
+  score += freshnessScore * 1.8;
+  score -= recentReplyCount * 0.45;
+  if (lastSpokeTurnsAgo === 0) score -= 0.9;
 }
-if (needsComfort && /温柔|陪伴|情绪|安慰|稳定|倾听|治愈|共情/.test(profileText)) score += 2.4
-if (needsAdvice && /理性|分析|建议|计划|复盘|清醒|判断|策略/.test(profileText)) score += 2.1
-if (needsDeescalation && /克制|边界|冷静|稳定|成熟|安全/.test(profileText)) score += 2.2
+if (needsComfort && /温柔|陪伴|情绪|安慰|稳定|倾听|治愈|共情/.test(profileText))
+  score += 2.4;
+if (needsAdvice && /理性|分析|建议|计划|复盘|清醒|判断|策略/.test(profileText))
+  score += 2.1;
+if (needsDeescalation && /克制|边界|冷静|稳定|成熟|安全/.test(profileText))
+  score += 2.2;
 ```
 
 `profileText` 由 agent 的 headline + description + persona/tone/guardrails 拼接。注意 `GroupChatMemberWithAgentRow` 只有 `name/headline/imageKey`，人设文本需从 `agentRecordsById` 取 `UserAgentRecord`。打分函数入参需能拿到人设，见 §7。
@@ -139,6 +144,7 @@ selectAgentsForReply(input: {
 逻辑：点名（name 命中）仍最优先，命中则直接返回（截断到 limit）。非点名场景：有 `speakingContext` + `agentRecordsById` 则打分排序（`score desc, displayOrder asc`）取前 limit（群体提问关键词命中时 limit=3，否则 1）；缺上下文则退回原关键词逻辑（保持向后兼容）。
 
 调用点：
+
 - `selectionFromLocalRules`（orchestration）：从 `state.speakingContext` + `state.agentRecordsById` 传入。
 - `runFallbackOrchestration`：整图失败，先 `buildGroupSpeakingContext`（userEmotion 用 `buildFallbackGroupUserEmotion`）再传入。
 
@@ -148,12 +154,12 @@ selectAgentsForReply(input: {
 
 ## 9. 降级矩阵
 
-| 失败点 | 行为 |
-| --- | --- |
-| 情绪 LLM 失败 | `buildFallbackGroupUserEmotion` 关键词兜底，上下文照常构建 |
-| 选择器 LLM 失败 | `selectionFromLocalRules` -> 带上下文打分 |
-| 整图 invoke 抛错 | `runFallbackOrchestration` -> 构造上下文 + 打分 |
-| `signal.aborted` | 各处向上抛，不吞成兜底 |
+| 失败点           | 行为                                                       |
+| ---------------- | ---------------------------------------------------------- |
+| 情绪 LLM 失败    | `buildFallbackGroupUserEmotion` 关键词兜底，上下文照常构建 |
+| 选择器 LLM 失败  | `selectionFromLocalRules` -> 带上下文打分                  |
+| 整图 invoke 抛错 | `runFallbackOrchestration` -> 构造上下文 + 打分            |
+| `signal.aborted` | 各处向上抛，不吞成兜底                                     |
 
 ## 10. 不改动
 

@@ -12,11 +12,11 @@
 
 ### 现状落点（moodmate 实际 vs 草稿 bobo）
 
-| 维度 | 草稿(bobo) | moodmate 实际 |
-| --- | --- | --- |
-| 前端输入 | `apps/web/app/(dashboard)/group-chats/page.tsx` | 内联在 `apps/web/src/components/group-chat/group-chat-workspace.tsx` 的 textarea（356-364 行，`onChange` 直接 `setDraft`）|
-| 服务端识别 | `apps/api/src/routes/chat/group.route.ts` | `apps/api/src/modules/group-chat/group-chat.reply.ts`（`selectAgentsForReply`）+ `group-chat.orchestration.ts`（`selectAgentsNode`）|
-| 成员字段 | `member.name` / `member.headline` | `AgentGroupChatMember`：`name` / `headline`(nullable) / `imageKey`(nullable) / `displayOrder`；无 `avatarColor` |
+| 维度       | 草稿(bobo)                                      | moodmate 实际                                                                                                                        |
+| ---------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 前端输入   | `apps/web/app/(dashboard)/group-chats/page.tsx` | 内联在 `apps/web/src/components/group-chat/group-chat-workspace.tsx` 的 textarea（356-364 行，`onChange` 直接 `setDraft`）           |
+| 服务端识别 | `apps/api/src/routes/chat/group.route.ts`       | `apps/api/src/modules/group-chat/group-chat.reply.ts`（`selectAgentsForReply`）+ `group-chat.orchestration.ts`（`selectAgentsNode`） |
+| 成员字段   | `member.name` / `member.headline`               | `AgentGroupChatMember`：`name` / `headline`(nullable) / `imageKey`(nullable) / `displayOrder`；无 `avatarColor`                      |
 
 ### 现状识别逻辑（要升级的点）
 
@@ -27,20 +27,24 @@
 ## Requirements
 
 ### R1 服务端严格 @ 识别（共享函数）
+
 - 新增共享函数 `findExplicitlyMentionedAgents(agents, userText)`：只识别 `@昵称`，昵称后须是空白、标点或文本结尾。正则 `@${escapedName}(?=\s|[,.!?，。！？、]|$)`，`i` 忽略大小写；昵称先做正则特殊字符转义。
 - 放在 `group-chat.reply.ts` 导出，供 reply 与 orchestration 两条路径共用，避免正则逻辑漂移。
 - 取代 `selectAgentsForReply` 里现有的无边界 `includes` 提及分支。
 
 ### R2 fallback 路径接严格识别
+
 - `selectAgentsForReply`（reply.ts）的点名分支改用 `findExplicitlyMentionedAgents`，命中则 `slice(0, groupReplyAgentLimit)` 返回，点名优先不变。
 - 无 @ 命中时，后续群体提问 / 打分排序逻辑保持不变。
 
 ### R3 正常路径调度前置覆盖
+
 - `selectAgentsNode`（orchestration.ts）在调用 `selectGroupAgentsWithLangChain` **之前**先跑 `findExplicitlyMentionedAgents(state.agents, state.userText)`。
 - 命中则构造 `GroupChatAgentSelectionSchema`：`selectedAgentIds` 取被提及 Agent 的 id（`slice(0, groupReplyAgentLimit)`），`mode` 为 1 人时 `single`、多人时 `multi_serial`，`reason` 记「用户在消息中显式提及了 Agent」；直接返回 `{ selection, selectedAgents }`，不进 LLM 调度。
 - 保证 @ 的 Agent 一定优先、不被智能调度覆盖，且 LangGraph 失败时点名仍有效（R2 已覆盖 fallback）。
 
 ### R4 前端提及输入组件
+
 - 抽独立组件 `apps/web/src/components/group-chat/mention-textarea.tsx`，替换 workspace 内联 textarea；对外暴露 `value` / `onChange` / `onSend` / `members` / `disabled` 等 props。
 - `getMentionContext(value, cursor)`：解析光标前最后一个独立 `@` 片段（`@` 须在文本开头或空白符后，正则 `(^|\s)@([^\s@]*)$`），返回 `{ start, end, query }` 或 `null`。避免把 `name@example.com` 之类识别成提及。
 - 候选来自当前群 active 成员；只输入 `@` 展示全体，继续输入按 `name` + `headline` 过滤（`toLowerCase().includes`）。

@@ -12,30 +12,30 @@
 
 ### 关键落点映射（modmate 实际 vs 草稿里的 bobo）
 
-| 维度 | 草稿(bobo) | moodmate 实际落点 |
-| --- | --- | --- |
-| 后端结构 | 单文件 `apps/api/src/routes/chat/group.route.ts` | 模块化 `apps/api/src/modules/group-chat/`（`.route/.service/.repository/.schema/.analysis/.provider/.presenter.ts`），照 `modules/chat/` 分层 |
-| LangGraph | 需引入 | 已就位：`apps/api/package.json` 已有 `@langchain/core`、`@langchain/langgraph`、`@langchain/openai`；`modules/chat/chat.analysis.ts` 已有成熟范式（`StateGraph`/`Annotation.Root`/`withStructuredOutput`/多节点图）|
-| 迁移编号 | 0016 | 顺延分配：multi-agent-foundation 用 **0013**，group-chat-foundation 用 **0014**；文件名照 `0012_companion_proactive_care.sql` 风格 |
-| 迁移写法 | 裸 SQL | 反引号标识符 + `FOREIGN KEY ... ON DELETE cascade` + `CONSTRAINT ... CHECK(...)` + 显式 `CREATE INDEX`，照 0012 |
-| 契约位置 | `packages/contracts/src/chat/group-chat.contract.ts` | 同路径；并在 `packages/contracts/src/index.ts` 导出（照现有 chat 契约导出方式）|
-| 路由注册 | `.route('/rpc/chat/group', groupChatRoute)` | `apps/api/src/routes/index.ts` 里 `.route("/", createGroupChatRoute())`，端点前缀在模块内定义为 `/rpc/chat/group` |
-| Web 本地 LLM 配置 | 复用本地 LLM 配置 | web 端已移除（提交 `1db3b85`），群聊**不引入** `llmConfig`，与现状单聊一致，服务端用平台默认模型 |
-| Web 回复形态 | 非流式，一次返回 `agentMessages` 数组 | 非流式（已与用户确认）；前端用 react-query `onMutate` 自建乐观更新（项目暂无现成范例）|
-| Web 目录 | `apps/web/app/(dashboard)/group-chats/page.tsx` | 无 `(dashboard)` group；建 `apps/web/app/(app)/group-chats/page.tsx`（薄壳）+ `apps/web/src/components/group-chat/` 组件 + `src/api/group-chat.api.ts` + `group-chat.query.ts`；路径别名是 `@/src/...` |
-| Web UI 依赖 | 用 Dialog/Avatar 等 | `packages/ui` 无 Dialog/Avatar/ScrollArea/Popover；三栏用 Tailwind grid，Dialog 与候选浮层手写遮罩层，头像用带背景色 `<span>` + lucide 图标，滚动用原生 `overflow-y-auto` |
+| 维度              | 草稿(bobo)                                           | moodmate 实际落点                                                                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 后端结构          | 单文件 `apps/api/src/routes/chat/group.route.ts`     | 模块化 `apps/api/src/modules/group-chat/`（`.route/.service/.repository/.schema/.analysis/.provider/.presenter.ts`），照 `modules/chat/` 分层                                                                       |
+| LangGraph         | 需引入                                               | 已就位：`apps/api/package.json` 已有 `@langchain/core`、`@langchain/langgraph`、`@langchain/openai`；`modules/chat/chat.analysis.ts` 已有成熟范式（`StateGraph`/`Annotation.Root`/`withStructuredOutput`/多节点图） |
+| 迁移编号          | 0016                                                 | 顺延分配：multi-agent-foundation 用 **0013**，group-chat-foundation 用 **0014**；文件名照 `0012_companion_proactive_care.sql` 风格                                                                                  |
+| 迁移写法          | 裸 SQL                                               | 反引号标识符 + `FOREIGN KEY ... ON DELETE cascade` + `CONSTRAINT ... CHECK(...)` + 显式 `CREATE INDEX`，照 0012                                                                                                     |
+| 契约位置          | `packages/contracts/src/chat/group-chat.contract.ts` | 同路径；并在 `packages/contracts/src/index.ts` 导出（照现有 chat 契约导出方式）                                                                                                                                     |
+| 路由注册          | `.route('/rpc/chat/group', groupChatRoute)`          | `apps/api/src/routes/index.ts` 里 `.route("/", createGroupChatRoute())`，端点前缀在模块内定义为 `/rpc/chat/group`                                                                                                   |
+| Web 本地 LLM 配置 | 复用本地 LLM 配置                                    | web 端已移除（提交 `1db3b85`），群聊**不引入** `llmConfig`，与现状单聊一致，服务端用平台默认模型                                                                                                                    |
+| Web 回复形态      | 非流式，一次返回 `agentMessages` 数组                | 非流式（已与用户确认）；前端用 react-query `onMutate` 自建乐观更新（项目暂无现成范例）                                                                                                                              |
+| Web 目录          | `apps/web/app/(dashboard)/group-chats/page.tsx`      | 无 `(dashboard)` group；建 `apps/web/app/(app)/group-chats/page.tsx`（薄壳）+ `apps/web/src/components/group-chat/` 组件 + `src/api/group-chat.api.ts` + `group-chat.query.ts`；路径别名是 `@/src/...`              |
+| Web UI 依赖       | 用 Dialog/Avatar 等                                  | `packages/ui` 无 Dialog/Avatar/ScrollArea/Popover；三栏用 Tailwind grid，Dialog 与候选浮层手写遮罩层，头像用带背景色 `<span>` + lucide 图标，滚动用原生 `overflow-y-auto`                                           |
 
 ## 子任务映射
 
-| 顺序 | 子任务目录 | 对应草稿 | 交付物摘要 |
-| --- | --- | --- | --- |
-| 0 | `07-25-multi-agent-foundation` | 无（前置补齐） | 新增独立多 Agent 体系并与现有单聊并存：`user_agents` 表（单用户多 Agent，含人设/头像/边界）、按 agent 维度的 `agent_conversations` / `agent_memories`、创建/列表/详情 API 与契约。为群聊提供"可被邀请的多个 Agent"和"按 Agent 的一对一记忆"。现有 `companion_*` 单聊零改动 |
-| 1 | `07-25-group-chat-foundation` | 56 | 迁移（3 张群聊表）、`group-chat.contract.ts`、基础 API（列表/创建/详情/历史分页/成员增删）、创建群聊与成员管理后端；成员外键指向 `user_agents` |
-| 2 | `07-25-group-chat-reply-ui` | 57 | v1 规则版 `selectAgentsForReply`、回复 Prompt、`POST /send` 完整链路、群聊三栏页面、乐观更新、历史分页 UI |
-| 3 | `07-25-group-chat-langgraph-orchestration` | 58 | 把 v1 规则升级为 LangGraph 图：`classifyIntent -> selectAgents -> generateReplies -> checkQuality`，串行/并行生成、结构化输出适配、全链路降级回退到 v1 规则 |
-| 4 | `07-25-group-chat-cross-agent-replies` | 59 | 新增 `generateCrossReplies` 节点，首轮后最多追加 2 条、1 轮 Agent 间补充回应，规划器 + 归一化 + 保守质量修订 + metadata |
-| 5 | `07-25-group-chat-smart-speaker-selection` | 60 | 新增 `detectEmotion` 节点，发言权综合人设/关系阶段/最近发言频率/用户情绪，fallback 从关键词升级为打分排序 |
-| 6 | `07-25-group-chat-mentions` | 61 | @ 提及：前端输入补全（候选浮层 + 键鼠交互）写入 `@昵称` 文本；服务端 `findExplicitlyMentionedAgents` 显式提及识别，调度前置覆盖 |
+| 顺序 | 子任务目录                                 | 对应草稿       | 交付物摘要                                                                                                                                                                                                                                                                 |
+| ---- | ------------------------------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | `07-25-multi-agent-foundation`             | 无（前置补齐） | 新增独立多 Agent 体系并与现有单聊并存：`user_agents` 表（单用户多 Agent，含人设/头像/边界）、按 agent 维度的 `agent_conversations` / `agent_memories`、创建/列表/详情 API 与契约。为群聊提供"可被邀请的多个 Agent"和"按 Agent 的一对一记忆"。现有 `companion_*` 单聊零改动 |
+| 1    | `07-25-group-chat-foundation`              | 56             | 迁移（3 张群聊表）、`group-chat.contract.ts`、基础 API（列表/创建/详情/历史分页/成员增删）、创建群聊与成员管理后端；成员外键指向 `user_agents`                                                                                                                             |
+| 2    | `07-25-group-chat-reply-ui`                | 57             | v1 规则版 `selectAgentsForReply`、回复 Prompt、`POST /send` 完整链路、群聊三栏页面、乐观更新、历史分页 UI                                                                                                                                                                  |
+| 3    | `07-25-group-chat-langgraph-orchestration` | 58             | 把 v1 规则升级为 LangGraph 图：`classifyIntent -> selectAgents -> generateReplies -> checkQuality`，串行/并行生成、结构化输出适配、全链路降级回退到 v1 规则                                                                                                                |
+| 4    | `07-25-group-chat-cross-agent-replies`     | 59             | 新增 `generateCrossReplies` 节点，首轮后最多追加 2 条、1 轮 Agent 间补充回应，规划器 + 归一化 + 保守质量修订 + metadata                                                                                                                                                    |
+| 5    | `07-25-group-chat-smart-speaker-selection` | 60             | 新增 `detectEmotion` 节点，发言权综合人设/关系阶段/最近发言频率/用户情绪，fallback 从关键词升级为打分排序                                                                                                                                                                  |
+| 6    | `07-25-group-chat-mentions`                | 61             | @ 提及：前端输入补全（候选浮层 + 键鼠交互）写入 `@昵称` 文本；服务端 `findExplicitlyMentionedAgents` 显式提及识别，调度前置覆盖                                                                                                                                            |
 
 ### 前置任务说明（为何新增 multi-agent-foundation）
 

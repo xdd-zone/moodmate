@@ -7,6 +7,7 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
+
 - **Active File**: `journal-1.md`
 - **Total Sessions**: 43
 - **Last Active**: 2026-07-30
@@ -17,9 +18,11 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-| File | Lines | Status |
-|------|-------|--------|
+
+| File           | Lines | Status |
+| -------------- | ----- | ------ |
 | `journal-1.md` | ~1477 | Active |
+
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -28,19 +31,19 @@
 
 <!-- @@@auto:session-history -->
 
-| # | Date | Title | Commits | Branch |
-|---|------|-------|---------|--------|
-| 43 | 2026-07-30 | 优化 Web 聊天布局与界面细节 | `221cbee` | `main` |
-| 42 | 2026-07-30 | 还原 Web 原型细节 | `9f347c4` | `main` |
-| 41 | 2026-07-29 | 实现设置路由与静态面板 | `7098c2e` | `main` |
-| 40 | 2026-07-29 | 完成 Web 朋友列表与档案路由 | `7bcee62` | `main` |
-| 39 | 2026-07-29 | 完成统一聊天工作区 | `154b0c7` | `main` |
-| 38 | 2026-07-29 | 完成 Web 登录欢迎入口 | `9282a75` | `main` |
-| 37 | 2026-07-29 | 完成 Web 原型视觉基础与应用外壳 | `d42f389` | `main` |
-| 36 | 2026-07-29 | 实现 Anthropic Messages 与 OpenAI Responses | `2f587f3`, `6fa14fa`, `9cf84c1` | `main` |
-| 35 | 2026-07-29 | API AI Provider 架构：阶段 7 文档与质量门禁 | `6bda5e1` | `main` |
-| 34 | 2026-07-27 | 群聊 Agent 间互相回应（cross-agent replies） | `7338a47` | `main` |
-| 33 | 2026-07-27 | 群聊 LangGraph 回复编排 | `292f8f2` | `main` |
+| #   | Date       | Title                                                       | Commits                                               | Branch |
+| --- | ---------- | ----------------------------------------------------------- | ----------------------------------------------------- | ------ |
+| 43  | 2026-07-30 | 优化 Web 聊天布局与界面细节                                 | `221cbee`                                             | `main` |
+| 42  | 2026-07-30 | 还原 Web 原型细节                                           | `9f347c4`                                             | `main` |
+| 41  | 2026-07-29 | 实现设置路由与静态面板                                      | `7098c2e`                                             | `main` |
+| 40  | 2026-07-29 | 完成 Web 朋友列表与档案路由                                 | `7bcee62`                                             | `main` |
+| 39  | 2026-07-29 | 完成统一聊天工作区                                          | `154b0c7`                                             | `main` |
+| 38  | 2026-07-29 | 完成 Web 登录欢迎入口                                       | `9282a75`                                             | `main` |
+| 37  | 2026-07-29 | 完成 Web 原型视觉基础与应用外壳                             | `d42f389`                                             | `main` |
+| 36  | 2026-07-29 | 实现 Anthropic Messages 与 OpenAI Responses                 | `2f587f3`, `6fa14fa`, `9cf84c1`                       | `main` |
+| 35  | 2026-07-29 | API AI Provider 架构：阶段 7 文档与质量门禁                 | `6bda5e1`                                             | `main` |
+| 34  | 2026-07-27 | 群聊 Agent 间互相回应（cross-agent replies）                | `7338a47`                                             | `main` |
+| 33  | 2026-07-27 | 群聊 LangGraph 回复编排                                     | `292f8f2`                                             | `main` |
 | 32  | 2026-07-24 | 关系阶段系统：LangGraph 关系阶段判断影响路由与策略          | `20fc4c0`, `87c965d`, `3596e47`, `1c12525`            | `main` |
 | 31  | 2026-07-24 | Reply Quality Guard 回复后质检落库                          | `b057e08`, `23b2135`, `b42a238`                       | `main` |
 | 30  | 2026-07-24 | Reply Policy 引擎（章50）                                   | `fb8e9cf`                                             | `main` |

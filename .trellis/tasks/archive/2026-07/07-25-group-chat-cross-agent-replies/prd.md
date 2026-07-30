@@ -17,14 +17,14 @@
 
 草稿是 bobo 源码复盘，变量/路径需映射，逻辑与命名做参考不作路径依据：
 
-| 维度 | 草稿(bobo) | moodmate 实际 |
-| --- | --- | --- |
-| 编排文件 | 单文件 `group.route.ts` | `apps/api/src/modules/group-chat/group-chat.orchestration.ts` |
-| `PlannedAgentReply` | 无 `status` 字段 | 已有 `status: "completed" \| "failed"`，本次新增字段要与之共存 |
-| Agent 索引键 | `agent.id` | 群成员行 `GroupChatMemberWithAgentRow`，索引键是 `member.agentId`（不是 `.id`，`.id` 是群成员关系行 id）|
-| metadata 写入 | 逐字段平铺在 `metadataJson` | 写在 `group-chat.service.ts` 的 `orchestration` 对象里（`intent/selection/quality`）|
-| 补充回应 prompt | `buildCrossAgentReply` 独立函数 | 落在 `group-chat.reply.ts`，与 `buildAgentReply` 并列 |
-| 硬上限 | `groupCrossReplyLimit=2`、`groupCrossReplyRoundLimit=1` | 同值，常量落在 orchestration 模块（与 `groupReplyAgentLimit` 就近）|
+| 维度                | 草稿(bobo)                                              | moodmate 实际                                                                                            |
+| ------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 编排文件            | 单文件 `group.route.ts`                                 | `apps/api/src/modules/group-chat/group-chat.orchestration.ts`                                            |
+| `PlannedAgentReply` | 无 `status` 字段                                        | 已有 `status: "completed" \| "failed"`，本次新增字段要与之共存                                           |
+| Agent 索引键        | `agent.id`                                              | 群成员行 `GroupChatMemberWithAgentRow`，索引键是 `member.agentId`（不是 `.id`，`.id` 是群成员关系行 id） |
+| metadata 写入       | 逐字段平铺在 `metadataJson`                             | 写在 `group-chat.service.ts` 的 `orchestration` 对象里（`intent/selection/quality`）                     |
+| 补充回应 prompt     | `buildCrossAgentReply` 独立函数                         | 落在 `group-chat.reply.ts`，与 `buildAgentReply` 并列                                                    |
+| 硬上限              | `groupCrossReplyLimit=2`、`groupCrossReplyRoundLimit=1` | 同值，常量落在 orchestration 模块（与 `groupReplyAgentLimit` 就近）                                      |
 
 ### 现状代码关键点
 

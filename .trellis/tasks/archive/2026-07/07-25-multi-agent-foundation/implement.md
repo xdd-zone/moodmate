@@ -12,16 +12,19 @@
 ## 执行顺序
 
 ### 1. 契约先行（packages/contracts）
+
 - [ ] 新建 `packages/contracts/src/agents/agent.contract.ts`：`UserAgentSchema`、`CreateUserAgentRequestSchema`、`UpdateUserAgentRequestSchema` 及各响应 schema + 对应 type。
 - [ ] `packages/contracts/src/index.ts` 导出上述 schema 与 type（照现有 chat 导出块）。
 - [ ] 校验：`pnpm --filter @repo/contracts type-check`（无则 `pnpm -w exec tsc --noEmit` 覆盖该包）。
 
 ### 2. 迁移（apps/api/migrations）
+
 - [ ] 新建 `0013_user_agents.sql`：`user_agents` / `agent_conversations` / `agent_memories` 三表，含 CHECK 与 INDEX（见 design）。
 - [ ] 反引号标识符 + FK cascade + CHECK，照 0012。
 - [ ] 确认编号唯一（当前最大 0012）。
 
 ### 3. 后端模块（apps/api/src/modules/agents/）
+
 - [ ] `agents.schema.ts`：3 张 drizzle 表 + `$inferSelect` 导出 Record 类型。
 - [ ] `agents.repository.ts`：`createUserAgent` / `listUserAgents` / `getUserAgentById` / `listOwnedUserAgentsByIds` / `listActiveAgentMemories` / `updateUserAgent` / `archiveUserAgent`。
 - [ ] `agents.presenter.ts`：Record → contract DTO。
@@ -31,6 +34,7 @@
 - [ ] `apps/api/src/routes/index.ts` 注册 `.route("/", createAgentsRoute())`。
 
 ### 4. 前端（apps/web）
+
 - [ ] `src/api/agent.api.ts`：5 个 http 函数 + response schema 校验。
 - [ ] `src/api/agent.query.ts`：keys 工厂 + queryOptions + mutationOptions。
 - [ ] `app/(app)/agents/page.tsx`：薄壳 + guard。
@@ -63,4 +67,4 @@
 - [ ] 能创建、列出、查看、编辑、归档 Agent。
 - [ ] `listActiveAgentMemories` / `listOwnedUserAgentsByIds` 可供群聊任务直接 import。
 - [ ] 三项质量门全绿。
-- [ ] 单聊（companion_*）功能未受影响。
+- [ ] 单聊（companion\_\*）功能未受影响。

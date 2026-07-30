@@ -12,9 +12,10 @@
 ## 2. 会话统计（moodmate 落点：改 listActiveMembers）
 
 草稿在成员记录上加两字段：
+
 - `conversationMessageCount`：`coalesce(agentConversations.messageCount, 0)`
 - `conversationLastMessageAtMs`：`agentConversations.lastMessageAtMs`
-通过 `leftJoin(agentConversations, and(eq(userId), eq(agentId)))` 关联。无新迁移。
+  通过 `leftJoin(agentConversations, and(eq(userId), eq(agentId)))` 关联。无新迁移。
 
 moodmate：`GroupChatMemberWithAgentRow` 加这两字段，`listActiveMembers` 加 `leftJoin(agentConversations)`。
 
@@ -44,6 +45,7 @@ messageCount >= 30 -> trusted
 messageCount >= 8  -> warming_up
 else               -> new_connection
 ```
+
 分数：close_bond 0.95 / trusted 0.78 / warming_up 0.52 / new_connection 0.25。
 
 ## 5. 最近发言频率与新鲜度
@@ -57,6 +59,7 @@ freshnessBase = lastSpokeTurnsAgo === null ? 1 : min(1, lastSpokeTurnsAgo / 6)
 freshnessPenalty = min(0.75, messagesByAgent.length * 0.16)
 freshnessScore = max(0, round2(freshnessBase - freshnessPenalty))
 ```
+
 maxTurnIndex 取 recentMessages 里最大的 turnIndex。
 
 ## 6. 用户情绪 schema（群聊专用）
@@ -89,11 +92,13 @@ needsComfort = sad||anxious||angry|| /陪陪|安慰|抱抱|难受/
 needsAdvice = confused|| /(建议|分析|复盘|怎么做|帮我想|选择)/
 needsDeescalation = angry|| /(冷静|别吵|缓一缓|降温)/
 ```
+
 primaryEmotion 按上面布尔命中优先级归一；socialEnergy 由 playful/happy 命中给 high、消极情绪给 low、否则 medium（草稿未写死，按此推导）。
 
 ## 8. fallback 打分（scoreAgentForFallbackSelection）
 
 点名仍优先直接返回；非点名场景改打分排序：
+
 ```
 if (context) {
   score += context.relationshipScore * 1.6
@@ -106,6 +111,7 @@ if (needsComfort && /(温柔|陪伴|情绪|安慰|稳定|倾听|治愈|共情)/.
 if (needsAdvice && /(理性|分析|建议|计划|复盘|清醒|判断|策略)/.test(profileText)) score += 2.1
 if (needsDeescalation && /(克制|边界|冷静|稳定|成熟|安全)/.test(profileText)) score += 2.2
 ```
+
 排序：`sort((a,b) => b.score - a.score || a.agent.displayOrder - b.agent.displayOrder)`，取前 limit。
 limit：多人场景（点名多个 / 群体提问关键词 / intent.shouldUseMultipleAgents）用 groupReplyAgentLimit，否则 1。
 

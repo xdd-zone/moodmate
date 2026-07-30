@@ -41,7 +41,7 @@ orchestrateGroupChatReplies(params): Promise<GroupChatOrchestrationResult>
 const GroupChatOrchestrationState = Annotation.Root({
   providerConfig: Annotation<ChatProviderConfig>(),
   groupChat: Annotation<AgentGroupChatRecord>(),
-  agents: Annotation<GroupChatMemberWithAgentRow[]>(),        // 当前活跃成员，按 displayOrder
+  agents: Annotation<GroupChatMemberWithAgentRow[]>(), // 当前活跃成员，按 displayOrder
   recentMessages: Annotation<GroupChatMessageWithAgentRow[]>(),
   userMessage: Annotation<GroupChatMessageWithAgentRow>(),
   userText: Annotation<string>(),
@@ -69,8 +69,15 @@ const GroupChatOrchestrationState = Annotation.Root({
 ```ts
 const GroupChatIntentSchema = z.object({
   intent: z.enum([
-    "direct_mention", "group_opinion", "emotional_support", "planning",
-    "roleplay", "casual_chat", "conflict_repair", "memory_or_preference", "unknown",
+    "direct_mention",
+    "group_opinion",
+    "emotional_support",
+    "planning",
+    "roleplay",
+    "casual_chat",
+    "conflict_repair",
+    "memory_or_preference",
+    "unknown",
   ]),
   targetAgentNames: z.array(z.string().trim().min(1).max(120)).max(6),
   shouldUseMultipleAgents: z.boolean(),
@@ -90,7 +97,10 @@ const GroupChatIntentSchema = z.object({
 
 ```ts
 const GroupChatAgentSelectionSchema = z.object({
-  selectedAgentIds: z.array(z.string().trim().min(1)).min(1).max(groupReplyAgentLimit),
+  selectedAgentIds: z
+    .array(z.string().trim().min(1))
+    .min(1)
+    .max(groupReplyAgentLimit),
   mode: z.enum(["single", "multi_serial", "multi_parallel"]),
   reason: z.string().trim().max(500),
 });
@@ -120,10 +130,14 @@ const GroupChatReplyQualitySchema = z.object({
   approved: z.boolean(),
   score: z.number().min(0).max(1),
   issues: z.array(z.string().trim().max(160)).max(6),
-  revisions: z.array(z.object({
-    agentId: z.string().trim().min(1),
-    content: z.string().trim().max(4000),
-  })).max(groupReplyAgentLimit),
+  revisions: z
+    .array(
+      z.object({
+        agentId: z.string().trim().min(1),
+        content: z.string().trim().max(4000),
+      }),
+    )
+    .max(groupReplyAgentLimit),
   reason: z.string().trim().max(500),
 });
 ```
@@ -160,11 +174,11 @@ Agent 回复 `metadata_json`（父 PRD acceptance 要求记录编排轨迹）：
 ```ts
 JSON.stringify({
   source: "group_chat_agent",
-  selectedBy: "langgraph_v1",   // 降级时写 "v1_rules_fallback"
+  selectedBy: "langgraph_v1", // 降级时写 "v1_rules_fallback"
   model: providerConfig.model,
   providerName: providerConfig.providerName,
   orchestration: { intent, selection, quality },
-})
+});
 ```
 
 ## 契约与兼容性

@@ -23,6 +23,7 @@
 ## Requirements
 
 ### R1 数据模型（迁移 0014）
+
 - 新增三张表：群聊主表、成员表、消息表。
 - 主表记录标题、摘要、消息数、最近消息时间、创建/更新时间。
 - 成员表记录 group_chat_id、user_id、agent_id、display_order、status（active/removed）、joined/removed 时间，支持软移除。
@@ -31,6 +32,7 @@
 - 按查询路径建索引（按群聊列出消息、按用户列群聊）。
 
 ### R2 Contract 先行
+
 - `AgentGroupChatMemberSchema`：id/agentId/name/headline/imageKey/status/displayOrder/joinedAtMs。
 - `AgentGroupChatMessageSchema`：id/groupChatId/senderType/agentId/agentName/agentImageKey/content/status/turnIndex/createdAtMs。
 - `CreateAgentGroupChatRequestSchema`：title(1-120) + agentIds(1-6)，Contract 层直接限制上下限。
@@ -38,6 +40,7 @@
 - 从 contracts index 导出所有 schema 与类型。
 
 ### R3 群聊 CRUD + 成员管理 API
+
 - `GET /rpc/chat/group` 列出当前用户群聊。
 - `POST /rpc/chat/group` 创建群聊。
 - `GET /rpc/chat/group/:groupChatId` 详情（群聊信息+成员+最近消息）。
@@ -48,6 +51,7 @@
 - 成员上限 6 在后端兜底（添加时 `现有+新增 > 6` 返回 422）。
 
 ### R4 前端三栏页面骨架
+
 - 新建群聊页面（独立路由，薄壳 + guard + client 组件），三栏：左群聊列表、中消息窗口、右成员管理/邀请。
 - 创建群聊入口（选择 1-6 个 Agent）。
 - 成员管理：移除成员、邀请自有 Agent（前端过滤已在群内的 Agent）。

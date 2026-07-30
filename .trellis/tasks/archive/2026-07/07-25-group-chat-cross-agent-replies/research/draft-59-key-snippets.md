@@ -47,6 +47,7 @@ const GroupChatCrossReplyPlanSchema = z.object({
 ## 规划 prompt 要点（groupChatCrossReplyPlanPrompt）
 
 系统提示核心：
+
 - 你是 Agent 间回应规划器，用户消息已被首轮回复过，判断是否值得增加一轮非常克制的补充回应。
 - 不生成聊天回复，只输出结构化计划。
 - 最多 `groupCrossReplyLimit` 条、`groupCrossReplyRoundLimit` 轮。
@@ -73,7 +74,9 @@ function normalizeCrossReplyPlan(params: {
     .filter((p) => agentById.has(p.agentId))
     .filter((p) => !usedAgentIds.has(p.agentId))
     .filter((p) =>
-      Boolean(p.respondToAgentId && primaryReplyAgentIds.has(p.respondToAgentId)),
+      Boolean(
+        p.respondToAgentId && primaryReplyAgentIds.has(p.respondToAgentId),
+      ),
     )
     .filter((p) => p.respondToAgentId !== p.agentId)
     .map((p) => {
@@ -81,17 +84,22 @@ function normalizeCrossReplyPlan(params: {
       return {
         agentId: p.agentId,
         respondToAgentId: p.respondToAgentId!,
-        angle: normalizeText(p.angle, 240) || "补充前面 Agent 的观点，但保持简短。",
+        angle:
+          normalizeText(p.angle, 240) || "补充前面 Agent 的观点，但保持简短。",
       };
     })
     .slice(0, groupCrossReplyLimit);
 
   return GroupChatCrossReplyPlanSchema.parse({
     enabled: Boolean(
-      params.plan.enabled && plans.length > 0 && params.primaryReplies.length > 0,
+      params.plan.enabled &&
+      plans.length > 0 &&
+      params.primaryReplies.length > 0,
     ),
     plans,
-    reason: params.plan.reason.trim() || "根据首轮回复判断是否需要 Agent 间补充回应。",
+    reason:
+      params.plan.reason.trim() ||
+      "根据首轮回复判断是否需要 Agent 间补充回应。",
   });
 }
 ```
@@ -105,6 +113,7 @@ classifyIntent -> selectAgents -> generateReplies -> generateCrossReplies -> che
 ```
 
 state 新增：
+
 ```ts
 primaryReplies: Annotation<PlannedAgentReply[]>(),
 crossReplyPlan: Annotation<GroupChatCrossReplyPlan | null>(),
