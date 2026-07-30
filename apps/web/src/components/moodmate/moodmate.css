@@ -1180,12 +1180,21 @@
   display: flex;
   max-width: min(78%, 620px);
   margin-top: 8px;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 9px;
 }
 
 .moodmate-message--stacked {
   margin-top: 2px;
+}
+
+/* 头像槽位统一 38px：裸头像补 2px 外边距，菜单按钮不被长气泡压缩 */
+.moodmate-message > .moodmate-avatar {
+  margin-inline: 2px;
+}
+
+.moodmate-message > .moodmate-avatar-menu__trigger {
+  flex: none;
 }
 
 .moodmate-message__avatar-placeholder {
