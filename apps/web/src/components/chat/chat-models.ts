@@ -1,7 +1,6 @@
 import type {
   AgentGroupChatListItem,
   CompanionConversationResponse,
-  WebUserProfile,
 } from "@repo/contracts";
 
 import type {
@@ -41,17 +40,6 @@ export function getCompanionProfile(
     name,
     palette: getMoodmateAvatarPalette(conversation.conversationId),
     status: "online",
-  };
-}
-
-export function getCurrentUserProfile(
-  profile: WebUserProfile,
-): MoodmateProfile {
-  return {
-    headline: profile.email,
-    id: profile.userId,
-    name: profile.displayName,
-    palette: getMoodmateAvatarPalette(profile.userId),
   };
 }
 

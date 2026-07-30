@@ -1,0 +1,32 @@
+{
+  "id": "web-chat-layout-ui",
+  "name": "web-chat-layout-ui",
+  "title": "优化 Web 聊天布局与界面细节",
+  "description": "调整 Web 输入框、滚动条和聊天详情默认状态，并用 Next.js 嵌套 Layout 保留应用导航与聊天列表。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": "web",
+  "package": "web",
+  "priority": "P2",
+  "creator": "喜东东",
+  "assignee": "喜东东",
+  "createdAt": "2026-07-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "apps/web/app/(app)",
+    "apps/web/src/components/chat",
+    "apps/web/src/components/friends",
+    "apps/web/src/components/settings",
+    "apps/web/src/components/moodmate/moodmate.css"
+  ],
+  "notes": "",
+  "meta": {}
+}

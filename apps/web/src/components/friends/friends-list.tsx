@@ -1,6 +1,6 @@
 "use client";
 
-import type { UserAgent, WebUserProfile } from "@repo/contracts";
+import type { UserAgent } from "@repo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
@@ -20,7 +20,6 @@ import {
   deleteUserAgentMutationOptions,
   userAgentsQueryOptions,
 } from "@/src/api/agent.query";
-import { MoodmateAppShell } from "@/src/components/moodmate/app-shell";
 import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
 import { classNames } from "@/src/components/moodmate/class-names";
 
@@ -31,13 +30,7 @@ import {
   matchesFriendFilter,
   type FriendFilter,
 } from "./friend-models";
-import { FriendsNavigation } from "./friends-navigation";
-
-type FriendsListProps = {
-  profile: WebUserProfile;
-};
-
-export function FriendsList({ profile }: FriendsListProps) {
+export function FriendsList() {
   const queryClient = useQueryClient();
   const agentsQuery = useQuery(userAgentsQueryOptions());
   const deleteMutation = useMutation(
@@ -100,10 +93,7 @@ export function FriendsList({ profile }: FriendsListProps) {
   }
 
   return (
-    <MoodmateAppShell
-      navigation={<FriendsNavigation profile={profile} />}
-      variant="no-list"
-    >
+    <>
       <section className="moodmate-friends">
         <header className="moodmate-page-header">
           <h1>通讯录</h1>
@@ -227,7 +217,7 @@ export function FriendsList({ profile }: FriendsListProps) {
         onClose={() => setIsEditorOpen(false)}
         open={isEditorOpen}
       />
-    </MoodmateAppShell>
+    </>
   );
 }
 

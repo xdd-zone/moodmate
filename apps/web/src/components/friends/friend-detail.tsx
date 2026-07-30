@@ -1,6 +1,6 @@
 "use client";
 
-import type { UserAgent, WebUserProfile } from "@repo/contracts";
+import type { UserAgent } from "@repo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -22,7 +22,6 @@ import {
   userAgentDetailQueryOptions,
 } from "@/src/api/agent.query";
 import { HttpRequestError } from "@/src/lib/http";
-import { MoodmateAppShell } from "@/src/components/moodmate/app-shell";
 import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
 
 import { FriendEditorDialog } from "./friend-editor-dialog";
@@ -31,14 +30,11 @@ import {
   getFriendProfile,
   getFriendTags,
 } from "./friend-models";
-import { FriendsNavigation } from "./friends-navigation";
-
 type FriendDetailProps = {
   friendId: string;
-  profile: WebUserProfile;
 };
 
-export function FriendDetail({ friendId, profile }: FriendDetailProps) {
+export function FriendDetail({ friendId }: FriendDetailProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const agentQuery = useQuery(userAgentDetailQueryOptions(friendId));
@@ -64,16 +60,12 @@ export function FriendDetail({ friendId, profile }: FriendDetailProps) {
       });
   }
 
-  const navigation = <FriendsNavigation profile={profile} />;
-
   if (agentQuery.isPending) {
     return (
-      <MoodmateAppShell navigation={navigation} variant="no-list">
-        <FriendDetailState
-          icon={<LoaderCircle className="moodmate-spin" />}
-          message="正在加载朋友档案"
-        />
-      </MoodmateAppShell>
+      <FriendDetailState
+        icon={<LoaderCircle className="moodmate-spin" />}
+        message="正在加载朋友档案"
+      />
     );
   }
 
@@ -83,32 +75,30 @@ export function FriendDetail({ friendId, profile }: FriendDetailProps) {
       (agentQuery.error.status === 403 || agentQuery.error.status === 404);
 
     return (
-      <MoodmateAppShell navigation={navigation} variant="no-list">
-        <FriendDetailState
-          action={
-            isMissing ? (
-              <Link
-                className="moodmate-button moodmate-button--secondary"
-                href="/friends"
-              >
-                <ArrowLeft aria-hidden="true" />
-                返回通讯录
-              </Link>
-            ) : (
-              <button
-                className="moodmate-button moodmate-button--secondary"
-                onClick={() => void agentQuery.refetch()}
-                type="button"
-              >
-                <RefreshCw aria-hidden="true" />
-                重新加载
-              </button>
-            )
-          }
-          icon={<UserRound />}
-          message={isMissing ? "没有找到这位朋友" : "朋友档案加载失败"}
-        />
-      </MoodmateAppShell>
+      <FriendDetailState
+        action={
+          isMissing ? (
+            <Link
+              className="moodmate-button moodmate-button--secondary"
+              href="/friends"
+            >
+              <ArrowLeft aria-hidden="true" />
+              返回通讯录
+            </Link>
+          ) : (
+            <button
+              className="moodmate-button moodmate-button--secondary"
+              onClick={() => void agentQuery.refetch()}
+              type="button"
+            >
+              <RefreshCw aria-hidden="true" />
+              重新加载
+            </button>
+          )
+        }
+        icon={<UserRound />}
+        message={isMissing ? "没有找到这位朋友" : "朋友档案加载失败"}
+      />
     );
   }
 
@@ -117,7 +107,7 @@ export function FriendDetail({ friendId, profile }: FriendDetailProps) {
   const tags = getFriendTags(agent);
 
   return (
-    <MoodmateAppShell navigation={navigation} variant="no-list">
+    <>
       <section className="moodmate-friend-detail">
         <header className="moodmate-page-header moodmate-page-header--sticky">
           <div className="moodmate-page-header__title">
@@ -306,7 +296,7 @@ export function FriendDetail({ friendId, profile }: FriendDetailProps) {
         onClose={() => setIsEditorOpen(false)}
         open={isEditorOpen}
       />
-    </MoodmateAppShell>
+    </>
   );
 }
 

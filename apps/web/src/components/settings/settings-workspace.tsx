@@ -1,25 +1,15 @@
 "use client";
 
-import type { WebUserProfile } from "@repo/contracts";
 import {
   Heart,
   Layers3,
-  LogOut,
   Palette,
-  Settings,
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { clearClientSession } from "@/src/auth/client-session";
-import { MoodmateAppShell } from "@/src/components/moodmate/app-shell";
-import { MoodmateAvatarMenu } from "@/src/components/moodmate/avatar-menu";
-import {
-  getMoodmateAvatarPalette,
-  type MoodmateProfile,
-} from "@/src/components/moodmate/models";
-import { MoodmateNavigationRail } from "@/src/components/moodmate/navigation-rail";
+import { useAuthenticatedApp } from "@/src/components/app/authenticated-app-layout";
 
 import {
   AppearancePanel,
@@ -30,10 +20,6 @@ import {
 } from "./settings-panels";
 
 type SettingsPanelId = "profile" | "general" | "memory" | "care" | "appearance";
-
-type SettingsWorkspaceProps = {
-  profile: WebUserProfile;
-};
 
 const settingsItems = [
   { icon: UserRound, id: "profile", label: "个人资料" },
@@ -47,28 +33,13 @@ const settingsItems = [
   label: string;
 }>;
 
-function getSettingsUserProfile(profile: WebUserProfile): MoodmateProfile {
-  return {
-    headline: profile.email,
-    id: profile.userId,
-    name: profile.displayName,
-    palette: getMoodmateAvatarPalette(profile.userId),
-  };
-}
-
-export function SettingsWorkspace({ profile }: SettingsWorkspaceProps) {
+export function SettingsWorkspace() {
+  const { logout, profile } = useAuthenticatedApp();
   const contentRef = useRef<HTMLDivElement>(null);
   const [activePanel, setActivePanel] = useState<SettingsPanelId>("profile");
   const [visitedPanels, setVisitedPanels] = useState<Set<SettingsPanelId>>(
     () => new Set(["profile"]),
   );
-  const userProfile = getSettingsUserProfile(profile);
-
-  function handleLogout() {
-    clearClientSession();
-    window.location.replace("/");
-  }
-
   function selectPanel(panel: SettingsPanelId) {
     setActivePanel(panel);
     setVisitedPanels((current) => {
@@ -80,32 +51,6 @@ export function SettingsWorkspace({ profile }: SettingsWorkspaceProps) {
     });
     contentRef.current?.scrollTo({ top: 0 });
   }
-
-  const navigation = (
-    <MoodmateNavigationRail
-      active="settings"
-      profileControl={
-        <MoodmateAvatarMenu
-          items={[
-            {
-              href: "/settings",
-              icon: Settings,
-              label: "个人资料与设置",
-            },
-            {
-              danger: true,
-              icon: LogOut,
-              label: "退出登录",
-              onSelect: handleLogout,
-              separatorBefore: true,
-            },
-          ]}
-          label="个人菜单"
-          profile={userProfile}
-        />
-      }
-    />
-  );
 
   const menu = (
     <>
@@ -141,11 +86,8 @@ export function SettingsWorkspace({ profile }: SettingsWorkspaceProps) {
   );
 
   return (
-    <MoodmateAppShell
-      className="moodmate-settings-app"
-      list={menu}
-      navigation={navigation}
-    >
+    <div className="moodmate-settings-layout">
+      <aside className="moodmate-list">{menu}</aside>
       <section className="moodmate-settings">
         <nav aria-label="设置分组" className="moodmate-settings-mobile-menu">
           {settingsItems.map((item) => (
@@ -171,7 +113,7 @@ export function SettingsWorkspace({ profile }: SettingsWorkspaceProps) {
         >
           {visitedPanels.has("profile") ? (
             <div hidden={activePanel !== "profile"}>
-              <ProfilePanel onLogout={handleLogout} profile={profile} />
+              <ProfilePanel onLogout={logout} profile={profile} />
             </div>
           ) : null}
           {visitedPanels.has("general") ? (
@@ -196,6 +138,6 @@ export function SettingsWorkspace({ profile }: SettingsWorkspaceProps) {
           ) : null}
         </div>
       </section>
-    </MoodmateAppShell>
+    </div>
   );
 }

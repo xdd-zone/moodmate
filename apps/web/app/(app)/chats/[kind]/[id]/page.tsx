@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { ChatWorkspaceGuard } from "@/src/components/chat/chat-workspace-guard";
+import { ChatConversationView } from "@/src/components/chat/chat-workspace";
 
 export const metadata: Metadata = {
   title: "聊天",
@@ -16,5 +16,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
 
   if (kind !== "direct" && kind !== "group") notFound();
 
-  return <ChatWorkspaceGuard selection={{ id, kind }} />;
+  return (
+    <ChatConversationView key={`${kind}:${id}`} selection={{ id, kind }} />
+  );
 }

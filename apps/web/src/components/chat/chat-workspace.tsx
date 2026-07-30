@@ -4,76 +4,88 @@ import type {
   AgentGroupChatDetail,
   AgentGroupChatListResponse,
   CompanionConversationResponse,
-  WebUserProfile,
 } from "@repo/contracts";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
   BellOff,
   Brain,
   Images,
-  LogOut,
   MessageCirclePlus,
   PanelLeft,
   PanelRight,
   Plus,
-  Settings,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { companionConversationQueryOptions } from "@/src/api/chat.query";
 import {
   groupChatDetailQueryOptions,
   groupChatsQueryOptions,
 } from "@/src/api/group-chat.query";
-import { clearClientSession } from "@/src/auth/client-session";
+import { useAuthenticatedApp } from "@/src/components/app/authenticated-app-layout";
 import {
   CreateGroupChatDialog,
   GroupChatInformation,
   GroupChatPane,
 } from "@/src/components/group-chat/group-chat-workspace";
-import { MoodmateAppShell } from "@/src/components/moodmate/app-shell";
-import { MoodmateAvatarMenu } from "@/src/components/moodmate/avatar-menu";
+import { classNames } from "@/src/components/moodmate/class-names";
 import { MoodmateConversationItem } from "@/src/components/moodmate/conversation-item";
 import {
   MoodmateInfoPanel,
   MoodmateInfoSection,
 } from "@/src/components/moodmate/info-panel";
 import { MoodmateListPanel } from "@/src/components/moodmate/list-panel";
-import { MoodmateNavigationRail } from "@/src/components/moodmate/navigation-rail";
+import type { MoodmateProfile } from "@/src/components/moodmate/models";
 
 import {
   getCompanionProfile,
-  getCurrentUserProfile,
   getLatestConversationHref,
   toDirectConversation,
   toGroupConversation,
 } from "./chat-models";
 import { CompanionChatPane, getRelationshipStageLabel } from "./companion-chat";
 
-export type ChatSelection = { id: string; kind: "direct" | "group" } | null;
+export type ChatSelection = { id: string; kind: "direct" | "group" };
 
-type ChatWorkspaceProps = {
-  profile: WebUserProfile;
-  selection: ChatSelection;
+type ChatWorkspaceLayoutProps = {
+  children: ReactNode;
 };
 
-export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
+type ChatWorkspaceContextValue = {
+  closeMobileList: () => void;
+  conversationQuery: UseQueryResult<CompanionConversationResponse>;
+  groupListQuery: UseQueryResult<AgentGroupChatListResponse>;
+  openMobileList: () => void;
+  userProfile: MoodmateProfile;
+};
+
+const ChatWorkspaceContext = createContext<ChatWorkspaceContextValue | null>(
+  null,
+);
+
+export function ChatWorkspaceLayout({ children }: ChatWorkspaceLayoutProps) {
   const router = useRouter();
+  const params = useParams<{ id?: string | string[] }>();
+  const { userProfile } = useAuthenticatedApp();
   const conversationQuery = useQuery(companionConversationQueryOptions());
   const groupListQuery = useQuery(groupChatsQueryOptions());
-  const selectedGroupId = selection?.kind === "group" ? selection.id : "";
-  const groupDetailQuery = useQuery(
-    groupChatDetailQueryOptions(selectedGroupId),
-  );
   const [search, setSearch] = useState("");
-  const [isInformationVisible, setIsInformationVisible] = useState(true);
   const [isMobileListOpen, setIsMobileListOpen] = useState(false);
-  const [isMobileInformationOpen, setIsMobileInformationOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
-
+  const activeId = Array.isArray(params.id)
+    ? (params.id[0] ?? "")
+    : (params.id ?? "");
   const conversations = useMemo(() => {
     const items = [
       ...(conversationQuery.data
@@ -91,83 +103,23 @@ export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
         )
       : items;
   }, [conversationQuery.data, groupListQuery.data, search]);
-
-  useEffect(() => {
-    if (selection || conversationQuery.isPending || groupListQuery.isPending) {
-      return;
-    }
-
-    const href = getLatestConversationHref(
-      conversationQuery.data,
-      groupListQuery.data?.items ?? [],
-    );
-
-    if (href) router.replace(href);
-  }, [
-    conversationQuery.data,
-    conversationQuery.isPending,
-    groupListQuery.data,
-    groupListQuery.isPending,
-    router,
-    selection,
-  ]);
-
-  useEffect(() => {
-    if (
-      selection?.kind === "direct" &&
-      conversationQuery.data &&
-      selection.id !== conversationQuery.data.conversationId
-    ) {
-      router.replace(`/chats/direct/${conversationQuery.data.conversationId}`);
-    }
-  }, [conversationQuery.data, router, selection]);
-
-  const userProfile = getCurrentUserProfile(profile);
-  const companionProfile = conversationQuery.data
-    ? getCompanionProfile(conversationQuery.data)
-    : null;
-  const activeId = selection?.id ?? "";
-
-  function handleLogout() {
-    clearClientSession();
-    window.location.replace("/");
-  }
-
-  function handleInformationToggle() {
-    if (window.matchMedia("(max-width: 1100px)").matches) {
-      setIsMobileInformationOpen(true);
-      setIsInformationVisible(true);
-      return;
-    }
-
-    setIsInformationVisible((current) => !current);
-  }
-
-  const navigation = (
-    <MoodmateNavigationRail
-      active="chats"
-      profileControl={
-        <MoodmateAvatarMenu
-          items={[
-            {
-              href: "/settings",
-              icon: Settings,
-              label: "个人资料与设置",
-            },
-            {
-              danger: true,
-              icon: LogOut,
-              label: "退出登录",
-              onSelect: handleLogout,
-              separatorBefore: true,
-            },
-          ]}
-          label="个人菜单"
-          profile={userProfile}
-        />
-      }
-      unreadCount={conversationQuery.data?.hasUnreadCareEvent ? 1 : 0}
-    />
+  const closeMobileList = useCallback(() => setIsMobileListOpen(false), []);
+  const openMobileList = useCallback(() => setIsMobileListOpen(true), []);
+  const contextValue = useMemo(
+    () => ({
+      closeMobileList,
+      conversationQuery,
+      groupListQuery,
+      openMobileList,
+      userProfile,
+    }),
+    [
+      closeMobileList,
+      conversationQuery,
+      groupListQuery,
+      openMobileList,
+      userProfile,
+    ],
   );
 
   const list = (
@@ -222,7 +174,7 @@ export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
           active={conversation.id === activeId}
           conversation={conversation}
           key={`${conversation.kind}:${conversation.id}`}
-          onNavigate={() => setIsMobileListOpen(false)}
+          onNavigate={closeMobileList}
         />
       ))}
       {!conversationQuery.isPending &&
@@ -233,54 +185,17 @@ export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
     </MoodmateListPanel>
   );
 
-  const main = renderMainContent({
-    companionProfile,
-    conversationQuery,
-    groupDetailQuery,
-    groupListQuery,
-    onInformationToggle: handleInformationToggle,
-    onOpenList: () => setIsMobileListOpen(true),
-    profile: userProfile,
-    selection,
-  });
-
-  const information = renderInformation({
-    companionProfile,
-    conversation: conversationQuery.data,
-    groupDetail: groupDetailQuery.data,
-    onClose: () => setIsMobileInformationOpen(false),
-    profile: userProfile,
-    selection,
-  });
-
-  const shellClassName = [
-    isMobileListOpen ? "moodmate-app--mobile-list" : "",
-    isMobileInformationOpen ? "moodmate-app--mobile-info" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
-    <>
-      {isInformationVisible && information ? (
-        <MoodmateAppShell
-          className={shellClassName}
-          information={information}
-          list={list}
-          navigation={navigation}
-          variant="has-info"
-        >
-          {main}
-        </MoodmateAppShell>
-      ) : (
-        <MoodmateAppShell
-          className={shellClassName}
-          list={list}
-          navigation={navigation}
-        >
-          {main}
-        </MoodmateAppShell>
-      )}
+    <ChatWorkspaceContext.Provider value={contextValue}>
+      <div
+        className={classNames(
+          "moodmate-chat-workspace",
+          isMobileListOpen && "moodmate-chat-workspace--mobile-list",
+        )}
+      >
+        <aside className="moodmate-list">{list}</aside>
+        <div className="moodmate-chat-workspace__content">{children}</div>
+      </div>
 
       {isCreateGroupOpen ? (
         <CreateGroupChatDialog
@@ -292,8 +207,129 @@ export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
           open
         />
       ) : null}
-    </>
+    </ChatWorkspaceContext.Provider>
   );
+}
+
+export function ChatEntryView() {
+  const router = useRouter();
+  const { conversationQuery, groupListQuery } = useChatWorkspace();
+  const isLoading = conversationQuery.isPending || groupListQuery.isPending;
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const href = getLatestConversationHref(
+      conversationQuery.data,
+      groupListQuery.data?.items ?? [],
+    );
+
+    if (href) router.replace(href);
+  }, [conversationQuery.data, groupListQuery.data, isLoading, router]);
+
+  return (
+    <div className="moodmate-chat-view">
+      <div className="moodmate-main">
+        <ChatEmptyState
+          description={
+            isLoading
+              ? "正在选择最近的会话"
+              : "新建群聊，或从左侧选择一个会话。"
+          }
+          title={isLoading ? "正在加载聊天" : "还没有可用会话"}
+        />
+      </div>
+    </div>
+  );
+}
+
+type ChatConversationViewProps = {
+  selection: ChatSelection;
+};
+
+export function ChatConversationView({ selection }: ChatConversationViewProps) {
+  const router = useRouter();
+  const { conversationQuery, groupListQuery, openMobileList, userProfile } =
+    useChatWorkspace();
+  const selectedGroupId = selection.kind === "group" ? selection.id : "";
+  const groupDetailQuery = useQuery(
+    groupChatDetailQueryOptions(selectedGroupId),
+  );
+  const [isInformationVisible, setIsInformationVisible] = useState(false);
+  const [isMobileInformationOpen, setIsMobileInformationOpen] = useState(false);
+  const companionProfile = conversationQuery.data
+    ? getCompanionProfile(conversationQuery.data)
+    : null;
+
+  useEffect(() => {
+    if (
+      selection.kind === "direct" &&
+      conversationQuery.data &&
+      selection.id !== conversationQuery.data.conversationId
+    ) {
+      router.replace(`/chats/direct/${conversationQuery.data.conversationId}`);
+    }
+  }, [conversationQuery.data, router, selection]);
+
+  function handleInformationToggle() {
+    if (window.matchMedia("(max-width: 1100px)").matches) {
+      setIsInformationVisible(true);
+      setIsMobileInformationOpen(true);
+      return;
+    }
+
+    setIsInformationVisible((current) => !current);
+  }
+
+  function closeInformation() {
+    setIsInformationVisible(false);
+    setIsMobileInformationOpen(false);
+  }
+
+  const main = renderMainContent({
+    companionProfile,
+    conversationQuery,
+    groupDetailQuery,
+    groupListQuery,
+    onInformationToggle: handleInformationToggle,
+    onOpenList: openMobileList,
+    profile: userProfile,
+    selection,
+  });
+  const information = renderInformation({
+    companionProfile,
+    conversation: conversationQuery.data,
+    groupDetail: groupDetailQuery.data,
+    onClose: closeInformation,
+    profile: userProfile,
+    selection,
+  });
+  const showInformation = isInformationVisible && information;
+
+  return (
+    <div
+      className={classNames(
+        "moodmate-chat-view",
+        showInformation && "moodmate-chat-view--has-info",
+        isMobileInformationOpen && "moodmate-chat-view--mobile-info",
+      )}
+    >
+      <div className="moodmate-main">{main}</div>
+      {showInformation ? (
+        <aside className="moodmate-info">{information}</aside>
+      ) : null}
+    </div>
+  );
+}
+
+function useChatWorkspace() {
+  const context = useContext(ChatWorkspaceContext);
+
+  if (!context) {
+    throw new Error("聊天页面必须在聊天布局内使用");
+  }
+
+  return context;
 }
 
 function renderMainContent({
@@ -312,26 +348,13 @@ function renderMainContent({
   groupListQuery: UseQueryResult<AgentGroupChatListResponse>;
   onInformationToggle: () => void;
   onOpenList: () => void;
-  profile: ReturnType<typeof getCurrentUserProfile>;
+  profile: MoodmateProfile;
   selection: ChatSelection;
 }) {
   const mobileActions = {
     onInformationToggle,
     onOpenList,
   };
-
-  if (!selection) {
-    const isLoading = conversationQuery.isPending || groupListQuery.isPending;
-
-    return (
-      <ChatEmptyState
-        description={
-          isLoading ? "正在选择最近的会话" : "新建群聊，或从左侧选择一个会话。"
-        }
-        title={isLoading ? "正在加载聊天" : "还没有可用会话"}
-      />
-    );
-  }
 
   if (selection.kind === "direct") {
     if (conversationQuery.isPending) {
@@ -410,10 +433,10 @@ function renderInformation({
   conversation: CompanionConversationResponse | undefined;
   groupDetail: AgentGroupChatDetail | undefined;
   onClose: () => void;
-  profile: ReturnType<typeof getCurrentUserProfile>;
+  profile: MoodmateProfile;
   selection: ChatSelection;
 }) {
-  if (selection?.kind === "group" && groupDetail) {
+  if (selection.kind === "group" && groupDetail) {
     return (
       <InformationPanelFrame onClose={onClose}>
         <GroupChatInformation
@@ -425,7 +448,7 @@ function renderInformation({
     );
   }
 
-  if (selection?.kind === "direct" && conversation && companionProfile) {
+  if (selection.kind === "direct" && conversation && companionProfile) {
     return (
       <InformationPanelFrame onClose={onClose}>
         <MoodmateInfoPanel
@@ -489,7 +512,7 @@ function InformationPanelFrame({
   children,
   onClose,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   onClose: () => void;
 }) {
   return (

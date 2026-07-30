@@ -90,7 +90,21 @@
   outline-offset: 2px;
 }
 
+.moodmate
+  :is(
+    input[data-slot="input"],
+    .moodmate-search input,
+    .moodmate-friends-search input,
+    .moodmate-field input,
+    .moodmate-settings-section input,
+    textarea
+  ):focus-visible {
+  outline: none;
+}
+
 .moodmate-app {
+  position: fixed;
+  inset: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   width: 100%;
@@ -116,6 +130,35 @@
 
 .moodmate-app--no-list {
   grid-template-columns: var(--mm-rail-width) minmax(0, 1fr);
+}
+
+.moodmate-chat-workspace,
+.moodmate-chat-view,
+.moodmate-settings-layout {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.moodmate-chat-workspace,
+.moodmate-settings-layout {
+  grid-template-columns: var(--mm-list-width) minmax(0, 1fr);
+}
+
+.moodmate-chat-workspace__content {
+  min-width: 0;
+  min-height: 0;
+}
+
+.moodmate-chat-view {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.moodmate-chat-view--has-info {
+  grid-template-columns: minmax(0, 1fr) var(--mm-info-width);
 }
 
 .moodmate-main {
@@ -808,23 +851,38 @@
   cursor: not-allowed;
 }
 
-.moodmate-scroll {
-  overflow-y: auto;
+.moodmate * {
   scrollbar-color: var(--mm-border) transparent;
   scrollbar-width: thin;
 }
 
-.moodmate-scroll::-webkit-scrollbar {
+.moodmate *::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
-.moodmate-scroll::-webkit-scrollbar-thumb {
+.moodmate *::-webkit-scrollbar-track,
+.moodmate *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.moodmate *::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.moodmate *::-webkit-scrollbar-thumb {
   border-radius: var(--mm-radius-full);
   background: var(--mm-border);
 }
 
-.moodmate-scroll::-webkit-scrollbar-thumb:hover {
+.moodmate *::-webkit-scrollbar-thumb:hover {
   background: var(--mm-muted);
+}
+
+.moodmate-scroll {
+  overflow-y: auto;
 }
 
 @media (max-width: 1100px) {
@@ -852,6 +910,29 @@
   .moodmate-app--mobile-info .moodmate-info-frame__close {
     display: grid;
   }
+
+  .moodmate-chat-view--has-info {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .moodmate-chat-view--has-info > .moodmate-info {
+    display: none;
+  }
+
+  .moodmate-chat-view--mobile-info > .moodmate-info {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    width: min(var(--mm-info-width), calc(100vw - var(--mm-rail-width)));
+    box-shadow: var(--mm-shadow-menu);
+  }
+
+  .moodmate-chat-view--mobile-info .moodmate-info-frame__close {
+    display: grid;
+  }
 }
 
 @media (max-width: 820px) {
@@ -871,6 +952,31 @@
   .moodmate-app > .moodmate-rail,
   .moodmate-app > .moodmate-list {
     display: none;
+  }
+
+  .moodmate-chat-workspace,
+  .moodmate-settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .moodmate-chat-workspace > .moodmate-list,
+  .moodmate-settings-layout > .moodmate-list {
+    display: none;
+  }
+
+  .moodmate-chat-workspace--mobile-list > .moodmate-list {
+    display: flex;
+  }
+
+  .moodmate-chat-workspace--mobile-list > .moodmate-chat-workspace__content,
+  .moodmate-chat-view--mobile-info > .moodmate-main {
+    display: none;
+  }
+
+  .moodmate-chat-view--mobile-info > .moodmate-info {
+    left: 0;
+    display: flex;
+    width: 100%;
   }
 }
 
@@ -1771,23 +1877,6 @@
     padding: 8px 10px 12px;
   }
 
-  .moodmate-app--mobile-list > .moodmate-list {
-    display: flex;
-  }
-
-  .moodmate-app--mobile-list > .moodmate-main,
-  .moodmate-app--mobile-list > .moodmate-info,
-  .moodmate-app--mobile-info > .moodmate-main,
-  .moodmate-app--mobile-info > .moodmate-list {
-    display: none;
-  }
-
-  .moodmate-app--mobile-info > .moodmate-info {
-    left: 0;
-    display: flex;
-    width: 100%;
-  }
-
   .moodmate-info-frame__close {
     display: grid;
   }
@@ -2173,7 +2262,7 @@
 }
 
 .moodmate-auth__input[data-slot="input"]:focus-visible {
-  border-color: var(--mm-accent);
+  border-color: var(--mm-border);
   box-shadow: none;
 }
 
@@ -2467,8 +2556,8 @@
 }
 
 .moodmate-friends-search:focus-within {
-  border-color: var(--mm-accent);
-  box-shadow: 0 0 0 2px var(--mm-accent-soft);
+  border-color: var(--mm-border);
+  box-shadow: none;
 }
 
 .moodmate-friends-tabs {
@@ -3034,8 +3123,8 @@
 
 .moodmate-field input:focus,
 .moodmate-field textarea:focus {
-  border-color: var(--mm-accent);
-  box-shadow: 0 0 0 2px var(--mm-accent-soft);
+  border-color: var(--mm-border);
+  box-shadow: none;
 }
 
 .moodmate-field textarea {
@@ -3192,7 +3281,6 @@
 /* ============================================================
    设置
    ============================================================ */
-.moodmate-settings-app .moodmate-main,
 .moodmate-settings {
   display: flex;
   min-width: 0;
@@ -3287,8 +3375,12 @@
 }
 
 .moodmate-settings-section input:focus,
-.moodmate-settings-section select:focus,
 .moodmate-settings-section textarea:focus {
+  border-color: var(--mm-border);
+  box-shadow: none;
+}
+
+.moodmate-settings-section select:focus {
   border-color: var(--mm-accent);
   box-shadow: 0 0 0 2px var(--mm-accent-soft);
 }

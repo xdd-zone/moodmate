@@ -1,4 +1,4 @@
-import type { UserAgent, WebUserProfile } from "@repo/contracts";
+import type { UserAgent } from "@repo/contracts";
 
 import {
   getMoodmateAvatarPalette,
@@ -34,17 +34,6 @@ export function getFriendProfile(agent: UserAgent): MoodmateProfile {
     name: agent.name,
     palette: getMoodmateAvatarPalette(agent.id),
     status: agent.status === "active" ? "online" : "offline",
-  };
-}
-
-export function getFriendsUserProfile(
-  profile: WebUserProfile,
-): MoodmateProfile {
-  return {
-    headline: profile.email,
-    id: profile.userId,
-    name: profile.displayName,
-    palette: getMoodmateAvatarPalette(profile.userId),
   };
 }
 

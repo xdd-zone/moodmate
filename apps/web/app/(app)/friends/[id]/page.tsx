@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { FriendsGuard } from "@/src/components/friends/friends-guard";
+import { FriendDetail } from "@/src/components/friends/friend-detail";
 
 export const metadata: Metadata = {
   title: "朋友档案",
@@ -15,5 +15,5 @@ export default async function FriendDetailPage({
 }: FriendDetailPageProps) {
   const { id } = await params;
 
-  return <FriendsGuard friendId={id} />;
+  return <FriendDetail friendId={id} />;
 }
