@@ -1407,3 +1407,37 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 ### Next Steps
 
 - None - task complete
+
+
+## Session 42: 还原 Web 原型细节
+
+**Date**: 2026-07-30
+**Task**: 还原 Web 原型细节
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+提交 Web 原型细节还原，包括聊天消息细节、朋友头像菜单、信息栏、通讯录、朋友详情和设置主题交互，并归档对应 Trellis 任务。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9f347c4` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

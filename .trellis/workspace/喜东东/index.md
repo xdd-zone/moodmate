@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 41
-- **Last Active**: 2026-07-29
+- **Total Sessions**: 42
+- **Last Active**: 2026-07-30
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1409 | Active |
+| `journal-1.md` | ~1443 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -30,6 +30,7 @@
 
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 42 | 2026-07-30 | 还原 Web 原型细节 | `9f347c4` | `main` |
 | 41 | 2026-07-29 | 实现设置路由与静态面板 | `7098c2e` | `main` |
 | 40 | 2026-07-29 | 完成 Web 朋友列表与档案路由 | `7bcee62` | `main` |
 | 39 | 2026-07-29 | 完成统一聊天工作区 | `154b0c7` | `main` |
