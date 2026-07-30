@@ -23,6 +23,7 @@ export type MoodmateConversation = {
   lastMessage: string;
   lastSenderName?: string;
   muted?: boolean;
+  pinned?: boolean;
   timeLabel: string;
   title: string;
   unreadCount?: number;

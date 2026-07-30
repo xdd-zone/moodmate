@@ -367,6 +367,14 @@
   padding-bottom: 12px;
 }
 
+.moodmate-conversation-row {
+  margin: 0 8px;
+}
+
+.moodmate-conversation-row .moodmate-conversation {
+  margin: 0;
+}
+
 .moodmate-conversation {
   position: relative;
   display: grid;
@@ -407,9 +415,36 @@
   white-space: nowrap;
 }
 
+.moodmate-conversation__name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .moodmate-conversation__name {
+  min-width: 0;
   font-size: var(--mm-fs-md);
   font-weight: 600;
+}
+
+.moodmate-conversation__state {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--mm-muted);
+}
+
+.moodmate-conversation__state svg {
+  width: 13px;
+  height: 13px;
+}
+
+.moodmate-conversation--active .moodmate-conversation__state {
+  color: color-mix(in oklch, var(--mm-accent-fg) 78%, transparent);
 }
 
 .moodmate-conversation__last {
@@ -754,6 +789,75 @@
   height: 1px;
   margin: 6px 4px;
   background: var(--mm-border);
+}
+
+.moodmate-context-menu--conversation {
+  width: min(264px, calc(100vw - 24px));
+}
+
+.moodmate-context-menu--conversation .moodmate-context-menu__item {
+  min-height: 44px;
+}
+
+.moodmate-context-menu__label {
+  min-width: 0;
+  flex: 1;
+}
+
+.moodmate-context-menu__state {
+  flex: none;
+  color: var(--mm-accent);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-xs);
+  opacity: 0;
+}
+
+.moodmate-context-menu__item[aria-checked="true"]
+  .moodmate-context-menu__state {
+  opacity: 1;
+}
+
+.moodmate-toast {
+  position: fixed;
+  z-index: 240;
+  bottom: 24px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface-2);
+  color: var(--mm-fg);
+  box-shadow: var(--mm-shadow-menu);
+  font-size: var(--mm-fs-sm);
+  animation: moodmate-toast-enter 180ms ease-out;
+}
+
+.moodmate-toast__action {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mm-accent);
+  font-size: var(--mm-fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@keyframes moodmate-toast-enter {
+  from {
+    transform: translate(-50%, 8px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
 
 .moodmate-dialog {
@@ -1595,6 +1699,15 @@
 
 .moodmate-list__notice[role="alert"] {
   color: var(--mm-danger);
+}
+
+.moodmate-list__notice--action {
+  display: block;
+  width: calc(100% - 24px);
+  border: 0;
+  background: none;
+  color: var(--mm-accent);
+  cursor: pointer;
 }
 
 .moodmate-chat-state {
