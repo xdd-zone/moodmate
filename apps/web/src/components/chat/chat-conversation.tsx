@@ -2,21 +2,32 @@
 
 import type { CompanionMessageFeedbackRating } from "@repo/contracts";
 import type { ChatStatus, UIMessage } from "ai";
-import { LoaderCircle, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
 import { classNames } from "@/src/components/moodmate/class-names";
 import type { MoodmateProfile } from "@/src/components/moodmate/models";
 
+import {
+  ChatDateDivider,
+  ChatTypingDots,
+  CopyMessageButton,
+  formatMessageTime,
+  isSameLocalDate,
+} from "./chat-message-details";
+import { FriendAvatarMenu } from "./friend-avatar-menu";
+
 const TYPEWRITER_INTERVAL_MS = 18;
+
+export type CompanionUiMessage = UIMessage<{ createdAtMs?: number }>;
 
 interface ChatConversationProps {
   assistantProfile: MoodmateProfile;
   feedbackByMessageId: Record<string, CompanionMessageFeedbackRating>;
   feedbackPendingMessageId: string | null;
   historicalAssistantMessageIds: readonly string[];
-  messages: UIMessage[];
+  messages: CompanionUiMessage[];
   onSubmitFeedback: (
     messageId: string,
     rating: CompanionMessageFeedbackRating,
@@ -25,7 +36,7 @@ interface ChatConversationProps {
   userProfile: MoodmateProfile;
 }
 
-function getMessageText(message: UIMessage): string {
+function getMessageText(message: CompanionUiMessage): string {
   return message.parts
     .flatMap((part) => (part.type === "text" ? [part.text] : []))
     .join("");
@@ -62,6 +73,7 @@ export function ChatConversation({
 }: ChatConversationProps) {
   const reducedMotion = usePrefersReducedMotion();
   const endRef = useRef<HTMLDivElement>(null);
+  const localCreatedAtByIdRef = useRef(new Map<string, number>());
   const historicalAssistantMessageIdSet = useMemo(
     () => new Set(historicalAssistantMessageIds),
     [historicalAssistantMessageIds],
@@ -180,6 +192,19 @@ export function ChatConversation({
     (status === "streaming" &&
       (latestMessage?.role !== "assistant" || !latestAssistantText));
 
+  function getCreatedAtMs(message: CompanionUiMessage): number {
+    if (message.metadata?.createdAtMs !== undefined) {
+      return message.metadata.createdAtMs;
+    }
+
+    const knownCreatedAtMs = localCreatedAtByIdRef.current.get(message.id);
+    if (knownCreatedAtMs !== undefined) return knownCreatedAtMs;
+
+    const createdAtMs = Date.now();
+    localCreatedAtByIdRef.current.set(message.id, createdAtMs);
+    return createdAtMs;
+  }
+
   return (
     <div
       aria-label={`与${assistantProfile.name}的对话`}
@@ -196,7 +221,7 @@ export function ChatConversation({
           </div>
         ) : null}
 
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const fullText = getMessageText(message);
 
           if (message.role === "assistant" && !fullText.trim()) {
@@ -210,34 +235,61 @@ export function ChatConversation({
               sliceUnicodeText(fullText, 1));
           const canFeedback =
             !isUser && historicalAssistantMessageIdSet.has(message.id);
+          const createdAtMs = getCreatedAtMs(message);
+          const previousMessage = messages[index - 1];
+          const previousCreatedAtMs = previousMessage
+            ? getCreatedAtMs(previousMessage)
+            : null;
+          const startsNewDay =
+            previousCreatedAtMs === null ||
+            !isSameLocalDate(previousCreatedAtMs, createdAtMs);
+          const isStacked =
+            !startsNewDay && previousMessage?.role === message.role;
 
           return (
-            <div
-              className={classNames(
-                "moodmate-message",
-                isUser
-                  ? "moodmate-message--outgoing"
-                  : "moodmate-message--incoming",
-              )}
-              key={message.id}
-            >
-              {isUser ? (
-                <>
+            <div className="moodmate-message-row" key={message.id}>
+              {startsNewDay ? (
+                <ChatDateDivider createdAtMs={createdAtMs} />
+              ) : null}
+              <div
+                className={classNames(
+                  "moodmate-message",
+                  isUser
+                    ? "moodmate-message--outgoing"
+                    : "moodmate-message--incoming",
+                  isStacked && "moodmate-message--stacked",
+                )}
+              >
+                {isStacked ? (
+                  <span
+                    aria-hidden="true"
+                    className="moodmate-message__avatar-placeholder"
+                  />
+                ) : isUser ? (
                   <MoodmateAvatar profile={userProfile} size="sm" />
-                  <div className="moodmate-message__bubble">{fullText}</div>
-                </>
-              ) : (
-                <>
-                  <MoodmateAvatar
+                ) : (
+                  <FriendAvatarMenu
                     onSurface
                     profile={assistantProfile}
+                    profileHref="/friends"
                     size="sm"
                   />
-                  <div className="moodmate-message__content">
-                    <div className="moodmate-message__bubble">
-                      <span aria-hidden="true">{visibleText}</span>
-                      <span className="sr-only">{fullText}</span>
-                    </div>
+                )}
+                <div className="moodmate-message__content">
+                  <div className="moodmate-message__bubble">
+                    {isUser ? (
+                      fullText
+                    ) : (
+                      <>
+                        <span aria-hidden="true">{visibleText}</span>
+                        <span className="sr-only">{fullText}</span>
+                      </>
+                    )}
+                    <time dateTime={new Date(createdAtMs).toISOString()}>
+                      {formatMessageTime(createdAtMs)}
+                    </time>
+                  </div>
+                  <div className="moodmate-message__feedback">
                     {canFeedback ? (
                       <FeedbackControls
                         disabled={feedbackPendingMessageId === message.id}
@@ -247,9 +299,10 @@ export function ChatConversation({
                         rating={feedbackByMessageId[message.id] ?? null}
                       />
                     ) : null}
+                    <CopyMessageButton text={fullText} />
                   </div>
-                </>
-              )}
+                </div>
+              </div>
             </div>
           );
         })}
@@ -259,10 +312,21 @@ export function ChatConversation({
             className="moodmate-message moodmate-message--incoming"
             role="status"
           >
-            <MoodmateAvatar onSurface profile={assistantProfile} size="sm" />
+            {latestMessage?.role === "assistant" ? (
+              <span
+                aria-hidden="true"
+                className="moodmate-message__avatar-placeholder"
+              />
+            ) : (
+              <FriendAvatarMenu
+                onSurface
+                profile={assistantProfile}
+                profileHref="/friends"
+                size="sm"
+              />
+            )}
             <div className="moodmate-message__typing">
-              <LoaderCircle aria-hidden="true" className="animate-spin" />
-              {assistantProfile.name}正在回复
+              <ChatTypingDots label={`${assistantProfile.name}正在回复`} />
             </div>
           </div>
         ) : null}
@@ -282,7 +346,7 @@ function FeedbackControls({
   rating: CompanionMessageFeedbackRating | null;
 }) {
   return (
-    <div className="moodmate-message__feedback">
+    <>
       <FeedbackButton
         active={rating === "positive"}
         disabled={disabled}
@@ -297,7 +361,7 @@ function FeedbackControls({
         label="不喜欢这条回复"
         onClick={() => onSubmitFeedback("negative")}
       />
-    </div>
+    </>
   );
 }
 

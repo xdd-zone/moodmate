@@ -4,6 +4,7 @@ import { MoodmateAvatar } from "./avatar";
 import type { MoodmateProfile } from "./models";
 
 type MoodmateInfoPanelProps = {
+  actions?: ReactNode;
   children: ReactNode;
   isGroup?: boolean;
   profile: MoodmateProfile;
@@ -15,6 +16,7 @@ type MoodmateInfoSectionProps = {
 };
 
 export function MoodmateInfoPanel({
+  actions,
   children,
   isGroup = false,
   profile,
@@ -31,6 +33,9 @@ export function MoodmateInfoPanel({
         />
         <h2 className="moodmate-info__name">{profile.name}</h2>
         <p className="moodmate-info__headline">{profile.headline}</p>
+        {actions ? (
+          <div className="moodmate-info__actions">{actions}</div>
+        ) : null}
       </header>
       <div className="moodmate-scroll moodmate-info__content">{children}</div>
     </>

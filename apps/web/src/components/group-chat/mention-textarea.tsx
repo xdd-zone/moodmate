@@ -2,7 +2,14 @@
 
 import type { AgentGroupChatMember } from "@repo/contracts";
 import { Bot } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 type MentionContext = {
   start: number;
@@ -41,13 +48,17 @@ type MentionTextareaProps = {
   disabled?: boolean;
 };
 
-export function MentionTextarea({
-  value,
-  onChange,
-  onSend,
-  members,
-  disabled,
-}: MentionTextareaProps) {
+export type MentionTextareaHandle = {
+  insertMention: (member?: AgentGroupChatMember) => void;
+};
+
+export const MentionTextarea = forwardRef<
+  MentionTextareaHandle,
+  MentionTextareaProps
+>(function MentionTextarea(
+  { value, onChange, onSend, members, disabled },
+  ref,
+) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mentionContext, setMentionContext] = useState<MentionContext | null>(
     null,
@@ -111,6 +122,41 @@ export function MentionTextarea({
     }
   }, [value]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      insertMention(member) {
+        const textarea = textareaRef.current;
+        const selectionStart = textarea?.selectionStart ?? value.length;
+        const selectionEnd = textarea?.selectionEnd ?? selectionStart;
+        const needsSpace =
+          selectionStart > 0 && !/\s/u.test(value[selectionStart - 1] ?? "");
+        const leadingSpace = needsSpace ? " " : "";
+        const mentionText = member ? `@${member.name} ` : "@";
+        const insertText = leadingSpace + mentionText;
+        const nextValue =
+          value.slice(0, selectionStart) +
+          insertText +
+          value.slice(selectionEnd);
+        const cursor = selectionStart + insertText.length;
+
+        pendingCursorRef.current = cursor;
+        onChange(nextValue);
+        setMentionIndex(0);
+        setMentionContext(
+          member
+            ? null
+            : {
+                start: selectionStart + leadingSpace.length,
+                end: cursor,
+                query: "",
+              },
+        );
+      },
+    }),
+    [onChange, value],
+  );
+
   useEffect(() => {
     const textarea = textareaRef.current;
 
@@ -130,7 +176,7 @@ export function MentionTextarea({
     refreshMentionContext(nextValue, event.target.selectionStart);
   }
 
-  function insertMention(member: AgentGroupChatMember) {
+  function selectMention(member: AgentGroupChatMember) {
     if (!mentionContext) {
       return;
     }
@@ -167,7 +213,7 @@ export function MentionTextarea({
         event.preventDefault();
         const candidate = mentionCandidates[mentionIndex];
         if (candidate) {
-          insertMention(candidate);
+          selectMention(candidate);
         }
         return;
       }
@@ -208,7 +254,7 @@ export function MentionTextarea({
                 <li key={member.id}>
                   <button
                     aria-current={index === mentionIndex}
-                    onClick={() => insertMention(member)}
+                    onClick={() => selectMention(member)}
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setMentionIndex(index)}
                     type="button"
@@ -244,4 +290,4 @@ export function MentionTextarea({
       />
     </div>
   );
-}
+});

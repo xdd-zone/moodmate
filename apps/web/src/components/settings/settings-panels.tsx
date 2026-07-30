@@ -24,7 +24,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import {
   deleteCompanionMemory,
@@ -45,6 +45,23 @@ const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+function subscribeToRootTheme(onStoreChange: () => void): () => void {
+  const observer = new MutationObserver(onStoreChange);
+  observer.observe(document.documentElement, {
+    attributeFilter: ["data-theme"],
+    attributes: true,
+  });
+  return () => observer.disconnect();
+}
+
+function getRootTheme(): "latte" | "mocha" {
+  return document.documentElement.dataset.theme === "mocha" ? "mocha" : "latte";
+}
+
+function getServerTheme(): "latte" {
+  return "latte";
+}
 
 function PanelShell({
   children,
@@ -195,14 +212,22 @@ export function GeneralPanel() {
 }
 
 export function AppearancePanel() {
+  const theme = useCurrentTheme();
+  const [compactBubbles, setCompactBubbles] = useState(false);
+
   return (
     <PanelShell
       description="选择你偏好的主题。设置会记住在本设备。"
       title="外观"
     >
       <div className="moodmate-settings-appearance">
-        <div aria-label="主题预览" className="moodmate-theme-cards">
-          <div className="moodmate-theme-card moodmate-theme-card--mocha">
+        <div aria-label="选择主题" className="moodmate-theme-cards">
+          <div
+            aria-label={`Mocha 暗色${theme === "mocha" ? "，当前主题" : ""}`}
+            className={`moodmate-theme-card moodmate-theme-card--mocha ${
+              theme === "mocha" ? "moodmate-theme-card--active" : ""
+            }`}
+          >
             <div className="moodmate-theme-preview moodmate-theme-preview--mocha">
               <span className="moodmate-theme-preview__rail" />
               <span className="moodmate-theme-preview__list" />
@@ -211,8 +236,20 @@ export function AppearancePanel() {
               </span>
             </div>
             <span>Mocha 暗色</span>
+            {theme !== "mocha" ? (
+              <ThemeToggle
+                aria-label="选择 Mocha 暗色"
+                className="moodmate-theme-card__control"
+                variant="ghost"
+              />
+            ) : null}
           </div>
-          <div className="moodmate-theme-card moodmate-theme-card--latte">
+          <div
+            aria-label={`Latte 亮色${theme === "latte" ? "，当前主题" : ""}`}
+            className={`moodmate-theme-card moodmate-theme-card--latte ${
+              theme === "latte" ? "moodmate-theme-card--active" : ""
+            }`}
+          >
             <div className="moodmate-theme-preview moodmate-theme-preview--latte">
               <span className="moodmate-theme-preview__rail" />
               <span className="moodmate-theme-preview__list" />
@@ -221,32 +258,40 @@ export function AppearancePanel() {
               </span>
             </div>
             <span>Latte 亮色</span>
+            {theme !== "latte" ? (
+              <ThemeToggle
+                aria-label="选择 Latte 亮色"
+                className="moodmate-theme-card__control"
+                variant="ghost"
+              />
+            ) : null}
           </div>
         </div>
         <SettingRow
           action={
-            <ThemeToggle
-              className="moodmate-settings-theme-toggle"
-              variant="outline"
-            />
-          }
-          description="切换后立即生效，并在刷新后保留"
-          label="界面主题"
-        />
-        <SettingRow
-          action={
             <SettingsSwitch
-              checked={false}
-              disabled
+              checked={compactBubbles}
               label="气泡紧凑模式"
-              onChange={() => undefined}
+              onChange={() => setCompactBubbles((current) => !current)}
             />
           }
-          description="紧凑模式暂未接入"
+          description={
+            compactBubbles
+              ? "当前页面按紧凑模式演示，刷新后恢复默认"
+              : "减小消息间距，一屏显示更多内容"
+          }
           label="气泡紧凑模式"
         />
       </div>
     </PanelShell>
+  );
+}
+
+function useCurrentTheme(): "latte" | "mocha" {
+  return useSyncExternalStore(
+    subscribeToRootTheme,
+    getRootTheme,
+    getServerTheme,
   );
 }
 

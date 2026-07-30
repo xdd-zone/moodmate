@@ -37,11 +37,6 @@ type FriendsListProps = {
   profile: WebUserProfile;
 };
 
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  month: "short",
-  day: "numeric",
-});
-
 export function FriendsList({ profile }: FriendsListProps) {
   const queryClient = useQueryClient();
   const agentsQuery = useQuery(userAgentsQueryOptions());
@@ -251,10 +246,15 @@ function FriendCard({
 
   return (
     <article className="moodmate-contact-card">
+      <Link
+        aria-label={`查看 ${agent.name} 的档案`}
+        className="moodmate-contact-card__surface"
+        href={`/friends/${agent.id}`}
+      />
       <div className="moodmate-contact-card__head">
         <MoodmateAvatar onSurface profile={profile} showStatus />
         <div>
-          <Link href={`/friends/${agent.id}`}>{agent.name}</Link>
+          <strong>{agent.name}</strong>
           <p>{profile.headline}</p>
         </div>
       </div>
@@ -267,9 +267,6 @@ function FriendCard({
         <span className="moodmate-relationship-pill">
           <Check aria-hidden="true" />
           亲密连结
-        </span>
-        <span className="moodmate-contact-card__updated">
-          {dateFormatter.format(agent.updatedAtMs)}
         </span>
         <div className="moodmate-contact-card__actions">
           <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { Send, Square } from "lucide-react";
+import { Paperclip, Send, Smile, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
@@ -58,6 +58,15 @@ export function ChatComposer({
   return (
     <form className="moodmate-composer" onSubmit={handleSubmit}>
       <div className="moodmate-composer__box">
+        <button
+          aria-label="表情暂未开放"
+          className="moodmate-composer__tool"
+          disabled
+          title="表情暂未开放"
+          type="button"
+        >
+          <Smile aria-hidden="true" />
+        </button>
         <label className="sr-only" htmlFor="chat-message">
           输入消息
         </label>
@@ -70,6 +79,15 @@ export function ChatComposer({
           rows={1}
           value={value}
         />
+        <button
+          aria-label="附件暂未开放"
+          className="moodmate-composer__tool"
+          disabled
+          title="附件暂未开放"
+          type="button"
+        >
+          <Paperclip aria-hidden="true" />
+        </button>
         {isSending ? (
           <button
             aria-label="停止生成"

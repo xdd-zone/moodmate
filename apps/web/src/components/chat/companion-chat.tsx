@@ -6,7 +6,7 @@ import type {
   CompanionMessageFeedbackRating,
 } from "@repo/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { TextStreamChatTransport, type UIMessage } from "ai";
+import { TextStreamChatTransport } from "ai";
 import {
   History,
   LoaderCircle,
@@ -22,13 +22,14 @@ import {
   companionChatKeys,
   submitCompanionMessageFeedbackMutationOptions,
 } from "@/src/api/chat.query";
-import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
 import type { MoodmateProfile } from "@/src/components/moodmate/models";
 import { getWebClientEnv } from "@/src/env/client";
 import { fetchWithClientSession } from "@/src/lib/http";
 
 import { ChatComposer } from "./chat-composer";
-import { ChatConversation } from "./chat-conversation";
+import { ChatConversation, type CompanionUiMessage } from "./chat-conversation";
+import { ChatHeaderTyping } from "./chat-message-details";
+import { FriendAvatarMenu } from "./friend-avatar-menu";
 
 type CompanionChatPaneProps = {
   assistantProfile: MoodmateProfile;
@@ -38,7 +39,7 @@ type CompanionChatPaneProps = {
   serverConversation: CompanionConversationResponse;
 };
 
-function getRelationshipStageLabel(messageCount: number) {
+export function getRelationshipStageLabel(messageCount: number) {
   if (messageCount >= 80) return "亲密连结";
   if (messageCount >= 36) return "稳定信任";
   if (messageCount >= 16) return "舒适陪伴";
@@ -57,7 +58,7 @@ export function CompanionChatPane({
   const [draft, setDraft] = useState("");
   const transport = useMemo(
     () =>
-      new TextStreamChatTransport<UIMessage>({
+      new TextStreamChatTransport<CompanionUiMessage>({
         api: `${getWebClientEnv().NEXT_PUBLIC_API_BASE_URL}/rpc/chat/companion`,
         fetch: fetchWithClientSession,
         prepareSendMessagesRequest({ api, body, messages }) {
@@ -81,7 +82,7 @@ export function CompanionChatPane({
     setMessages,
     status,
     stop,
-  } = useChat({
+  } = useChat<CompanionUiMessage>({
     id: serverConversation.conversationId,
     messages: serverConversation.messages.map(toUiMessage),
     onFinish({ isAbort, isDisconnect, isError }) {
@@ -136,7 +137,7 @@ export function CompanionChatPane({
 
     clearError();
     setDraft("");
-    void sendMessage({ text });
+    void sendMessage({ metadata: { createdAtMs: Date.now() }, text });
   }
 
   async function loadMoreHistory() {
@@ -186,9 +187,10 @@ export function CompanionChatPane({
         >
           <PanelLeft aria-hidden="true" />
         </button>
-        <MoodmateAvatar
+        <FriendAvatarMenu
           onSurface
           profile={assistantProfile}
+          profileHref="/friends"
           showStatus
           size="sm"
         />
@@ -199,7 +201,11 @@ export function CompanionChatPane({
               {getRelationshipStageLabel(serverConversation.messageCount)}
             </span>
           </h1>
-          <p>在线</p>
+          {isSending ? (
+            <ChatHeaderTyping label={`${assistantProfile.name}正在输入`} />
+          ) : (
+            <p>在线</p>
+          )}
         </div>
         <div className="moodmate-chat__actions">
           <button
@@ -298,9 +304,10 @@ export function CompanionChatPane({
 
 function toUiMessage(
   message: CompanionConversationResponse["messages"][number],
-): UIMessage {
+): CompanionUiMessage {
   return {
     id: message.id,
+    metadata: { createdAtMs: message.createdAtMs },
     parts: [{ text: message.content, type: "text" }],
     role: message.role,
   };

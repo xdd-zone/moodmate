@@ -4,6 +4,7 @@ import type { UserAgent, WebUserProfile } from "@repo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  BellOff,
   Check,
   LoaderCircle,
   MessageCircle,
@@ -178,10 +179,10 @@ export function FriendDetail({ friendId, profile }: FriendDetailProps) {
               </div>
             </div>
 
-            <p className="moodmate-friend-placeholder-label">档案示例数据</p>
             <div className="moodmate-friend-stats">
               {friendProfilePlaceholders.stats.map((stat) => (
                 <article className="moodmate-friend-stat" key={stat.label}>
+                  <span className="moodmate-friend-stat__sample">示例</span>
                   <strong>{stat.value}</strong>
                   <span>{stat.label}</span>
                 </article>
@@ -268,19 +269,33 @@ export function FriendDetail({ friendId, profile }: FriendDetailProps) {
                   {actionError}
                 </p>
               ) : null}
-              <button
-                className="moodmate-button moodmate-button--danger"
-                disabled={deleteMutation.isPending}
-                onClick={() => handleDelete(agent)}
-                type="button"
-              >
-                {deleteMutation.isPending ? (
-                  <LoaderCircle aria-hidden="true" className="moodmate-spin" />
-                ) : (
-                  <Trash2 aria-hidden="true" />
-                )}
-                暂别这位朋友
-              </button>
+              <div className="moodmate-friend-more-actions">
+                <button
+                  className="moodmate-button moodmate-button--secondary"
+                  disabled
+                  title="消息免打扰暂未开放"
+                  type="button"
+                >
+                  <BellOff aria-hidden="true" />
+                  消息免打扰
+                </button>
+                <button
+                  className="moodmate-button moodmate-button--danger"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => handleDelete(agent)}
+                  type="button"
+                >
+                  {deleteMutation.isPending ? (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="moodmate-spin"
+                    />
+                  ) : (
+                    <Trash2 aria-hidden="true" />
+                  )}
+                  暂别这位朋友
+                </button>
+              </div>
             </section>
           </div>
         </div>

@@ -8,12 +8,17 @@ import type {
 } from "@repo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AtSign,
+  BellOff,
+  Clock3,
+  Edit3,
   LoaderCircle,
   MoreVertical,
   PanelLeft,
   PanelRight,
   Search,
   Send,
+  Smile,
   Trash2,
   UserPlus,
 } from "lucide-react";
@@ -33,6 +38,7 @@ import {
   getMemberProfile,
 } from "@/src/components/chat/chat-models";
 import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
+import { classNames } from "@/src/components/moodmate/class-names";
 import { MoodmateDialog } from "@/src/components/moodmate/dialog";
 import {
   MoodmateInfoPanel,
@@ -40,16 +46,23 @@ import {
 } from "@/src/components/moodmate/info-panel";
 import type { MoodmateProfile } from "@/src/components/moodmate/models";
 
-import { MentionTextarea } from "./mention-textarea";
+import {
+  ChatDateDivider,
+  ChatHeaderTyping,
+  ChatTypingDots,
+  CopyMessageButton,
+  formatMessageTime,
+  isSameLocalDate,
+} from "@/src/components/chat/chat-message-details";
+import { FriendAvatarMenu } from "@/src/components/chat/friend-avatar-menu";
+
+import {
+  MentionTextarea,
+  type MentionTextareaHandle,
+} from "./mention-textarea";
 
 const MAX_MEMBERS = 6;
 const RECENT_MESSAGES_LIMIT = 50;
-
-const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
-  hour: "2-digit",
-  hour12: false,
-  minute: "2-digit",
-});
 
 type GroupChatPaneProps = {
   detail: AgentGroupChatDetail;
@@ -79,12 +92,14 @@ export function GroupChatPane({
       : null,
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mentionTextareaRef = useRef<MentionTextareaHandle>(null);
   const activeMembers = detail.members.filter(
     (member) => member.status === "active",
   );
+  const totalMemberCount = activeMembers.length + 1;
   const groupProfile = {
     ...getGroupProfile(detail.groupChat),
-    headline: `${activeMembers.length} 位成员`,
+    headline: `${totalMemberCount} 位成员`,
   };
   const canSend = draft.trim().length > 0 && !sendMutation.isPending;
 
@@ -154,7 +169,11 @@ export function GroupChatPane({
         <MoodmateAvatar isGroup onSurface profile={groupProfile} size="sm" />
         <div className="moodmate-chat__heading">
           <h1>{detail.groupChat.title}</h1>
-          <p>{activeMembers.length} 位成员</p>
+          {sendMutation.isPending ? (
+            <ChatHeaderTyping label="朋友正在输入" />
+          ) : (
+            <p>{totalMemberCount} 位成员</p>
+          )}
         </div>
         <div className="moodmate-chat__actions">
           <button
@@ -220,29 +239,87 @@ export function GroupChatPane({
                 还没有消息，先和大家打个招呼。
               </p>
             ) : (
-              detail.recentMessages.map((message) => (
-                <GroupMessage
-                  groupProfile={groupProfile}
-                  key={message.id}
-                  message={message}
-                  userProfile={profile}
-                />
-              ))
+              detail.recentMessages.map((message, index) => {
+                const previousMessage = detail.recentMessages[index - 1];
+                const startsNewDay =
+                  !previousMessage ||
+                  !isSameLocalDate(
+                    previousMessage.createdAtMs,
+                    message.createdAtMs,
+                  );
+
+                return (
+                  <div className="moodmate-message-row" key={message.id}>
+                    {startsNewDay ? (
+                      <ChatDateDivider createdAtMs={message.createdAtMs} />
+                    ) : null}
+                    <GroupMessage
+                      groupProfile={groupProfile}
+                      isStacked={
+                        !startsNewDay &&
+                        isSameGroupSender(previousMessage, message)
+                      }
+                      message={message}
+                      member={activeMembers.find(
+                        (member) => member.agentId === message.agentId,
+                      )}
+                      onMention={(member) =>
+                        mentionTextareaRef.current?.insertMention(member)
+                      }
+                      userProfile={profile}
+                    />
+                  </div>
+                );
+              })
             )}
+            {sendMutation.isPending ? (
+              <div className="moodmate-message moodmate-message--incoming moodmate-message--stacked">
+                <span
+                  aria-hidden="true"
+                  className="moodmate-message__avatar-placeholder"
+                />
+                <div className="moodmate-message__typing">
+                  <ChatTypingDots label="朋友正在回复" />
+                </div>
+              </div>
+            ) : null}
             <div ref={messagesEndRef} />
           </div>
         </div>
 
         <div className="moodmate-group-composer">
-          <p>输入 @ 可指定某位朋友优先回复</p>
+          <p>
+            <AtSign aria-hidden="true" />
+            输入 @ 可指定某位朋友优先回复
+          </p>
           <div className="moodmate-group-composer__box">
+            <button
+              aria-label="表情暂未开放"
+              className="moodmate-composer__tool"
+              disabled
+              title="表情暂未开放"
+              type="button"
+            >
+              <Smile aria-hidden="true" />
+            </button>
             <MentionTextarea
               disabled={sendMutation.isPending}
               members={activeMembers}
               onChange={setDraft}
               onSend={handleSend}
+              ref={mentionTextareaRef}
               value={draft}
             />
+            <button
+              aria-label="提及朋友"
+              className="moodmate-composer__tool"
+              disabled={sendMutation.isPending}
+              onClick={() => mentionTextareaRef.current?.insertMention()}
+              title="提及朋友"
+              type="button"
+            >
+              <AtSign aria-hidden="true" />
+            </button>
             <button
               aria-label="发送消息"
               className="moodmate-composer__send"
@@ -266,11 +343,17 @@ export function GroupChatPane({
 
 function GroupMessage({
   groupProfile,
+  isStacked,
   message,
+  member,
+  onMention,
   userProfile,
 }: {
   groupProfile: MoodmateProfile;
+  isStacked: boolean;
   message: AgentGroupChatMessage;
+  member: AgentGroupChatMember | undefined;
+  onMention: (member: AgentGroupChatMember) => void;
   userProfile: MoodmateProfile;
 }) {
   if (message.senderType === "system") {
@@ -285,16 +368,34 @@ function GroupMessage({
         id: message.agentId ?? message.id,
         name: message.agentName ?? groupProfile.name,
       });
-
   return (
     <div
-      className={`moodmate-message ${
-        isUser ? "moodmate-message--outgoing" : "moodmate-message--incoming"
-      }`}
+      className={classNames(
+        "moodmate-message",
+        isUser ? "moodmate-message--outgoing" : "moodmate-message--incoming",
+        isStacked && "moodmate-message--stacked",
+      )}
     >
-      <MoodmateAvatar onSurface={!isUser} profile={senderProfile} size="sm" />
+      {isStacked ? (
+        <span
+          aria-hidden="true"
+          className="moodmate-message__avatar-placeholder"
+        />
+      ) : isUser ? (
+        <MoodmateAvatar profile={senderProfile} size="sm" />
+      ) : (
+        <FriendAvatarMenu
+          onMention={member ? () => onMention(member) : undefined}
+          onSurface
+          profile={senderProfile}
+          profileHref={
+            message.agentId ? `/friends/${message.agentId}` : undefined
+          }
+          size="sm"
+        />
+      )}
       <div className="moodmate-message__content">
-        {!isUser ? (
+        {!isUser && !isStacked ? (
           <span className="moodmate-message__sender">
             {message.agentName ?? "群聊成员"}
           </span>
@@ -307,19 +408,41 @@ function GroupMessage({
           }`}
         >
           {message.content}
-          <time>{timeFormatter.format(new Date(message.createdAtMs))}</time>
+          <time dateTime={new Date(message.createdAtMs).toISOString()}>
+            {formatMessageTime(message.createdAtMs)}
+          </time>
+        </div>
+        <div className="moodmate-message__feedback">
+          <CopyMessageButton text={message.content} />
         </div>
       </div>
     </div>
   );
 }
 
+function isSameGroupSender(
+  previousMessage: AgentGroupChatMessage | undefined,
+  message: AgentGroupChatMessage,
+): boolean {
+  if (!previousMessage || previousMessage.senderType !== message.senderType) {
+    return false;
+  }
+
+  if (message.senderType === "agent") {
+    return previousMessage.agentId === message.agentId;
+  }
+
+  return message.senderType !== "system";
+}
+
 export function GroupChatInformation({
   detail,
   groupChatId,
+  profile,
 }: {
   detail: AgentGroupChatDetail;
   groupChatId: string;
+  profile: MoodmateProfile;
 }) {
   const queryClient = useQueryClient();
   const removeMutation = useMutation(
@@ -329,9 +452,10 @@ export function GroupChatInformation({
   const activeMembers = detail.members.filter(
     (member) => member.status === "active",
   );
+  const totalMemberCount = activeMembers.length + 1;
   const groupProfile = {
     ...getGroupProfile(detail.groupChat),
-    headline: `${activeMembers.length} 位成员`,
+    headline: `${totalMemberCount} 位成员`,
   };
 
   async function handleRemove(member: AgentGroupChatMember) {
@@ -342,22 +466,47 @@ export function GroupChatInformation({
 
   return (
     <>
-      <MoodmateInfoPanel isGroup profile={groupProfile}>
+      <MoodmateInfoPanel
+        actions={
+          <>
+            <button
+              className="moodmate-button moodmate-button--secondary"
+              disabled
+              title="群聊静音暂未开放"
+              type="button"
+            >
+              <BellOff aria-hidden="true" />
+              静音
+            </button>
+            <button
+              className="moodmate-button moodmate-button--secondary"
+              disabled
+              title="编辑群组暂未开放"
+              type="button"
+            >
+              <Edit3 aria-hidden="true" />
+              编辑群组
+            </button>
+          </>
+        }
+        isGroup
+        profile={groupProfile}
+      >
         <MoodmateInfoSection title="群简介">
           <p>
             {detail.groupChat.summary?.trim() ||
               "和几位朋友一起聊聊，每个人都会从自己的角度回应。"}
           </p>
         </MoodmateInfoSection>
-        <MoodmateInfoSection
-          title={`成员 · ${activeMembers.length} / ${MAX_MEMBERS}`}
-        >
+        <MoodmateInfoSection title={`成员 · ${totalMemberCount}`}>
           <div className="moodmate-member-list">
             {activeMembers.map((member) => (
               <div className="moodmate-member" key={member.id}>
-                <MoodmateAvatar
+                <FriendAvatarMenu
+                  onRemove={() => void handleRemove(member)}
                   onSurface
                   profile={getMemberProfile(member)}
+                  profileHref={`/friends/${member.agentId}`}
                   size="xs"
                 />
                 <div>
@@ -376,6 +525,16 @@ export function GroupChatInformation({
                 </button>
               </div>
             ))}
+            <div className="moodmate-member">
+              <MoodmateAvatar onSurface profile={profile} size="xs" />
+              <div>
+                <strong>
+                  {profile.name}
+                  <span className="moodmate-member__role">群主</span>
+                </strong>
+                <span>你</span>
+              </div>
+            </div>
           </div>
           <button
             className="moodmate-button moodmate-button--secondary moodmate-info__invite"
@@ -386,6 +545,32 @@ export function GroupChatInformation({
             <UserPlus aria-hidden="true" />
             邀请朋友
           </button>
+        </MoodmateInfoSection>
+        <MoodmateInfoSection title="群设置">
+          <div className="moodmate-info-setting">
+            <BellOff aria-hidden="true" />
+            <span>消息免打扰</span>
+            <button
+              aria-checked="false"
+              aria-label="消息免打扰暂未开放"
+              className="moodmate-settings-switch"
+              disabled
+              role="switch"
+              type="button"
+            />
+          </div>
+          <div className="moodmate-info-setting">
+            <Clock3 aria-hidden="true" />
+            <span>朋友依次发言</span>
+            <button
+              aria-checked="true"
+              aria-label="朋友依次发言"
+              className="moodmate-settings-switch moodmate-settings-switch--checked"
+              disabled
+              role="switch"
+              type="button"
+            />
+          </div>
         </MoodmateInfoSection>
       </MoodmateInfoPanel>
 

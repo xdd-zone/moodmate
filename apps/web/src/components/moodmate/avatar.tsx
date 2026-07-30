@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { MoodmateProfile } from "./models";
 import { classNames } from "./class-names";
 
-type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
+export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 type AvatarStyle = CSSProperties & {
   "--mm-avatar-end": string;

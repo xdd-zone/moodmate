@@ -52,7 +52,7 @@
 - `default` 必须传 `list`，列为 `72px 340px minmax(0, 1fr)`。
 - `has-info` 必须传 `list` 和 `information`，末列为 `300px`。
 - `no-list` 不接收 `list` 和 `information`，列为 `72px minmax(0, 1fr)`。
-- `1100px` 以下隐藏资料栏，`820px` 以下把列表缩到 `280px`，`640px` 以下隐藏导航栏和列表，只显示主区。
+- `1100px` 以下默认隐藏资料栏，头部资料按钮打开右侧 `300px` 抽屉；`820px` 以下把列表缩到 `280px`；`640px` 以下隐藏导航栏和列表，资料按钮改为打开全屏资料视图。
 
 ## 使用检查
 
@@ -61,7 +61,8 @@
 - 会话条目使用语义路由 `href`，当前项传 `active`，不要在组件里读路由或请求数据。
 - 图标按钮使用 lucide 图标并提供 `aria-label` 或 `title`。
 - 菜单和 dialog 可以用 Escape 关闭；菜单靠近视口边缘时不能溢出。
-- 资料栏的“关于”只使用短的展示文案，不直接渲染 `conversation.summary` 等完整聊天记录；群聊标题下的成员数必须来自当前 `active` 成员。
+- 资料栏的“关于”只使用短的展示文案，不直接渲染 `conversation.summary` 等完整聊天记录。
+- 群聊头部、头像副标题和成员栏数量必须使用同一口径：当前 `active` 朋友成员数加当前用户；邀请上限仍只计算 `active` 朋友成员。
 - 头像菜单关闭时同时设置 `hidden` 和 `aria-hidden="true"`，避免隐藏菜单进入可访问树和键盘焦点顺序。
 - 改动后依次运行 `pnpm check-types`、`pnpm lint`、`pnpm format:check` 和 `pnpm --filter web build`。
 

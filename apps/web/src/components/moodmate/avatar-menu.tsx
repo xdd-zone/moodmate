@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
-import { MoodmateAvatar } from "./avatar";
+import { MoodmateAvatar, type AvatarSize } from "./avatar";
 import { classNames } from "./class-names";
 import type { MoodmateProfile } from "./models";
 
@@ -20,9 +20,13 @@ export type MoodmateAvatarMenuItem = {
 };
 
 type MoodmateAvatarMenuProps = {
+  compact?: boolean;
   items: MoodmateAvatarMenuItem[];
   label: string;
+  onSurface?: boolean;
   profile: MoodmateProfile;
+  showStatus?: boolean;
+  size?: AvatarSize;
 };
 
 type MenuPosition = {
@@ -33,9 +37,13 @@ type MenuPosition = {
 const viewportGap = 8;
 
 export function MoodmateAvatarMenu({
+  compact = false,
   items,
   label,
+  onSurface = false,
   profile,
+  showStatus = false,
+  size = "sm",
 }: MoodmateAvatarMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -124,13 +132,21 @@ export function MoodmateAvatarMenu({
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label={label}
-        className="moodmate-avatar-menu__trigger"
+        className={classNames(
+          "moodmate-avatar-menu__trigger",
+          compact && `moodmate-avatar-menu__trigger--compact-${size}`,
+        )}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         ref={triggerRef}
         type="button"
       >
-        <MoodmateAvatar profile={profile} size="sm" />
+        <MoodmateAvatar
+          onSurface={onSurface}
+          profile={profile}
+          showStatus={showStatus}
+          size={size}
+        />
       </button>
       <div
         aria-label={label}

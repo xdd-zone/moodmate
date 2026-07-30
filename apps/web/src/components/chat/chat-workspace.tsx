@@ -7,7 +7,19 @@ import type {
   WebUserProfile,
 } from "@repo/contracts";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { LogOut, PanelLeft, PanelRight, Plus, Settings } from "lucide-react";
+import {
+  BellOff,
+  Brain,
+  Images,
+  LogOut,
+  MessageCirclePlus,
+  PanelLeft,
+  PanelRight,
+  Plus,
+  Settings,
+  UserRound,
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -39,7 +51,7 @@ import {
   toDirectConversation,
   toGroupConversation,
 } from "./chat-models";
-import { CompanionChatPane } from "./companion-chat";
+import { CompanionChatPane, getRelationshipStageLabel } from "./companion-chat";
 
 export type ChatSelection = { id: string; kind: "direct" | "group" } | null;
 
@@ -122,7 +134,7 @@ export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
   }
 
   function handleInformationToggle() {
-    if (window.matchMedia("(max-width: 640px)").matches) {
+    if (window.matchMedia("(max-width: 1100px)").matches) {
       setIsMobileInformationOpen(true);
       setIsInformationVisible(true);
       return;
@@ -161,15 +173,25 @@ export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
   const list = (
     <MoodmateListPanel
       actions={
-        <button
-          aria-label="新建群聊"
-          className="moodmate-icon-button"
-          onClick={() => setIsCreateGroupOpen(true)}
-          title="新建群聊"
-          type="button"
-        >
-          <Plus aria-hidden="true" />
-        </button>
+        <>
+          <Link
+            aria-label="新对话"
+            className="moodmate-icon-button"
+            href="/friends"
+            title="新对话"
+          >
+            <MessageCirclePlus aria-hidden="true" />
+          </Link>
+          <button
+            aria-label="新建群聊"
+            className="moodmate-icon-button"
+            onClick={() => setIsCreateGroupOpen(true)}
+            title="新建群聊"
+            type="button"
+          >
+            <Plus aria-hidden="true" />
+          </button>
+        </>
       }
       searchInput={{
         "aria-label": "搜索会话",
@@ -227,6 +249,7 @@ export function ChatWorkspace({ profile, selection }: ChatWorkspaceProps) {
     conversation: conversationQuery.data,
     groupDetail: groupDetailQuery.data,
     onClose: () => setIsMobileInformationOpen(false),
+    profile: userProfile,
     selection,
   });
 
@@ -380,18 +403,24 @@ function renderInformation({
   conversation,
   groupDetail,
   onClose,
+  profile,
   selection,
 }: {
   companionProfile: ReturnType<typeof getCompanionProfile> | null;
   conversation: CompanionConversationResponse | undefined;
   groupDetail: AgentGroupChatDetail | undefined;
   onClose: () => void;
+  profile: ReturnType<typeof getCurrentUserProfile>;
   selection: ChatSelection;
 }) {
   if (selection?.kind === "group" && groupDetail) {
     return (
       <InformationPanelFrame onClose={onClose}>
-        <GroupChatInformation detail={groupDetail} groupChatId={selection.id} />
+        <GroupChatInformation
+          detail={groupDetail}
+          groupChatId={selection.id}
+          profile={profile}
+        />
       </InformationPanelFrame>
     );
   }
@@ -399,15 +428,54 @@ function renderInformation({
   if (selection?.kind === "direct" && conversation && companionProfile) {
     return (
       <InformationPanelFrame onClose={onClose}>
-        <MoodmateInfoPanel profile={companionProfile}>
-          <MoodmateInfoSection title="关于">
+        <MoodmateInfoPanel
+          actions={
+            <>
+              <Link
+                className="moodmate-button moodmate-button--secondary"
+                href="/friends"
+              >
+                <UserRound aria-hidden="true" />
+                查看详情
+              </Link>
+              <button
+                className="moodmate-button moodmate-button--secondary"
+                disabled
+                title="消息免打扰暂未开放"
+                type="button"
+              >
+                <BellOff aria-hidden="true" />
+                静音
+              </button>
+            </>
+          }
+          profile={companionProfile}
+        >
+          <MoodmateInfoSection title="简介">
             <p>
               愿意听你慢慢说，不急着给建议。会记住你在意的人和事，
               在你需要时轻轻提起。
             </p>
           </MoodmateInfoSection>
-          <MoodmateInfoSection title="关系">
-            <p>已经一起聊过 {conversation.messageCount} 条消息。</p>
+          <MoodmateInfoSection title="关系阶段">
+            <div className="moodmate-info-stat">
+              <span className="moodmate-relationship-pill">
+                {getRelationshipStageLabel(conversation.messageCount)}
+              </span>
+              <p>共 {conversation.messageCount} 条对话</p>
+            </div>
+          </MoodmateInfoSection>
+          <MoodmateInfoSection title="关于 TA 记得的">
+            <Link className="moodmate-info-link" href="/settings">
+              <Brain aria-hidden="true" />
+              在设置中查看记忆
+            </Link>
+          </MoodmateInfoSection>
+          <MoodmateInfoSection title="共享媒体">
+            <p className="moodmate-info-empty">
+              <Images aria-hidden="true" />
+              暂时没有共享媒体
+            </p>
           </MoodmateInfoSection>
         </MoodmateInfoPanel>
       </InformationPanelFrame>
