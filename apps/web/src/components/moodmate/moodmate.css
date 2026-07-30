@@ -760,6 +760,7 @@
   width: min(520px, calc(100vw - 32px));
   max-width: none;
   max-height: min(82vh, 760px);
+  margin: auto;
   padding: 0;
   border: 0;
   overflow: visible;
