@@ -1,0 +1,32 @@
+{
+  "id": "web-login-github-oauth",
+  "name": "web-login-github-oauth",
+  "title": "复刻 Web 登录页并接入 GitHub 登录",
+  "description": "按 Open Design 的 login.html 还原 Web 登录页，并恢复 API 已实现的 GitHub OAuth 登录流程。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": "apps/web",
+  "package": "web",
+  "priority": "P2",
+  "creator": "喜东东",
+  "assignee": "喜东东",
+  "createdAt": "2026-07-31",
+  "completedAt": "2026-07-31",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "apps/web/src/components/auth/login-form.tsx",
+    "apps/web/src/components/moodmate/moodmate.css",
+    "apps/web/src/auth/login-client.ts",
+    "apps/web/src/api/github-auth.api.ts",
+    "apps/web/app/(auth)/login/github/callback/page.tsx"
+  ],
+  "notes": "",
+  "meta": {}
+}
