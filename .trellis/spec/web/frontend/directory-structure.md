@@ -5,7 +5,7 @@
 ## 页面目录
 
 - `app/(site)/`：公开页面。当前 `/` 在 `app/(site)/page.tsx`，挂载欢迎和邮箱登录组件。
-- `app/(auth)/`：认证回调状态页。当前 `/auth/callback/github` 只说明 GitHub 登录暂未开放，不处理 ticket。
+- `app/(auth)/`：认证回调页。`/login/github/callback` 校验 GitHub OAuth state，并用一次性 ticket 创建 Web 登录态。
 - `app/(app)/`：登录后的业务页面。重构期间仍包含旧页面，后续子任务迁移到 `/chats`、`/friends` 和 `/settings`。
 - `app/layout.tsx`：Maple Mono、本地字体、全局 metadata 和 HTML 语言。
 - `app/globals.css`：Tailwind 4 入口、设计 token 和基础样式。
@@ -25,7 +25,7 @@ apps/web/src/
 └── providers/    # 全局 Provider
 ```
 
-这些目录当前还不存在。第一次增加业务请求时先建立统一 `http` 和 `src/api`，不要让页面各自直接写 `fetch()`。
+这些目录已经投入使用。新增业务请求继续复用统一 `http` 和 `src/api`，不要让页面各自直接写 `fetch()`。
 
 ## 依赖方向
 

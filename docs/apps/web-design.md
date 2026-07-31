@@ -14,8 +14,8 @@ moodmate 不是产品官网模板。首页直接展示欢迎状态，点击“�
 
 - 公开首页放在 `apps/web/app/(site)/page.tsx`。
 - 登录后的页面放在 `apps/web/app/(app)`：`/chats`、`/chats/[kind]/[id]`、`/friends`、`/friends/[id]` 和 `/settings`。
-- GitHub 回调状态页放在 `apps/web/app/(auth)/auth/callback/github/page.tsx`，只展示静态未开放状态。
-- 旧 `/login`、`/app`、`/group-chats`、`/agents` 和 `/login/github/callback` 不保留页面、别名或重定向。
+- GitHub 回调页放在 `apps/web/app/(auth)/login/github/callback/page.tsx`，URL 是 `/login/github/callback`。页面校验 OAuth state，并用一次性 ticket 创建登录态。
+- 旧 `/login`、`/app`、`/group-chats`、`/agents` 和 `/auth/callback/github` 不保留页面、别名或重定向。
 - 页面默认写服务端组件。只有需要浏览器事件、状态或本地存储时，才加 `"use client"`。
 
 ## 样式规则
