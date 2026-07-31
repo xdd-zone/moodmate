@@ -7,10 +7,9 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
-
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 43
-- **Last Active**: 2026-07-30
+- **Total Sessions**: 44
+- **Last Active**: 2026-07-31
 <!-- @@@/auto:current-status -->
 
 ---
@@ -18,11 +17,9 @@
 ## Active Documents
 
 <!-- @@@auto:active-documents -->
-
-| File           | Lines | Status |
-| -------------- | ----- | ------ |
-| `journal-1.md` | ~1477 | Active |
-
+| File | Lines | Status |
+|------|-------|--------|
+| `journal-1.md` | ~1501 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,8 +28,9 @@
 
 <!-- @@@auto:session-history -->
 
-| #   | Date       | Title                                                       | Commits                                               | Branch |
-| --- | ---------- | ----------------------------------------------------------- | ----------------------------------------------------- | ------ |
+| # | Date | Title | Commits | Branch |
+|---|------|-------|---------|--------|
+| 44 | 2026-07-31 | 复刻 Web 登录页并接入 GitHub OAuth | `91ad328`, `f237de5` | `main` |
 | 43  | 2026-07-30 | 优化 Web 聊天布局与界面细节                                 | `221cbee`                                             | `main` |
 | 42  | 2026-07-30 | 还原 Web 原型细节                                           | `9f347c4`                                             | `main` |
 | 41  | 2026-07-29 | 实现设置路由与静态面板                                      | `7098c2e`                                             | `main` |

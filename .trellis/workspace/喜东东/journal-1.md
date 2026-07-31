@@ -1464,3 +1464,38 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 ### Next Steps
 
 - None - task complete
+
+
+## Session 44: 复刻 Web 登录页并接入 GitHub OAuth
+
+**Date**: 2026-07-31
+**Task**: 复刻 Web 登录页并接入 GitHub OAuth
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+按 Open Design login.html 还原 Web 登录页交互与布局，恢复 GitHub OAuth authorize、callback 和 ticket 登录流程，移除旧 GitHub callback 路由。修正 Mocha 暗色主题下 Tab 与第三方登录按钮偏棕的问题，改用保留色相的 sRGB 混色。已通过 pnpm check、pnpm --filter web build、git diff --check，并用浏览器核对 Latte、Mocha 与页面控制台。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `91ad328` | (see git log) |
+| `f237de5` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
