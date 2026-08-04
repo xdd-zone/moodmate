@@ -1498,3 +1498,48 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 ### Next Steps
 
 - None - task complete
+
+## Session 45: 设计 Admin 菜单与 API 运营数据管理
+
+**Date**: 2026-08-04
+**Task**: 08-03-admin-api-operations-design
+**Package**: admin
+**Branch**: `main`
+
+### Summary
+
+Admin 后台从占位菜单改为接真实数据的运营视图，API 侧把每用户唯一的 companion 会话重建为按朋友区分的单聊，并为每次模型调用建立可归属、可汇总的调用记录。激活配置切到 openai-responses 协议后，五个分析场景的 json_schema 首次尝试即成功，一轮对话从 21 条调用记录（15 条失败）降到 6 条全部成功。
+
+### Main Changes
+
+- 菜单按概览、运营、AI、系统四组重排，删除情绪记录与系统设置占位页；新增 `/overview`、`/friends`、`/feedback` 与用户 Token 用量抽屉
+- API 新增 admin-operations、ai-usage、direct-chat、care 四个模块；migration 0016 重建 agents 与单聊、记忆、反馈、关怀、调用记录七张表
+- Web 补齐从朋友档案与头像菜单幂等发起单聊；主动关怀改为由用户指定的一位活跃朋友发送
+- `disableThinking` 按协议映射，responses 走 `reasoning.effort`；结构化输出统一关闭推理，避免推理吃掉输出预算导致 JSON 截断
+- `json_object` 方法注入含 json 字样与 schema 的系统消息；LLM 配置测试从单一连通性扩展为五项能力检测
+- `ai_call_records` 增加 `error_message` 保留上游原始报错；失败率改为按 operation 聚合；workerd 掐断连接映射为 `aborted`
+- 修复群聊 `memberCount` 恒为 0：`sql` 模板里的关联条件改用 `eq()` 并补 `as()` 别名
+- 修复 admin build 失败：`next build` 与 dev 统一使用 webpack
+
+### Git Commits
+
+| Hash      | Message                                                  |
+| --------- | -------------------------------------------------------- |
+| `a76345b` | feat: rebuild admin operations and per-agent direct chat |
+
+### Testing
+
+- `pnpm check-types`、`pnpm lint`、`pnpm format:check`、web build、admin build 全部通过
+- 单聊与群聊各跑通一轮真实对话，六条调用记录均 `attempt_index = 0` 且无失败
+- 朋友用量与系统流程用量之和等于用户总量；`usage_status = unavailable` 的记录三个 token 字段均为 NULL
+- 制造一次 structured output 降级验证失败率口径：按记录行数 29.4%，按 operation 0%
+- LLM 能力检测五项在 `disableThinking` 两种取值下全部通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 90 秒上游 timeout 在群聊的 LangChain / LangGraph 包装下未生效，单次调用没有有效超时上限
+- 项目仍无测试框架，本次验证全部为手动执行
