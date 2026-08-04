@@ -31,7 +31,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 
 import {
@@ -46,6 +46,7 @@ import {
   adminAgentsQueryOptions,
   operationsKeys,
 } from "@/src/api/operations.query";
+import { Drawer } from "@/src/components/ui/drawer";
 
 const time = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
@@ -297,7 +298,6 @@ export function FriendsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const agentsQuery = useQuery(
     adminAgentsQueryOptions({
       page,
@@ -705,9 +705,8 @@ export function FriendsPage() {
           </footer>
         </div>
       )}
-      <dialog
-        className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-foreground backdrop:bg-black/30 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:w-[min(38rem,100vw)]"
-        ref={dialogRef}
+      <Drawer
+        maxWidth="max-w-[38rem]"
         onClose={() => setDrawerOpen(false)}
         open={drawerOpen}
       >
@@ -720,16 +719,16 @@ export function FriendsPage() {
           onSubmit={handleSubmit}
           pending={isBusy}
         />
-      </dialog>
-      <dialog
-        className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-foreground backdrop:bg-black/30 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:w-[min(38rem,100vw)]"
+      </Drawer>
+      <Drawer
+        maxWidth="max-w-[38rem]"
         onClose={() => setDetail(null)}
         open={Boolean(detail)}
       >
         {detail ? (
           <AgentDetail detail={detail} onClose={() => setDetail(null)} />
         ) : null}
-      </dialog>
+      </Drawer>
     </section>
   );
 }

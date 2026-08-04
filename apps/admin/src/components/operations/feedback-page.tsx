@@ -21,6 +21,7 @@ import {
   adminFeedbacksQueryOptions,
   adminFeedbackStatusMutationOptions,
 } from "@/src/api/operations.query";
+import { Drawer } from "@/src/components/ui/drawer";
 const time = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -180,20 +181,24 @@ export function FeedbackPage() {
           )}
         </TableBody>
       </Table>
-      {selected ? (
-        <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-lg overflow-y-auto border-l border-border bg-background p-6 shadow-xl">
-          <div className="flex items-center">
-            <h2 className="text-lg font-semibold">反馈详情</h2>
-            <Button
-              aria-label="关闭反馈详情"
-              className="ml-auto"
-              onClick={() => setSelected("")}
-              size="icon"
-              variant="ghost"
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
+      <Drawer
+        maxWidth="max-w-lg"
+        onClose={() => setSelected("")}
+        open={Boolean(selected)}
+      >
+        <div className="flex items-center border-b border-border p-6">
+          <h2 className="text-lg font-semibold">反馈详情</h2>
+          <Button
+            aria-label="关闭反馈详情"
+            className="ml-auto"
+            onClick={() => setSelected("")}
+            size="icon"
+            variant="ghost"
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6">
           {detail.isPending ? (
             <p className="mt-6 text-sm text-muted">正在读取关联消息</p>
           ) : detail.data ? (
@@ -240,8 +245,8 @@ export function FeedbackPage() {
           ) : (
             <p className="mt-6 text-sm text-danger">详情读取失败</p>
           )}
-        </aside>
-      ) : null}
+        </div>
+      </Drawer>
     </section>
   );
 }

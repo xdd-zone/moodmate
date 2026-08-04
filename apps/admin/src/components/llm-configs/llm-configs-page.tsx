@@ -40,6 +40,7 @@ import {
   adminLlmConfigKeys,
   adminLlmConfigsQueryOptions,
 } from "@/src/api/llm-configs.query";
+import { Drawer } from "@/src/components/ui/drawer";
 
 const LLM_API_OPTIONS: ReadonlyArray<{
   label: string;
@@ -357,7 +358,6 @@ function ConfigDrawer({
   open: boolean;
 }) {
   const queryClient = useQueryClient();
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<ConfigFormState>(() =>
     createFormState(config),
@@ -403,17 +403,11 @@ function ConfigDrawer({
   });
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (open && !dialog.open) {
-      dialog.showModal();
-      setForm(createFormState(config));
-      setFormError("");
-      setTestResult(null);
-      setTimeout(() => nameRef.current?.focus(), 220);
-    }
-    if (!open && dialog.open) dialog.close();
+    if (!open) return;
+    setForm(createFormState(config));
+    setFormError("");
+    setTestResult(null);
+    setTimeout(() => nameRef.current?.focus(), 220);
   }, [open, config]);
 
   function updateField<Key extends keyof ConfigFormState>(
@@ -527,264 +521,230 @@ function ConfigDrawer({
   }
 
   return (
-    <dialog
-      aria-labelledby="llm-config-title"
-      className="mood-detail-dialog fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-foreground"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Drawer
+      ariaDescribedby="llm-config-desc"
+      ariaLabelledby="llm-config-title"
+      description="支持 OpenAI Chat Completions、Anthropic Messages 和 OpenAI Responses。"
+      maxWidth="max-w-[30rem]"
       onClose={onClose}
-      ref={dialogRef}
+      open={open}
+      title={isEdit ? "编辑模型配置" : "新建模型配置"}
     >
-      <aside className="mood-detail-drawer ml-auto flex h-dvh w-full max-w-[30rem] flex-col border-l border-border bg-background shadow-soft">
-        <header className="flex items-start gap-3 border-b border-border px-5 py-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold" id="llm-config-title">
-              {isEdit ? "编辑模型配置" : "新建模型配置"}
-            </h2>
-            <p className="mt-0.5 text-xs text-muted">
-              支持 OpenAI Chat Completions、Anthropic Messages 和 OpenAI
-              Responses。
-            </p>
+      <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+        <div className="flex-1 space-y-3 overflow-y-auto p-5">
+          <FormField htmlFor="configApi" label="协议">
+            <div className="relative">
+              <select
+                className="h-9 w-full appearance-none rounded-md border border-border bg-background pr-8 pl-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                id="configApi"
+                onChange={(event) =>
+                  updateField(
+                    "api",
+                    LlmConfigApiSchema.parse(event.target.value),
+                  )
+                }
+                value={form.api}
+              >
+                {LLM_API_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
+            </div>
+          </FormField>
+
+          <FormField htmlFor="configName" label="配置名称">
+            <Input
+              autoComplete="off"
+              className="bg-background text-xs"
+              id="configName"
+              maxLength={80}
+              onChange={(event) => updateField("name", event.target.value)}
+              placeholder="例如：生产 DeepSeek"
+              ref={nameRef}
+              value={form.name}
+            />
+          </FormField>
+
+          <FormField htmlFor="configProvider" label="Provider">
+            <Input
+              autoComplete="off"
+              className="bg-background text-xs"
+              id="configProvider"
+              maxLength={80}
+              onChange={(event) =>
+                updateField("providerName", event.target.value)
+              }
+              placeholder="例如：OpenAI、DeepSeek、GLM"
+              value={form.providerName}
+            />
+          </FormField>
+
+          <FormField htmlFor="configBaseUrl" label="Base URL">
+            <Input
+              autoComplete="off"
+              className="bg-background text-xs"
+              id="configBaseUrl"
+              maxLength={300}
+              onChange={(event) => updateField("baseURL", event.target.value)}
+              placeholder={getLlmApiBaseUrlPlaceholder(form.api)}
+              value={form.baseURL}
+            />
+          </FormField>
+
+          <FormField htmlFor="configModel" label="Model">
+            <Input
+              autoComplete="off"
+              className="bg-background text-xs"
+              id="configModel"
+              maxLength={120}
+              onChange={(event) => updateField("model", event.target.value)}
+              placeholder="例如：deepseek-chat"
+              value={form.model}
+            />
+          </FormField>
+
+          <FormField
+            htmlFor="configApiKey"
+            label={isEdit ? "API Key（留空不修改）" : "API Key"}
+          >
+            <Input
+              autoComplete="off"
+              className="bg-background text-xs"
+              id="configApiKey"
+              maxLength={400}
+              onChange={(event) => updateField("apiKey", event.target.value)}
+              placeholder={isEdit ? "留空则沿用已保存的 Key" : "输入 API Key"}
+              type="password"
+              value={form.apiKey}
+            />
+          </FormField>
+
+          {supportsThinkingControl(form.api) ? (
+            <label className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface px-3 py-2.5">
+              <span className="min-w-0">
+                <span className="block text-xs font-medium">禁用 thinking</span>
+                <span className="mt-0.5 block text-[0.6875rem] leading-4 text-muted">
+                  对支持 thinking 的模型（如 DeepSeek）关闭思考输出。
+                </span>
+              </span>
+              <input
+                checked={form.disableThinking}
+                className="size-4 accent-primary"
+                onChange={(event) =>
+                  updateField("disableThinking", event.currentTarget.checked)
+                }
+                type="checkbox"
+              />
+            </label>
+          ) : null}
+
+          <div className="rounded-md border border-border bg-surface p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0">
+                <span className="block text-xs font-medium">模型能力测试</span>
+                <span className="mt-0.5 block text-[0.6875rem] leading-4 text-muted">
+                  依次检测连通性、流式输出和三种结构化输出方法。
+                </span>
+              </span>
+              <Button
+                disabled={testMutation.isPending}
+                onClick={handleTest}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <Plug className="size-4" />
+                {testMutation.isPending ? "测试中…" : "开始测试"}
+              </Button>
+            </div>
+            {testResult?.kind === "error" ? (
+              <p
+                className="mt-2 text-[0.6875rem] leading-4 text-danger"
+                role="alert"
+              >
+                {testResult.message}
+              </p>
+            ) : null}
+            {testResult?.kind === "result" ? (
+              <div className="mt-2" role="status">
+                <p
+                  className={`text-[0.6875rem] leading-4 ${
+                    testResult.response.ok ? "text-success" : "text-danger"
+                  }`}
+                >
+                  {testResult.response.message}
+                  {testResult.response.latencyMs !== undefined
+                    ? `（共 ${testResult.response.latencyMs}ms）`
+                    : ""}
+                </p>
+                {testResult.response.checks.length > 0 ? (
+                  <ul className="mt-2 grid gap-1">
+                    {testResult.response.checks.map((check) => (
+                      <li
+                        className="flex items-start gap-1.5 text-[0.6875rem] leading-4"
+                        key={check.id}
+                      >
+                        {check.ok ? (
+                          <CheckCircle2
+                            aria-hidden="true"
+                            className="mt-px size-3 shrink-0 text-success"
+                          />
+                        ) : (
+                          <X
+                            aria-hidden="true"
+                            className="mt-px size-3 shrink-0 text-danger"
+                          />
+                        )}
+                        <span className="min-w-0">
+                          {TEST_CHECK_LABELS[check.id]}
+                          <span className="text-muted">
+                            {check.latencyMs !== undefined
+                              ? ` ${check.latencyMs}ms`
+                              : ""}
+                            {check.ok ? "" : ` — ${check.message ?? "不支持"}`}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
           </div>
+
+          <p className="min-h-4 text-[0.6875rem] text-danger" role="alert">
+            {formError}
+          </p>
+        </div>
+
+        <footer className="flex gap-2.5 border-t border-border p-5">
           <Button
-            aria-label="关闭配置抽屉"
-            className="ml-auto p-0"
+            className="flex-1"
             onClick={onClose}
-            size="icon"
+            size="sm"
             type="button"
             variant="secondary"
           >
-            <X className="size-4" />
+            取消
           </Button>
-        </header>
-
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-          <div className="flex-1 space-y-3 overflow-y-auto p-5">
-            <FormField htmlFor="configApi" label="协议">
-              <div className="relative">
-                <select
-                  className="h-9 w-full appearance-none rounded-md border border-border bg-background pr-8 pl-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                  id="configApi"
-                  onChange={(event) =>
-                    updateField(
-                      "api",
-                      LlmConfigApiSchema.parse(event.target.value),
-                    )
-                  }
-                  value={form.api}
-                >
-                  {LLM_API_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
-              </div>
-            </FormField>
-
-            <FormField htmlFor="configName" label="配置名称">
-              <Input
-                autoComplete="off"
-                className="bg-background text-xs"
-                id="configName"
-                maxLength={80}
-                onChange={(event) => updateField("name", event.target.value)}
-                placeholder="例如：生产 DeepSeek"
-                ref={nameRef}
-                value={form.name}
-              />
-            </FormField>
-
-            <FormField htmlFor="configProvider" label="Provider">
-              <Input
-                autoComplete="off"
-                className="bg-background text-xs"
-                id="configProvider"
-                maxLength={80}
-                onChange={(event) =>
-                  updateField("providerName", event.target.value)
-                }
-                placeholder="例如：OpenAI、DeepSeek、GLM"
-                value={form.providerName}
-              />
-            </FormField>
-
-            <FormField htmlFor="configBaseUrl" label="Base URL">
-              <Input
-                autoComplete="off"
-                className="bg-background text-xs"
-                id="configBaseUrl"
-                maxLength={300}
-                onChange={(event) => updateField("baseURL", event.target.value)}
-                placeholder={getLlmApiBaseUrlPlaceholder(form.api)}
-                value={form.baseURL}
-              />
-            </FormField>
-
-            <FormField htmlFor="configModel" label="Model">
-              <Input
-                autoComplete="off"
-                className="bg-background text-xs"
-                id="configModel"
-                maxLength={120}
-                onChange={(event) => updateField("model", event.target.value)}
-                placeholder="例如：deepseek-chat"
-                value={form.model}
-              />
-            </FormField>
-
-            <FormField
-              htmlFor="configApiKey"
-              label={isEdit ? "API Key（留空不修改）" : "API Key"}
-            >
-              <Input
-                autoComplete="off"
-                className="bg-background text-xs"
-                id="configApiKey"
-                maxLength={400}
-                onChange={(event) => updateField("apiKey", event.target.value)}
-                placeholder={isEdit ? "留空则沿用已保存的 Key" : "输入 API Key"}
-                type="password"
-                value={form.apiKey}
-              />
-            </FormField>
-
-            {supportsThinkingControl(form.api) ? (
-              <label className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface px-3 py-2.5">
-                <span className="min-w-0">
-                  <span className="block text-xs font-medium">
-                    禁用 thinking
-                  </span>
-                  <span className="mt-0.5 block text-[0.6875rem] leading-4 text-muted">
-                    对支持 thinking 的模型（如 DeepSeek）关闭思考输出。
-                  </span>
-                </span>
-                <input
-                  checked={form.disableThinking}
-                  className="size-4 accent-primary"
-                  onChange={(event) =>
-                    updateField("disableThinking", event.currentTarget.checked)
-                  }
-                  type="checkbox"
-                />
-              </label>
-            ) : null}
-
-            <div className="rounded-md border border-border bg-surface p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0">
-                  <span className="block text-xs font-medium">
-                    模型能力测试
-                  </span>
-                  <span className="mt-0.5 block text-[0.6875rem] leading-4 text-muted">
-                    依次检测连通性、流式输出和三种结构化输出方法。
-                  </span>
-                </span>
-                <Button
-                  disabled={testMutation.isPending}
-                  onClick={handleTest}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <Plug className="size-4" />
-                  {testMutation.isPending ? "测试中…" : "开始测试"}
-                </Button>
-              </div>
-              {testResult?.kind === "error" ? (
-                <p
-                  className="mt-2 text-[0.6875rem] leading-4 text-danger"
-                  role="alert"
-                >
-                  {testResult.message}
-                </p>
-              ) : null}
-              {testResult?.kind === "result" ? (
-                <div className="mt-2" role="status">
-                  <p
-                    className={`text-[0.6875rem] leading-4 ${
-                      testResult.response.ok ? "text-success" : "text-danger"
-                    }`}
-                  >
-                    {testResult.response.message}
-                    {testResult.response.latencyMs !== undefined
-                      ? `（共 ${testResult.response.latencyMs}ms）`
-                      : ""}
-                  </p>
-                  {testResult.response.checks.length > 0 ? (
-                    <ul className="mt-2 grid gap-1">
-                      {testResult.response.checks.map((check) => (
-                        <li
-                          className="flex items-start gap-1.5 text-[0.6875rem] leading-4"
-                          key={check.id}
-                        >
-                          {check.ok ? (
-                            <CheckCircle2
-                              aria-hidden="true"
-                              className="mt-px size-3 shrink-0 text-success"
-                            />
-                          ) : (
-                            <X
-                              aria-hidden="true"
-                              className="mt-px size-3 shrink-0 text-danger"
-                            />
-                          )}
-                          <span className="min-w-0">
-                            {TEST_CHECK_LABELS[check.id]}
-                            <span className="text-muted">
-                              {check.latencyMs !== undefined
-                                ? ` ${check.latencyMs}ms`
-                                : ""}
-                              {check.ok
-                                ? ""
-                                : ` — ${check.message ?? "不支持"}`}
-                            </span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            <p className="min-h-4 text-[0.6875rem] text-danger" role="alert">
-              {formError}
-            </p>
-          </div>
-
-          <footer className="flex gap-2.5 border-t border-border p-5">
-            <Button
-              className="flex-1"
-              onClick={onClose}
-              size="sm"
-              type="button"
-              variant="secondary"
-            >
-              取消
-            </Button>
-            <Button
-              className="flex-1"
-              disabled={saveMutation.isPending}
-              size="sm"
-              type="submit"
-            >
-              {saveMutation.isPending
-                ? "保存中…"
-                : isEdit
-                  ? "保存修改"
-                  : "创建配置"}
-            </Button>
-          </footer>
-        </form>
-      </aside>
-    </dialog>
+          <Button
+            className="flex-1"
+            disabled={saveMutation.isPending}
+            size="sm"
+            type="submit"
+          >
+            {saveMutation.isPending
+              ? "保存中…"
+              : isEdit
+                ? "保存修改"
+                : "创建配置"}
+          </Button>
+        </footer>
+      </form>
+    </Drawer>
   );
 }
 

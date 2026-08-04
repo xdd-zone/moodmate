@@ -48,6 +48,7 @@ import {
   adminUserDetailQueryOptions,
   adminUserUsageQueryOptions,
 } from "@/src/api/operations.query";
+import { Drawer } from "@/src/components/ui/drawer";
 
 const PAGE_SIZE = 10;
 const UNKNOWN_CALL_AFTER_MS = 10 * 60 * 1000;
@@ -403,12 +404,11 @@ function UserDetailDrawer({
   onClose: () => void;
 }) {
   const detail = useQuery(adminUserDetailQueryOptions(userId));
-  if (!userId) return null;
   const data = detail.data;
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-3xl overflow-y-auto border-l border-border bg-background p-6 shadow-xl">
-      <div className="flex items-start gap-4">
+    <Drawer maxWidth="max-w-3xl" onClose={onClose} open={Boolean(userId)}>
+      <div className="flex items-start gap-4 border-b border-border p-6">
         <div>
           <h2 className="text-lg font-semibold">
             {data?.user.displayName ?? "用户详情"}
@@ -425,135 +425,137 @@ function UserDetailDrawer({
           <X className="size-4" />
         </Button>
       </div>
-      {detail.isPending ? (
-        <p className="mt-6 text-sm text-muted">正在加载用户详情</p>
-      ) : detail.isError || !data ? (
-        <p className="mt-6 text-sm text-danger" role="alert">
-          {toErrorMessage(detail.error, "用户详情加载失败")}
-        </p>
-      ) : (
-        <div className="mt-6 space-y-8">
-          <section>
-            <h3 className="text-sm font-semibold">账号信息</h3>
-            <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-muted">状态</dt>
-                <dd className="mt-1">{STATUS_LABELS[data.user.status]}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">角色</dt>
-                <dd className="mt-1">
-                  {data.user.roles.map((role) => role.name).join("、") ||
-                    "未分配"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">注册时间</dt>
-                <dd className="mt-1 tabular-nums">
-                  {formatTime(data.user.createdAtMs)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">最近活跃</dt>
-                <dd className="mt-1 tabular-nums">
-                  {formatTime(data.user.lastActiveAtMs)}
-                </dd>
-              </div>
-            </dl>
-          </section>
-          <section>
-            <h3 className="text-sm font-semibold">使用摘要</h3>
-            <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden border border-border bg-border sm:grid-cols-4">
-              {[
-                ["朋友", data.summary.friendCount],
-                ["单聊", data.summary.directConversationCount],
-                ["单聊消息", data.summary.directMessageCount],
-                ["群聊", data.summary.groupConversationCount],
-                ["群聊消息", data.summary.groupMessageCount],
-                ["AI 调用", data.summary.aiCallCount],
-                ["失败调用", data.summary.failedAiCallCount],
-                ["Token", data.summary.totalTokens],
-              ].map(([label, value]) => (
-                <div className="bg-background p-3" key={label}>
-                  <dt className="text-xs text-muted">{label}</dt>
-                  <dd className="mt-1 text-lg font-semibold tabular-nums">
-                    {numberFormatter.format(Number(value))}
+      <div className="flex-1 overflow-y-auto p-6">
+        {detail.isPending ? (
+          <p className="mt-6 text-sm text-muted">正在加载用户详情</p>
+        ) : detail.isError || !data ? (
+          <p className="mt-6 text-sm text-danger" role="alert">
+            {toErrorMessage(detail.error, "用户详情加载失败")}
+          </p>
+        ) : (
+          <div className="mt-6 space-y-8">
+            <section>
+              <h3 className="text-sm font-semibold">账号信息</h3>
+              <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-muted">状态</dt>
+                  <dd className="mt-1">{STATUS_LABELS[data.user.status]}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">角色</dt>
+                  <dd className="mt-1">
+                    {data.user.roles.map((role) => role.name).join("、") ||
+                      "未分配"}
                   </dd>
                 </div>
-              ))}
-            </dl>
-          </section>
-          <section>
-            <h3 className="text-sm font-semibold">朋友与单聊</h3>
-            <Table
-              className="mt-3 min-w-[44rem] table-fixed"
-              containerClassName="admin-table-scroll admin-table-scroll-compact"
-            >
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-48">朋友</TableHead>
-                  <TableHead className="w-24">来源</TableHead>
-                  <TableHead className="w-28">状态</TableHead>
-                  <TableHead className="w-24">消息</TableHead>
-                  <TableHead className="w-40">最近活跃</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.friends.length === 0 ? (
+                <div>
+                  <dt className="text-xs text-muted">注册时间</dt>
+                  <dd className="mt-1 tabular-nums">
+                    {formatTime(data.user.createdAtMs)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">最近活跃</dt>
+                  <dd className="mt-1 tabular-nums">
+                    {formatTime(data.user.lastActiveAtMs)}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+            <section>
+              <h3 className="text-sm font-semibold">使用摘要</h3>
+              <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden border border-border bg-border sm:grid-cols-4">
+                {[
+                  ["朋友", data.summary.friendCount],
+                  ["单聊", data.summary.directConversationCount],
+                  ["单聊消息", data.summary.directMessageCount],
+                  ["群聊", data.summary.groupConversationCount],
+                  ["群聊消息", data.summary.groupMessageCount],
+                  ["AI 调用", data.summary.aiCallCount],
+                  ["失败调用", data.summary.failedAiCallCount],
+                  ["Token", data.summary.totalTokens],
+                ].map(([label, value]) => (
+                  <div className="bg-background p-3" key={label}>
+                    <dt className="text-xs text-muted">{label}</dt>
+                    <dd className="mt-1 text-lg font-semibold tabular-nums">
+                      {numberFormatter.format(Number(value))}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+            <section>
+              <h3 className="text-sm font-semibold">朋友与单聊</h3>
+              <Table
+                className="mt-3 min-w-[44rem] table-fixed"
+                containerClassName="admin-table-scroll admin-table-scroll-compact"
+              >
+                <TableHeader>
                   <TableRow>
-                    <TableCell className="text-center text-muted" colSpan={5}>
-                      暂无朋友或单聊
-                    </TableCell>
+                    <TableHead className="w-48">朋友</TableHead>
+                    <TableHead className="w-24">来源</TableHead>
+                    <TableHead className="w-28">状态</TableHead>
+                    <TableHead className="w-24">消息</TableHead>
+                    <TableHead className="w-40">最近活跃</TableHead>
                   </TableRow>
-                ) : (
-                  data.friends.map((friend) => (
-                    <TableRow key={friend.id}>
-                      <TableCell className="truncate" title={friend.name}>
-                        {friend.name}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {friend.source === "system" ? "系统" : "用户"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {friend.status}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {friend.messageCount}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatCallTime(friend.lastActiveAtMs)}
+                </TableHeader>
+                <TableBody>
+                  {data.friends.length === 0 ? (
+                    <TableRow>
+                      <TableCell className="text-center text-muted" colSpan={5}>
+                        暂无朋友或单聊
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </section>
-          <section>
-            <h3 className="text-sm font-semibold">群聊</h3>
-            {data.groupChats.length === 0 ? (
-              <p className="mt-3 text-sm text-muted">暂无群聊</p>
-            ) : (
-              <ul className="mt-3 divide-y divide-border border-t border-border">
-                {data.groupChats.map((group) => (
-                  <li className="flex gap-4 py-3 text-sm" key={group.id}>
-                    <span className="min-w-0 flex-1 truncate">
-                      {group.title}
-                    </span>
-                    <span className="text-muted">
-                      {group.messageCount} 条消息
-                    </span>
-                    <time className="text-muted">
-                      {formatCallTime(group.lastActiveAtMs)}
-                    </time>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
-      )}
-    </aside>
+                  ) : (
+                    data.friends.map((friend) => (
+                      <TableRow key={friend.id}>
+                        <TableCell className="truncate" title={friend.name}>
+                          {friend.name}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {friend.source === "system" ? "系统" : "用户"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {friend.status}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {friend.messageCount}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatCallTime(friend.lastActiveAtMs)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </section>
+            <section>
+              <h3 className="text-sm font-semibold">群聊</h3>
+              {data.groupChats.length === 0 ? (
+                <p className="mt-3 text-sm text-muted">暂无群聊</p>
+              ) : (
+                <ul className="mt-3 divide-y divide-border border-t border-border">
+                  {data.groupChats.map((group) => (
+                    <li className="flex gap-4 py-3 text-sm" key={group.id}>
+                      <span className="min-w-0 flex-1 truncate">
+                        {group.title}
+                      </span>
+                      <span className="text-muted">
+                        {group.messageCount} 条消息
+                      </span>
+                      <time className="text-muted">
+                        {formatCallTime(group.lastActiveAtMs)}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
+    </Drawer>
   );
 }
 
@@ -593,11 +595,10 @@ function UserUsageDrawer({
     ...adminUserCallsQueryOptions(userId, callQuery),
     enabled: Boolean(userId) && tab === "calls",
   });
-  if (!userId) return null;
   const user = detail.data?.user;
   return (
-    <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-3xl overflow-y-auto border-l border-border bg-background p-6 shadow-xl">
-      <div className="flex items-start">
+    <Drawer maxWidth="max-w-3xl" onClose={onClose} open={Boolean(userId)}>
+      <div className="flex items-start border-b border-border p-6">
         <div>
           <h2 className="text-lg font-semibold">
             {user ? `${user.displayName}的 Token 用量` : "用户 Token 用量"}
@@ -614,355 +615,359 @@ function UserUsageDrawer({
           <X className="size-4" />
         </Button>
       </div>
-      <div className="mt-6 flex border-b border-border" role="tablist">
-        {(
-          [
-            ["summary", "用量汇总"],
-            ["calls", "调用明细"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            aria-selected={tab === value}
-            className={`border-b-2 px-4 py-2 text-sm ${tab === value ? "border-primary text-foreground" : "border-transparent text-muted"}`}
-            key={value}
-            onClick={() => setTab(value)}
-            role="tab"
-            type="button"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {tab === "summary" ? (
-        usage.isError ? (
-          <p className="mt-6 text-sm text-danger" role="alert">
-            {toErrorMessage(usage.error, "Token 用量加载失败")}
-          </p>
-        ) : usage.data ? (
-          <>
-            <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
-              {[
-                ["累计输入", usage.data.total.promptTokens],
-                ["累计输出", usage.data.total.completionTokens],
-                ["累计 Token", usage.data.total.totalTokens],
-                ["累计调用", usage.data.total.callCount],
-                ["今日输入", usage.data.today.promptTokens],
-                ["今日输出", usage.data.today.completionTokens],
-                ["今日 Token", usage.data.today.totalTokens],
-                ["今日调用", usage.data.today.callCount],
-                ["失败调用", usage.data.failedCallCount],
-                ["最近调用", formatCallTime(usage.data.lastCalledAtMs)],
-              ].map(([label, value]) => (
-                <div className="bg-background p-4" key={label}>
-                  <p className="text-xs text-muted">{label}</p>
-                  <strong className="mt-2 block text-base tabular-nums">
-                    {value}
-                  </strong>
-                </div>
-              ))}
-            </div>
-            <h3 className="mt-7 text-sm font-semibold">用量主体</h3>
-            <Table
-              className="mt-3 min-w-[91rem] table-fixed"
-              containerClassName="admin-table-scroll admin-table-scroll-compact"
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mt-6 flex border-b border-border" role="tablist">
+          {(
+            [
+              ["summary", "用量汇总"],
+              ["calls", "调用明细"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              aria-selected={tab === value}
+              className={`border-b-2 px-4 py-2 text-sm ${tab === value ? "border-primary text-foreground" : "border-transparent text-muted"}`}
+              key={value}
+              onClick={() => setTab(value)}
+              role="tab"
+              type="button"
             >
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-48">主体</TableHead>
-                  <TableHead className="w-28">类型</TableHead>
-                  <TableHead className="w-24">来源</TableHead>
-                  <TableHead className="w-28">累计输入</TableHead>
-                  <TableHead className="w-28">累计输出</TableHead>
-                  <TableHead className="w-28">累计总量</TableHead>
-                  <TableHead className="w-28">累计调用</TableHead>
-                  <TableHead className="w-28">今日输入</TableHead>
-                  <TableHead className="w-28">今日输出</TableHead>
-                  <TableHead className="w-28">今日总量</TableHead>
-                  <TableHead className="w-28">今日调用</TableHead>
-                  <TableHead className="w-40">最近调用</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {usage.data.subjects.length === 0 ? (
+              {label}
+            </button>
+          ))}
+        </div>
+        {tab === "summary" ? (
+          usage.isError ? (
+            <p className="mt-6 text-sm text-danger" role="alert">
+              {toErrorMessage(usage.error, "Token 用量加载失败")}
+            </p>
+          ) : usage.data ? (
+            <>
+              <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
+                {[
+                  ["累计输入", usage.data.total.promptTokens],
+                  ["累计输出", usage.data.total.completionTokens],
+                  ["累计 Token", usage.data.total.totalTokens],
+                  ["累计调用", usage.data.total.callCount],
+                  ["今日输入", usage.data.today.promptTokens],
+                  ["今日输出", usage.data.today.completionTokens],
+                  ["今日 Token", usage.data.today.totalTokens],
+                  ["今日调用", usage.data.today.callCount],
+                  ["失败调用", usage.data.failedCallCount],
+                  ["最近调用", formatCallTime(usage.data.lastCalledAtMs)],
+                ].map(([label, value]) => (
+                  <div className="bg-background p-4" key={label}>
+                    <p className="text-xs text-muted">{label}</p>
+                    <strong className="mt-2 block text-base tabular-nums">
+                      {value}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+              <h3 className="mt-7 text-sm font-semibold">用量主体</h3>
+              <Table
+                className="mt-3 min-w-[91rem] table-fixed"
+                containerClassName="admin-table-scroll admin-table-scroll-compact"
+              >
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      className="py-8 text-center text-muted"
-                      colSpan={12}
-                    >
-                      暂无调用记录
-                    </TableCell>
+                    <TableHead className="w-48">主体</TableHead>
+                    <TableHead className="w-28">类型</TableHead>
+                    <TableHead className="w-24">来源</TableHead>
+                    <TableHead className="w-28">累计输入</TableHead>
+                    <TableHead className="w-28">累计输出</TableHead>
+                    <TableHead className="w-28">累计总量</TableHead>
+                    <TableHead className="w-28">累计调用</TableHead>
+                    <TableHead className="w-28">今日输入</TableHead>
+                    <TableHead className="w-28">今日输出</TableHead>
+                    <TableHead className="w-28">今日总量</TableHead>
+                    <TableHead className="w-28">今日调用</TableHead>
+                    <TableHead className="w-40">最近调用</TableHead>
                   </TableRow>
-                ) : (
-                  usage.data.subjects.map((subject) => (
-                    <TableRow key={subject.agentId ?? "system"}>
+                </TableHeader>
+                <TableBody>
+                  {usage.data.subjects.length === 0 ? (
+                    <TableRow>
                       <TableCell
-                        className="truncate"
-                        title={subject.agentName ?? "系统流程"}
+                        className="py-8 text-center text-muted"
+                        colSpan={12}
                       >
-                        {subject.agentName ?? "系统流程"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {subject.subjectType === "agent" ? "朋友" : "系统流程"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {subject.agentSource === "system"
-                          ? "系统"
-                          : subject.agentSource === "user"
-                            ? "用户"
-                            : "-"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.total.promptTokens}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.total.completionTokens}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.total.totalTokens}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.total.callCount}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.today.promptTokens}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.today.completionTokens}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.today.totalTokens}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {subject.today.callCount}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatCallTime(subject.lastCalledAtMs)}
+                        暂无调用记录
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </>
+                  ) : (
+                    usage.data.subjects.map((subject) => (
+                      <TableRow key={subject.agentId ?? "system"}>
+                        <TableCell
+                          className="truncate"
+                          title={subject.agentName ?? "系统流程"}
+                        >
+                          {subject.agentName ?? "系统流程"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {subject.subjectType === "agent"
+                            ? "朋友"
+                            : "系统流程"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {subject.agentSource === "system"
+                            ? "系统"
+                            : subject.agentSource === "user"
+                              ? "用户"
+                              : "-"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.total.promptTokens}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.total.completionTokens}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.total.totalTokens}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.total.callCount}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.today.promptTokens}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.today.completionTokens}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.today.totalTokens}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {subject.today.callCount}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatCallTime(subject.lastCalledAtMs)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </>
+          ) : (
+            <p className="mt-6 text-sm text-muted">正在加载用量</p>
+          )
         ) : (
-          <p className="mt-6 text-sm text-muted">正在加载用量</p>
-        )
-      ) : (
-        <>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <select
-              aria-label="朋友筛选"
-              className="h-9 rounded-md border border-border bg-background px-3 text-sm"
-              onChange={(event) => {
-                setAgentId(event.currentTarget.value);
-                setCallPage(1);
-              }}
-              value={agentId}
-            >
-              <option value="">全部主体</option>
-              {usage.data?.subjects
-                .filter((subject) => subject.agentId)
-                .map((subject) => (
-                  <option key={subject.agentId} value={subject.agentId ?? ""}>
-                    {subject.agentName}
+          <>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <select
+                aria-label="朋友筛选"
+                className="h-9 rounded-md border border-border bg-background px-3 text-sm"
+                onChange={(event) => {
+                  setAgentId(event.currentTarget.value);
+                  setCallPage(1);
+                }}
+                value={agentId}
+              >
+                <option value="">全部主体</option>
+                {usage.data?.subjects
+                  .filter((subject) => subject.agentId)
+                  .map((subject) => (
+                    <option key={subject.agentId} value={subject.agentId ?? ""}>
+                      {subject.agentName}
+                    </option>
+                  ))}
+              </select>
+              <select
+                aria-label="业务场景筛选"
+                className="h-9 rounded-md border border-border bg-background px-3 text-sm"
+                onChange={(event) => {
+                  const parsed = AiCallScenarioSchema.safeParse(
+                    event.currentTarget.value,
+                  );
+                  setScenario(parsed.success ? parsed.data : "");
+                  setCallPage(1);
+                }}
+                value={scenario}
+              >
+                <option value="">全部场景</option>
+                {AiCallScenarioSchema.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
                 ))}
-            </select>
-            <select
-              aria-label="业务场景筛选"
-              className="h-9 rounded-md border border-border bg-background px-3 text-sm"
-              onChange={(event) => {
-                const parsed = AiCallScenarioSchema.safeParse(
-                  event.currentTarget.value,
-                );
-                setScenario(parsed.success ? parsed.data : "");
-                setCallPage(1);
-              }}
-              value={scenario}
-            >
-              <option value="">全部场景</option>
-              {AiCallScenarioSchema.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="调用状态筛选"
-              className="h-9 rounded-md border border-border bg-background px-3 text-sm"
-              onChange={(event) => {
-                const parsed = AiCallStatusSchema.safeParse(
-                  event.currentTarget.value,
-                );
-                setStatus(parsed.success ? parsed.data : "");
-                setCallPage(1);
-              }}
-              value={status}
-            >
-              <option value="">全部状态</option>
-              <option value="started">进行中</option>
-              <option value="completed">已完成</option>
-              <option value="failed">失败</option>
-              <option value="aborted">已中止</option>
-            </select>
-            <Input
-              aria-label="模型筛选"
-              onChange={(event) => {
-                setModel(event.currentTarget.value);
-                setCallPage(1);
-              }}
-              placeholder="模型名称"
-              value={model}
-            />
-            <Input
-              aria-label="开始时间"
-              onChange={(event) => {
-                setStartAt(event.currentTarget.value);
-                setCallPage(1);
-              }}
-              type="datetime-local"
-              value={startAt}
-            />
-            <Input
-              aria-label="结束时间"
-              onChange={(event) => {
-                setEndAt(event.currentTarget.value);
-                setCallPage(1);
-              }}
-              type="datetime-local"
-              value={endAt}
-            />
-          </div>
-          {calls.isError ? (
-            <p className="mt-5 text-sm text-danger" role="alert">
-              {toErrorMessage(calls.error, "调用明细加载失败")}
-            </p>
-          ) : (
-            <Table
-              className="mt-5 min-w-[125rem] table-fixed"
-              containerClassName="admin-table-scroll admin-table-scroll-compact"
-            >
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-40">时间</TableHead>
-                  <TableHead className="w-40">场景</TableHead>
-                  <TableHead className="w-48">主体</TableHead>
-                  <TableHead className="w-64">会话</TableHead>
-                  <TableHead className="w-64">Provider / 模型</TableHead>
-                  <TableHead className="w-28">输入</TableHead>
-                  <TableHead className="w-28">输出</TableHead>
-                  <TableHead className="w-28">总量</TableHead>
-                  <TableHead className="w-28">耗时</TableHead>
-                  <TableHead className="w-28">状态</TableHead>
-                  <TableHead className="w-40">错误</TableHead>
-                  <TableHead className="w-64">requestId</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {calls.data && calls.data.items.length > 0 ? (
-                  calls.data.items.map((call) => (
-                    <TableRow key={call.id}>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatTime(call.startedAtMs)}
-                      </TableCell>
-                      <TableCell className="truncate" title={call.scenario}>
-                        {call.scenario}
-                      </TableCell>
+              </select>
+              <select
+                aria-label="调用状态筛选"
+                className="h-9 rounded-md border border-border bg-background px-3 text-sm"
+                onChange={(event) => {
+                  const parsed = AiCallStatusSchema.safeParse(
+                    event.currentTarget.value,
+                  );
+                  setStatus(parsed.success ? parsed.data : "");
+                  setCallPage(1);
+                }}
+                value={status}
+              >
+                <option value="">全部状态</option>
+                <option value="started">进行中</option>
+                <option value="completed">已完成</option>
+                <option value="failed">失败</option>
+                <option value="aborted">已中止</option>
+              </select>
+              <Input
+                aria-label="模型筛选"
+                onChange={(event) => {
+                  setModel(event.currentTarget.value);
+                  setCallPage(1);
+                }}
+                placeholder="模型名称"
+                value={model}
+              />
+              <Input
+                aria-label="开始时间"
+                onChange={(event) => {
+                  setStartAt(event.currentTarget.value);
+                  setCallPage(1);
+                }}
+                type="datetime-local"
+                value={startAt}
+              />
+              <Input
+                aria-label="结束时间"
+                onChange={(event) => {
+                  setEndAt(event.currentTarget.value);
+                  setCallPage(1);
+                }}
+                type="datetime-local"
+                value={endAt}
+              />
+            </div>
+            {calls.isError ? (
+              <p className="mt-5 text-sm text-danger" role="alert">
+                {toErrorMessage(calls.error, "调用明细加载失败")}
+              </p>
+            ) : (
+              <Table
+                className="mt-5 min-w-[125rem] table-fixed"
+                containerClassName="admin-table-scroll admin-table-scroll-compact"
+              >
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-40">时间</TableHead>
+                    <TableHead className="w-40">场景</TableHead>
+                    <TableHead className="w-48">主体</TableHead>
+                    <TableHead className="w-64">会话</TableHead>
+                    <TableHead className="w-64">Provider / 模型</TableHead>
+                    <TableHead className="w-28">输入</TableHead>
+                    <TableHead className="w-28">输出</TableHead>
+                    <TableHead className="w-28">总量</TableHead>
+                    <TableHead className="w-28">耗时</TableHead>
+                    <TableHead className="w-28">状态</TableHead>
+                    <TableHead className="w-40">错误</TableHead>
+                    <TableHead className="w-64">requestId</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {calls.data && calls.data.items.length > 0 ? (
+                    calls.data.items.map((call) => (
+                      <TableRow key={call.id}>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatTime(call.startedAtMs)}
+                        </TableCell>
+                        <TableCell className="truncate" title={call.scenario}>
+                          {call.scenario}
+                        </TableCell>
+                        <TableCell
+                          className="truncate"
+                          title={call.agentName ?? "系统流程"}
+                        >
+                          {call.agentName ?? "系统流程"}
+                        </TableCell>
+                        <TableCell className="truncate">
+                          {call.conversationType === "none"
+                            ? "-"
+                            : `${call.conversationType} · ${call.conversationId ?? "-"}`}
+                        </TableCell>
+                        <TableCell className="truncate">
+                          {call.providerName} / {call.model}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatToken(call.usageStatus, call.promptTokens)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatToken(call.usageStatus, call.completionTokens)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatToken(call.usageStatus, call.totalTokens)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {call.durationMs === null
+                            ? "-"
+                            : `${call.durationMs} ms`}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {formatCallStatus(call)}
+                        </TableCell>
+                        <TableCell
+                          className="truncate"
+                          title={call.errorCode ?? "-"}
+                        >
+                          {call.errorCode ?? "-"}
+                        </TableCell>
+                        <TableCell className="truncate" title={call.requestId}>
+                          {call.requestId}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
                       <TableCell
-                        className="truncate"
-                        title={call.agentName ?? "系统流程"}
+                        className="py-8 text-center text-muted"
+                        colSpan={12}
                       >
-                        {call.agentName ?? "系统流程"}
-                      </TableCell>
-                      <TableCell className="truncate">
-                        {call.conversationType === "none"
-                          ? "-"
-                          : `${call.conversationType} · ${call.conversationId ?? "-"}`}
-                      </TableCell>
-                      <TableCell className="truncate">
-                        {call.providerName} / {call.model}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatToken(call.usageStatus, call.promptTokens)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatToken(call.usageStatus, call.completionTokens)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatToken(call.usageStatus, call.totalTokens)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {call.durationMs === null
-                          ? "-"
-                          : `${call.durationMs} ms`}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatCallStatus(call)}
-                      </TableCell>
-                      <TableCell
-                        className="truncate"
-                        title={call.errorCode ?? "-"}
-                      >
-                        {call.errorCode ?? "-"}
-                      </TableCell>
-                      <TableCell className="truncate" title={call.requestId}>
-                        {call.requestId}
+                        {calls.isPending ? "正在加载调用明细" : "暂无调用记录"}
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      className="py-8 text-center text-muted"
-                      colSpan={12}
-                    >
-                      {calls.isPending ? "正在加载调用明细" : "暂无调用记录"}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-          <footer className="mt-4 flex items-center gap-3">
-            <p className="text-xs text-muted tabular-nums">
-              第 {callPage} / {Math.max(calls.data?.totalPages ?? 0, 1)} 页
-            </p>
-            <div className="ml-auto flex gap-2">
-              <Button
-                aria-label="上一页调用明细"
-                disabled={callPage <= 1 || calls.isFetching}
-                onClick={() =>
-                  setCallPage((current) => Math.max(1, current - 1))
-                }
-                size="icon"
-                type="button"
-                variant="secondary"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                aria-label="下一页调用明细"
-                disabled={
-                  !calls.data?.totalPages ||
-                  callPage >= calls.data.totalPages ||
-                  calls.isFetching
-                }
-                onClick={() =>
-                  setCallPage((current) =>
-                    Math.min(calls.data?.totalPages ?? current, current + 1),
-                  )
-                }
-                size="icon"
-                type="button"
-                variant="secondary"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          </footer>
-        </>
-      )}
-    </aside>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+            <footer className="mt-4 flex items-center gap-3">
+              <p className="text-xs text-muted tabular-nums">
+                第 {callPage} / {Math.max(calls.data?.totalPages ?? 0, 1)} 页
+              </p>
+              <div className="ml-auto flex gap-2">
+                <Button
+                  aria-label="上一页调用明细"
+                  disabled={callPage <= 1 || calls.isFetching}
+                  onClick={() =>
+                    setCallPage((current) => Math.max(1, current - 1))
+                  }
+                  size="icon"
+                  type="button"
+                  variant="secondary"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <Button
+                  aria-label="下一页调用明细"
+                  disabled={
+                    !calls.data?.totalPages ||
+                    callPage >= calls.data.totalPages ||
+                    calls.isFetching
+                  }
+                  onClick={() =>
+                    setCallPage((current) =>
+                      Math.min(calls.data?.totalPages ?? current, current + 1),
+                    )
+                  }
+                  size="icon"
+                  type="button"
+                  variant="secondary"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </footer>
+          </>
+        )}
+      </div>
+    </Drawer>
   );
 }
 
@@ -982,7 +987,6 @@ function NewUserDrawer({
   rolesPending: boolean;
 }) {
   const queryClient = useQueryClient();
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const displayNameRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -995,26 +999,19 @@ function NewUserDrawer({
   );
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!open) return;
+    setDisplayName("");
+    setEmail("");
+    setPassword("");
+    setRoleId(activeRoles[0]?.id ?? "");
+    setShowPassword(false);
+    setFormError("");
+    const focusTimer = window.setTimeout(
+      () => displayNameRef.current?.focus(),
+      220,
+    );
 
-    if (open && !dialog.open) {
-      dialog.showModal();
-      setDisplayName("");
-      setEmail("");
-      setPassword("");
-      setRoleId(activeRoles[0]?.id ?? "");
-      setShowPassword(false);
-      setFormError("");
-      const focusTimer = window.setTimeout(
-        () => displayNameRef.current?.focus(),
-        220,
-      );
-
-      return () => window.clearTimeout(focusTimer);
-    }
-
-    if (!open && dialog.open) dialog.close();
+    return () => window.clearTimeout(focusTimer);
   }, [activeRoles, open]);
 
   useEffect(() => {
@@ -1075,159 +1072,128 @@ function NewUserDrawer({
         : "";
 
   return (
-    <dialog
-      aria-labelledby="new-user-title"
-      className="mood-detail-dialog fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-foreground"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Drawer
+      ariaDescribedby="new-user-desc"
+      ariaLabelledby="new-user-title"
+      description="创建登录凭据并分配一个初始角色"
+      maxWidth="max-w-[27.5rem]"
       onClose={onClose}
-      ref={dialogRef}
+      open={open}
+      title="新建用户"
     >
-      <aside className="mood-detail-drawer ml-auto flex h-dvh w-full max-w-[27.5rem] flex-col border-l border-border bg-background shadow-soft">
-        <header className="flex items-start gap-3 border-b border-border px-5 py-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold" id="new-user-title">
-              新建用户
-            </h2>
-            <p className="mt-0.5 text-xs text-muted">
-              创建登录凭据并分配一个初始角色
-            </p>
+      <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+        <div className="flex-1 overflow-y-auto p-5">
+          <FieldLabel htmlFor="userDisplayName">显示名</FieldLabel>
+          <Input
+            autoComplete="off"
+            className="bg-background text-xs"
+            disabled={createMutation.isPending}
+            id="userDisplayName"
+            maxLength={80}
+            onChange={(event) => setDisplayName(event.target.value)}
+            ref={displayNameRef}
+            value={displayName}
+          />
+
+          <FieldLabel className="mt-3" htmlFor="userEmail">
+            邮箱
+          </FieldLabel>
+          <Input
+            autoComplete="email"
+            className="bg-background text-xs"
+            disabled={createMutation.isPending}
+            id="userEmail"
+            maxLength={254}
+            onChange={(event) => setEmail(event.target.value)}
+            type="email"
+            value={email}
+          />
+
+          <FieldLabel className="mt-3" htmlFor="userPassword">
+            初始密码
+          </FieldLabel>
+          <div className="relative">
+            <Input
+              autoComplete="new-password"
+              className="bg-background pr-10 text-xs"
+              disabled={createMutation.isPending}
+              id="userPassword"
+              onChange={(event) => setPassword(event.target.value)}
+              type={showPassword ? "text" : "password"}
+              value={password}
+            />
+            <button
+              aria-label={showPassword ? "隐藏密码" : "显示密码"}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+              onClick={() => setShowPassword((current) => !current)}
+              title={showPassword ? "隐藏密码" : "显示密码"}
+              type="button"
+            >
+              {showPassword ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+            </button>
           </div>
+
+          <FieldLabel className="mt-3" htmlFor="userRole">
+            初始角色
+          </FieldLabel>
+          <div className="relative">
+            <select
+              className="h-9 w-full appearance-none rounded-md border border-border bg-background pr-8 pl-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
+              disabled={
+                createMutation.isPending ||
+                rolesPending ||
+                activeRoles.length === 0
+              }
+              id="userRole"
+              onChange={(event) => setRoleId(event.target.value)}
+              value={roleId}
+            >
+              {activeRoles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}（{role.applicationCode}）
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
+          </div>
+          {roleStatusMessage ? (
+            <p className="mt-1.5 text-[0.6875rem] text-muted">
+              {roleStatusMessage}
+            </p>
+          ) : null}
+
+          <p className="mt-3 min-h-4 text-[0.6875rem] text-danger" role="alert">
+            {formError}
+          </p>
+        </div>
+
+        <footer className="flex gap-2.5 border-t border-border p-5">
           <Button
-            aria-label="关闭新建用户抽屉"
-            className="ml-auto p-0"
+            className="flex-1"
+            disabled={createMutation.isPending}
             onClick={onClose}
-            size="icon"
-            title="关闭"
+            size="sm"
             type="button"
             variant="secondary"
           >
-            <X className="size-4" />
+            取消
           </Button>
-        </header>
-
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-          <div className="flex-1 overflow-y-auto p-5">
-            <FieldLabel htmlFor="userDisplayName">显示名</FieldLabel>
-            <Input
-              autoComplete="off"
-              className="bg-background text-xs"
-              disabled={createMutation.isPending}
-              id="userDisplayName"
-              maxLength={80}
-              onChange={(event) => setDisplayName(event.target.value)}
-              ref={displayNameRef}
-              value={displayName}
-            />
-
-            <FieldLabel className="mt-3" htmlFor="userEmail">
-              邮箱
-            </FieldLabel>
-            <Input
-              autoComplete="email"
-              className="bg-background text-xs"
-              disabled={createMutation.isPending}
-              id="userEmail"
-              maxLength={254}
-              onChange={(event) => setEmail(event.target.value)}
-              type="email"
-              value={email}
-            />
-
-            <FieldLabel className="mt-3" htmlFor="userPassword">
-              初始密码
-            </FieldLabel>
-            <div className="relative">
-              <Input
-                autoComplete="new-password"
-                className="bg-background pr-10 text-xs"
-                disabled={createMutation.isPending}
-                id="userPassword"
-                onChange={(event) => setPassword(event.target.value)}
-                type={showPassword ? "text" : "password"}
-                value={password}
-              />
-              <button
-                aria-label={showPassword ? "隐藏密码" : "显示密码"}
-                aria-pressed={showPassword}
-                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
-                onClick={() => setShowPassword((current) => !current)}
-                title={showPassword ? "隐藏密码" : "显示密码"}
-                type="button"
-              >
-                {showPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
-            </div>
-
-            <FieldLabel className="mt-3" htmlFor="userRole">
-              初始角色
-            </FieldLabel>
-            <div className="relative">
-              <select
-                className="h-9 w-full appearance-none rounded-md border border-border bg-background pr-8 pl-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
-                disabled={
-                  createMutation.isPending ||
-                  rolesPending ||
-                  activeRoles.length === 0
-                }
-                id="userRole"
-                onChange={(event) => setRoleId(event.target.value)}
-                value={roleId}
-              >
-                {activeRoles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}（{role.applicationCode}）
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
-            </div>
-            {roleStatusMessage ? (
-              <p className="mt-1.5 text-[0.6875rem] text-muted">
-                {roleStatusMessage}
-              </p>
-            ) : null}
-
-            <p
-              className="mt-3 min-h-4 text-[0.6875rem] text-danger"
-              role="alert"
-            >
-              {formError}
-            </p>
-          </div>
-
-          <footer className="flex gap-2.5 border-t border-border p-5">
-            <Button
-              className="flex-1"
-              disabled={createMutation.isPending}
-              onClick={onClose}
-              size="sm"
-              type="button"
-              variant="secondary"
-            >
-              取消
-            </Button>
-            <Button
-              className="flex-1"
-              disabled={createMutation.isPending || activeRoles.length === 0}
-              size="sm"
-              type="submit"
-            >
-              {createMutation.isPending ? "创建中…" : "创建用户"}
-            </Button>
-          </footer>
-        </form>
-      </aside>
-    </dialog>
+          <Button
+            className="flex-1"
+            disabled={createMutation.isPending || activeRoles.length === 0}
+            size="sm"
+            type="submit"
+          >
+            {createMutation.isPending ? "创建中…" : "创建用户"}
+          </Button>
+        </footer>
+      </form>
+    </Drawer>
   );
 }
 

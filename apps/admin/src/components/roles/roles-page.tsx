@@ -10,7 +10,7 @@ import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { Input } from "@repo/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, Lock, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { Ban, Lock, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -20,6 +20,7 @@ import {
   disableAdminRole,
 } from "@/src/api/roles.api";
 import { adminRoleKeys, adminRolesQueryOptions } from "@/src/api/roles.query";
+import { Drawer } from "@/src/components/ui/drawer";
 
 const STATUS_LABELS: Record<Role["status"], string> = {
   active: "启用",
@@ -273,7 +274,6 @@ function NewRoleDrawer({
   open: boolean;
 }) {
   const queryClient = useQueryClient();
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const [applicationCode, setApplicationCode] = useState("admin");
   const [code, setCode] = useState("");
@@ -292,18 +292,12 @@ function NewRoleDrawer({
   });
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (open && !dialog.open) {
-      dialog.showModal();
-      setApplicationCode("admin");
-      setCode("");
-      setName("");
-      setFormError("");
-      setTimeout(() => nameRef.current?.focus(), 220);
-    }
-    if (!open && dialog.open) dialog.close();
+    if (!open) return;
+    setApplicationCode("admin");
+    setCode("");
+    setName("");
+    setFormError("");
+    setTimeout(() => nameRef.current?.focus(), 220);
   }, [open]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -332,126 +326,96 @@ function NewRoleDrawer({
   }
 
   return (
-    <dialog
-      aria-labelledby="new-role-title"
-      className="mood-detail-dialog fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-foreground"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Drawer
+      ariaDescribedby="new-role-desc"
+      ariaLabelledby="new-role-title"
+      description="角色按应用维度隔离，创建后立即出现在列表中。"
+      maxWidth="max-w-[27.5rem]"
       onClose={onClose}
-      ref={dialogRef}
+      open={open}
+      title="新建角色"
     >
-      <aside className="mood-detail-drawer ml-auto flex h-dvh w-full max-w-[27.5rem] flex-col border-l border-border bg-background shadow-soft">
-        <header className="flex items-start gap-3 border-b border-border px-5 py-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold" id="new-role-title">
-              新建角色
-            </h2>
-            <p className="mt-0.5 text-xs text-muted">
-              角色按应用维度隔离，创建后立即出现在列表中。
-            </p>
+      <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+        <div className="flex-1 overflow-y-auto p-5">
+          <label
+            className="mb-1.5 block text-[0.6875rem] font-semibold text-muted"
+            htmlFor="roleName"
+          >
+            角色名称
+          </label>
+          <Input
+            autoComplete="off"
+            className="bg-background text-xs"
+            id="roleName"
+            maxLength={128}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="例如：内容审核"
+            ref={nameRef}
+            value={name}
+          />
+
+          <label
+            className="mt-2.5 mb-1.5 block text-[0.6875rem] font-semibold text-muted"
+            htmlFor="roleCode"
+          >
+            角色 code
+          </label>
+          <Input
+            autoComplete="off"
+            className="bg-background text-xs"
+            id="roleCode"
+            maxLength={64}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="例如：content_reviewer"
+            value={code}
+          />
+          <p className="mt-1.5 text-[0.6875rem] text-disabled">
+            小写字母开头，只能包含小写字母、数字、_、:、-。
+          </p>
+
+          <label
+            className="mt-2.5 mb-1.5 block text-[0.6875rem] font-semibold text-muted"
+            htmlFor="roleApplication"
+          >
+            所属应用
+          </label>
+          <div className="relative">
+            <select
+              className="h-9 w-full appearance-none rounded-md border border-border bg-background pr-8 pl-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              id="roleApplication"
+              onChange={(event) => setApplicationCode(event.target.value)}
+              value={applicationCode}
+            >
+              <option value="admin">admin</option>
+              <option value="web">web</option>
+            </select>
           </div>
+
+          <p className="mt-3 min-h-4 text-[0.6875rem] text-danger" role="alert">
+            {formError}
+          </p>
+        </div>
+
+        <footer className="flex gap-2.5 border-t border-border p-5">
           <Button
-            aria-label="关闭新建角色抽屉"
-            className="ml-auto p-0"
+            className="flex-1"
             onClick={onClose}
-            size="icon"
+            size="sm"
             type="button"
             variant="secondary"
           >
-            <X className="size-4" />
+            取消
           </Button>
-        </header>
-
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-          <div className="flex-1 overflow-y-auto p-5">
-            <label
-              className="mb-1.5 block text-[0.6875rem] font-semibold text-muted"
-              htmlFor="roleName"
-            >
-              角色名称
-            </label>
-            <Input
-              autoComplete="off"
-              className="bg-background text-xs"
-              id="roleName"
-              maxLength={128}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="例如：内容审核"
-              ref={nameRef}
-              value={name}
-            />
-
-            <label
-              className="mt-2.5 mb-1.5 block text-[0.6875rem] font-semibold text-muted"
-              htmlFor="roleCode"
-            >
-              角色 code
-            </label>
-            <Input
-              autoComplete="off"
-              className="bg-background text-xs"
-              id="roleCode"
-              maxLength={64}
-              onChange={(event) => setCode(event.target.value)}
-              placeholder="例如：content_reviewer"
-              value={code}
-            />
-            <p className="mt-1.5 text-[0.6875rem] text-disabled">
-              小写字母开头，只能包含小写字母、数字、_、:、-。
-            </p>
-
-            <label
-              className="mt-2.5 mb-1.5 block text-[0.6875rem] font-semibold text-muted"
-              htmlFor="roleApplication"
-            >
-              所属应用
-            </label>
-            <div className="relative">
-              <select
-                className="h-9 w-full appearance-none rounded-md border border-border bg-background pr-8 pl-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                id="roleApplication"
-                onChange={(event) => setApplicationCode(event.target.value)}
-                value={applicationCode}
-              >
-                <option value="admin">admin</option>
-                <option value="web">web</option>
-              </select>
-            </div>
-
-            <p
-              className="mt-3 min-h-4 text-[0.6875rem] text-danger"
-              role="alert"
-            >
-              {formError}
-            </p>
-          </div>
-
-          <footer className="flex gap-2.5 border-t border-border p-5">
-            <Button
-              className="flex-1"
-              onClick={onClose}
-              size="sm"
-              type="button"
-              variant="secondary"
-            >
-              取消
-            </Button>
-            <Button
-              className="flex-1"
-              disabled={createMutation.isPending}
-              size="sm"
-              type="submit"
-            >
-              {createMutation.isPending ? "创建中…" : "创建角色"}
-            </Button>
-          </footer>
-        </form>
-      </aside>
-    </dialog>
+          <Button
+            className="flex-1"
+            disabled={createMutation.isPending}
+            size="sm"
+            type="submit"
+          >
+            {createMutation.isPending ? "创建中…" : "创建角色"}
+          </Button>
+        </footer>
+      </form>
+    </Drawer>
   );
 }
