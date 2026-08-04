@@ -25,6 +25,7 @@ import type {
   AiResponseFormat,
   AiStructuredOutputMethod,
   AiUsage,
+  AiCallObserver,
 } from "../types";
 
 /**
@@ -47,6 +48,12 @@ export interface GenerateObjectOptions<T> {
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
+  observer?: AiCallObserver;
+  /**
+   * 限定本次尝试的 structured output 方法，按给定顺序降级。
+   * 默认走 `STRUCTURED_OUTPUT_METHODS`；管理端能力检测用它单测某一种方法。
+   */
+  methods?: readonly AiStructuredOutputMethod[];
 }
 
 export interface GenerateObjectResult<T> {
@@ -62,18 +69,22 @@ export interface GenerateObjectResult<T> {
  * - `invalid_output`（模型输出无法过 Zod）继续尝试下一种，可能换方法能修好；
  * - 认证 / 限流 / 超时 / 取消 / 网络等错误立即向上抛，不重试、不切换。
  *
+ * `json_object` 方法会额外注入含 json 字样与 JSON Schema 的系统消息，
+ * 因为该方法本身不传 schema，且上游要求提示里出现 json 字样。
+ *
  * 全部方法用尽后抛最后一次错误（无错误时抛 `invalid_output`）。
  */
 export async function generateObject<T>(
   options: GenerateObjectOptions<T>,
 ): Promise<GenerateObjectResult<T>> {
   const provider = getAiProvider(options.model.api);
+  const model = withThinkingDisabled(options.model);
   const jsonSchema = z.toJSONSchema(options.schema) as Record<string, unknown>;
   const generationOptions = toGenerationOptions(options);
 
   let lastError: AiError | null = null;
 
-  for (const method of STRUCTURED_OUTPUT_METHODS) {
+  for (const method of options.methods ?? STRUCTURED_OUTPUT_METHODS) {
     const responseFormat: AiResponseFormat = {
       name: options.schemaName,
       jsonSchema,
@@ -81,15 +92,22 @@ export async function generateObject<T>(
     };
 
     let result: AiGenerationResult;
+    const callId = await options.observer?.onStart({
+      structuredOutputMethod: method,
+    });
 
     try {
       result = await provider.generate({
-        model: options.model,
-        messages: options.messages,
+        model,
+        messages:
+          method === "json_object"
+            ? withJsonObjectHint(options.messages, jsonSchema)
+            : options.messages,
         options: generationOptions,
         responseFormat,
       });
     } catch (error) {
+      if (callId) await options.observer?.onError(callId, error);
       if (!(error instanceof AiError)) {
         throw error;
       }
@@ -111,6 +129,7 @@ export async function generateObject<T>(
     const parsed = parseWithSchema(options.schema, rawText);
 
     if (parsed.ok) {
+      if (callId) await options.observer?.onComplete(callId, result);
       return { value: parsed.value, usage: result.usage };
     }
 
@@ -121,6 +140,7 @@ export async function generateObject<T>(
         model: options.model.model,
       },
     });
+    if (callId) await options.observer?.onError(callId, lastError, result);
   }
 
   throw (
@@ -132,6 +152,55 @@ export async function generateObject<T>(
       },
     })
   );
+}
+
+/**
+ * 结构化输出统一关闭上游推理模式。
+ *
+ * 推理与结构化输出在多数上游上冲突：推理过程会吃掉 `maxTokens` 预算导致 JSON
+ * 截断，部分上游还直接拒绝推理模式下的 `tool_choice`。回复生成走
+ * `generateText` / `streamText`，仍按模型配置保留推理。
+ */
+export function withThinkingDisabled(model: AiModel): AiModel {
+  if (model.api === "openai-chat-completions") {
+    return {
+      ...model,
+      providerOptions: {
+        ...model.providerOptions,
+        "openai-chat-completions": { disableThinking: true },
+      },
+    };
+  }
+
+  if (model.api === "openai-responses") {
+    return {
+      ...model,
+      providerOptions: {
+        ...model.providerOptions,
+        "openai-responses": { disableThinking: true },
+      },
+    };
+  }
+
+  return model;
+}
+
+/**
+ * json_object 方法只声明「输出 JSON」，不把 schema 交给 Provider。
+ * OpenAI 及兼容实现都要求提示里出现 json 字样，否则直接返回 400，
+ * 所以这里补一条系统消息，并把 JSON Schema 写进提示来约束结构。
+ */
+function withJsonObjectHint(
+  messages: AiMessage[],
+  jsonSchema: Record<string, unknown>,
+): AiMessage[] {
+  return [
+    {
+      role: "system",
+      content: `只输出一个 JSON 对象，不要输出 Markdown 或解释。JSON 必须符合这个 Schema：${JSON.stringify(jsonSchema)}`,
+    },
+    ...messages,
+  ];
 }
 
 /**

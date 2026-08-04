@@ -4,7 +4,7 @@ import type {
   AgentGroupChatDetail,
   AgentGroupChatMember,
   AgentGroupChatMessage,
-  UserAgent,
+  Agent,
 } from "@repo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -809,7 +809,7 @@ function AgentPicker({
   onToggle,
   selected,
 }: {
-  agents: UserAgent[];
+  agents: Agent[];
   isPending: boolean;
   onToggle: (agentId: string) => void;
   selected: string[];

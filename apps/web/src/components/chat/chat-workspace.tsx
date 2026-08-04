@@ -3,7 +3,9 @@
 import type {
   AgentGroupChatDetail,
   AgentGroupChatListResponse,
-  CompanionConversationResponse,
+  DirectChatDetailResponse,
+  DirectChatListResponse,
+  DirectChatMessagesResponse,
 } from "@repo/contracts";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
@@ -35,7 +37,11 @@ import {
   useState,
 } from "react";
 
-import { companionConversationQueryOptions } from "@/src/api/chat.query";
+import {
+  directChatDetailQueryOptions,
+  directChatMessagesQueryOptions,
+  directChatsQueryOptions,
+} from "@/src/api/direct-chat.query";
 import {
   groupChatDetailQueryOptions,
   groupChatsQueryOptions,
@@ -95,7 +101,7 @@ type ChatToast = {
 
 type ChatWorkspaceContextValue = {
   closeMobileList: () => void;
-  conversationQuery: UseQueryResult<CompanionConversationResponse>;
+  conversationQuery: UseQueryResult<DirectChatListResponse>;
   groupListQuery: UseQueryResult<AgentGroupChatListResponse>;
   informationRequest: InformationRequest | null;
   openMobileList: () => void;
@@ -110,7 +116,7 @@ export function ChatWorkspaceLayout({ children }: ChatWorkspaceLayoutProps) {
   const router = useRouter();
   const params = useParams<{ id?: string | string[] }>();
   const { userProfile } = useAuthenticatedApp();
-  const conversationQuery = useQuery(companionConversationQueryOptions());
+  const conversationQuery = useQuery(directChatsQueryOptions());
   const groupListQuery = useQuery(groupChatsQueryOptions());
   const { preferences, restoreArchived, updatePreference } =
     useConversationPreferences();
@@ -126,9 +132,7 @@ export function ChatWorkspaceLayout({ children }: ChatWorkspaceLayoutProps) {
     : (params.id ?? "");
   const allConversations = useMemo(
     () => [
-      ...(conversationQuery.data
-        ? [toDirectConversation(conversationQuery.data)]
-        : []),
+      ...(conversationQuery.data?.items ?? []).map(toDirectConversation),
       ...(groupListQuery.data?.items ?? []).map(toGroupConversation),
     ],
     [conversationQuery.data, groupListQuery.data],
@@ -405,7 +409,7 @@ export function ChatEntryView() {
     if (isLoading) return;
 
     const href = getLatestConversationHref(
-      conversationQuery.data,
+      conversationQuery.data?.items ?? [],
       groupListQuery.data?.items ?? [],
     );
 
@@ -433,33 +437,24 @@ type ChatConversationViewProps = {
 };
 
 export function ChatConversationView({ selection }: ChatConversationViewProps) {
-  const router = useRouter();
-  const {
-    conversationQuery,
-    groupListQuery,
-    informationRequest,
-    openMobileList,
-    userProfile,
-  } = useChatWorkspace();
+  const { groupListQuery, informationRequest, openMobileList, userProfile } =
+    useChatWorkspace();
   const selectedGroupId = selection.kind === "group" ? selection.id : "";
+  const selectedDirectId = selection.kind === "direct" ? selection.id : "";
+  const directDetailQuery = useQuery(
+    directChatDetailQueryOptions(selectedDirectId),
+  );
+  const directMessagesQuery = useQuery(
+    directChatMessagesQueryOptions(selectedDirectId),
+  );
   const groupDetailQuery = useQuery(
     groupChatDetailQueryOptions(selectedGroupId),
   );
   const [isInformationVisible, setIsInformationVisible] = useState(false);
   const [isMobileInformationOpen, setIsMobileInformationOpen] = useState(false);
-  const companionProfile = conversationQuery.data
-    ? getCompanionProfile(conversationQuery.data)
+  const companionProfile = directDetailQuery.data
+    ? getCompanionProfile(directDetailQuery.data.conversation)
     : null;
-
-  useEffect(() => {
-    if (
-      selection.kind === "direct" &&
-      conversationQuery.data &&
-      selection.id !== conversationQuery.data.conversationId
-    ) {
-      router.replace(`/chats/direct/${conversationQuery.data.conversationId}`);
-    }
-  }, [conversationQuery.data, router, selection]);
 
   useEffect(() => {
     if (informationRequest?.key !== `${selection.kind}:${selection.id}`) return;
@@ -488,7 +483,8 @@ export function ChatConversationView({ selection }: ChatConversationViewProps) {
 
   const main = renderMainContent({
     companionProfile,
-    conversationQuery,
+    directDetailQuery,
+    directMessagesQuery,
     groupDetailQuery,
     groupListQuery,
     onInformationToggle: handleInformationToggle,
@@ -498,7 +494,7 @@ export function ChatConversationView({ selection }: ChatConversationViewProps) {
   });
   const information = renderInformation({
     companionProfile,
-    conversation: conversationQuery.data,
+    conversation: directDetailQuery.data,
     groupDetail: groupDetailQuery.data,
     onClose: closeInformation,
     profile: userProfile,
@@ -575,7 +571,8 @@ function getUnreadCount(
 
 function renderMainContent({
   companionProfile,
-  conversationQuery,
+  directDetailQuery,
+  directMessagesQuery,
   groupDetailQuery,
   groupListQuery,
   onInformationToggle,
@@ -584,7 +581,8 @@ function renderMainContent({
   selection,
 }: {
   companionProfile: ReturnType<typeof getCompanionProfile> | null;
-  conversationQuery: UseQueryResult<CompanionConversationResponse>;
+  directDetailQuery: UseQueryResult<DirectChatDetailResponse>;
+  directMessagesQuery: UseQueryResult<DirectChatMessagesResponse>;
   groupDetailQuery: UseQueryResult<AgentGroupChatDetail>;
   groupListQuery: UseQueryResult<AgentGroupChatListResponse>;
   onInformationToggle: () => void;
@@ -598,13 +596,15 @@ function renderMainContent({
   };
 
   if (selection.kind === "direct") {
-    if (conversationQuery.isPending) {
+    if (directDetailQuery.isPending || directMessagesQuery.isPending) {
       return <ChatEmptyState description="请稍候" title="正在加载单聊" />;
     }
 
     if (
-      conversationQuery.isError ||
-      !conversationQuery.data ||
+      directDetailQuery.isError ||
+      directMessagesQuery.isError ||
+      !directDetailQuery.data ||
+      !directMessagesQuery.data ||
       !companionProfile
     ) {
       return (
@@ -618,9 +618,11 @@ function renderMainContent({
     return (
       <CompanionChatPane
         assistantProfile={companionProfile}
-        key={conversationQuery.data.conversationId}
+        key={directDetailQuery.data.conversation.id}
         profile={profile}
-        serverConversation={conversationQuery.data}
+        serverConversation={directDetailQuery.data.conversation}
+        serverMessages={directMessagesQuery.data.items}
+        nextCursor={directMessagesQuery.data.nextCursor}
         {...mobileActions}
       />
     );
@@ -671,7 +673,7 @@ function renderInformation({
   selection,
 }: {
   companionProfile: ReturnType<typeof getCompanionProfile> | null;
-  conversation: CompanionConversationResponse | undefined;
+  conversation: DirectChatDetailResponse | undefined;
   groupDetail: AgentGroupChatDetail | undefined;
   onClose: () => void;
   profile: MoodmateProfile;
@@ -697,7 +699,7 @@ function renderInformation({
             <>
               <Link
                 className="moodmate-button moodmate-button--secondary"
-                href="/friends"
+                href={`/friends/${conversation.conversation.agent.id}`}
               >
                 <UserRound aria-hidden="true" />
                 查看详情
@@ -724,9 +726,11 @@ function renderInformation({
           <MoodmateInfoSection title="关系阶段">
             <div className="moodmate-info-stat">
               <span className="moodmate-relationship-pill">
-                {getRelationshipStageLabel(conversation.messageCount)}
+                {getRelationshipStageLabel(
+                  conversation.conversation.messageCount,
+                )}
               </span>
-              <p>共 {conversation.messageCount} 条对话</p>
+              <p>共 {conversation.conversation.messageCount} 条消息</p>
             </div>
           </MoodmateInfoSection>
           <MoodmateInfoSection title="关于 TA 记得的">

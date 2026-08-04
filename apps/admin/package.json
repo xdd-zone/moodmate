@@ -6,8 +6,8 @@
   "scripts": {
     "check": "pnpm check-types && pnpm lint && pnpm format:check",
     "check-types": "next typegen && tsc --noEmit",
-    "dev": "next dev --turbopack --port 6154",
-    "build": "next build",
+    "dev": "next dev --webpack --port 6154",
+    "build": "next build --webpack",
     "start": "next start",
     "format": "prettier --write . --ignore-path ../../.prettierignore",
     "format:check": "prettier --check . --ignore-path ../../.prettierignore",

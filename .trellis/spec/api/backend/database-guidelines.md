@@ -80,6 +80,39 @@ for (const m of members) {
 
 ## Common Mistakes
 
-<!-- Database-related mistakes your team has made -->
+### 在 `sql` 模板里手写关联条件，Drizzle 会渲染成裸列名
 
-(To be filled by the team)
+**Problem**: Drizzle 对单表查询会省略列的表前缀。`sql` 模板里的 `${table.column}` 只输出 `"column"`，不输出 `"table"."column"`。相关子查询因此关联不到外层表：
+
+```typescript
+// 错误：条件在 sql 模板里手写
+const memberCountExpr = sql<number>`(
+  SELECT COUNT(*) FROM ${agentGroupChatMembers}
+  WHERE ${agentGroupChatMembers.groupChatId} = ${agentGroupChats.id}
+    AND ${agentGroupChatMembers.status} = 'active'
+)`;
+```
+
+`toSQL()` 打出来是 `WHERE "group_chat_id" = "id"`。子查询的 FROM 是成员表，而成员表同时有 `group_chat_id` 和 `id` 两列，SQLite 把两边都解析到内层表，条件变成成员表自身两列相比，`COUNT` 恒为 0。多表查询（带 `innerJoin`）反而不会踩到——Drizzle 那时不做单表优化，列都带表前缀。所以同一种写法在一处正常、换个查询就静默出错。
+
+还有第二个坑：select 列表里的 `sql` 表达式没有 `as()` 时，结果集列名是整段子查询文本，`row.memberCount` 读到 `undefined`，`Number(undefined ?? 0)` 又兜成 0。两个缺陷都指向同一个数字，只修一个仍然是 0。
+
+**Solution**: 关联条件用 `eq()` / `and()` 生成，末尾补 `as()` 别名。`eq()` 返回 SQL 对象，渲染时不受单表优化影响：
+
+```typescript
+const activeMemberCountExpr = sql<number>`(
+  SELECT COUNT(*) FROM ${agentGroupChatMembers}
+  WHERE ${eq(agentGroupChatMembers.groupChatId, agentGroupChats.id)}
+    AND ${eq(agentGroupChatMembers.status, "active")}
+)`.as("member_count");
+```
+
+生成 `WHERE "agent_group_chat_members"."group_chat_id" = "agent_group_chats"."id" AND "agent_group_chat_members"."status" = ?`，条件正确、值也参数化了。
+
+**Verify**: 改完别只看接口返回。用 `query.toSQL()` 打出真实语句，确认每个列引用都带表前缀、子查询有别名；再把同一段 SQL 在 D1 上直接跑一遍对数：
+
+```bash
+pnpm exec wrangler d1 execute moodmate-local --local --command "SELECT ..." --yes
+```
+
+计数类字段返回 0 或恒等值时，先怀疑这一条，别先怀疑数据。

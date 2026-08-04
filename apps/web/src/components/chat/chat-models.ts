@@ -1,6 +1,6 @@
 import type {
   AgentGroupChatListItem,
-  CompanionConversationResponse,
+  DirectChatListItem,
 } from "@repo/contracts";
 
 import type {
@@ -19,27 +19,19 @@ function formatTime(value: number | null | undefined) {
   return value ? timeFormatter.format(new Date(value)) : "";
 }
 
-function getMessagePreview(
-  conversation: CompanionConversationResponse,
-): string {
-  return (
-    conversation.messages.at(-1)?.content.trim() ||
-    conversation.summary?.trim() ||
-    "从一句你好开始"
-  );
+function getMessagePreview(conversation: DirectChatListItem): string {
+  return conversation.summary?.trim() || `${conversation.messageCount} 条消息`;
 }
 
 export function getCompanionProfile(
-  conversation: CompanionConversationResponse,
+  conversation: DirectChatListItem,
 ): MoodmateProfile {
-  const name = conversation.title?.trim() || "MoodMate";
-
   return {
-    headline: "你的 AI 伴侣",
-    id: conversation.conversationId,
-    name,
-    palette: getMoodmateAvatarPalette(conversation.conversationId),
-    status: "online",
+    headline: conversation.agent.headline?.trim() || "MoodMate 朋友",
+    id: conversation.agent.id,
+    name: conversation.agent.name,
+    palette: getMoodmateAvatarPalette(conversation.agent.id),
+    status: conversation.agent.status === "active" ? "online" : "offline",
   };
 }
 
@@ -69,20 +61,18 @@ export function getMemberProfile(input: {
 }
 
 export function toDirectConversation(
-  conversation: CompanionConversationResponse,
+  conversation: DirectChatListItem,
 ): MoodmateConversation {
-  const lastMessage = conversation.messages.at(-1);
   const profile = getCompanionProfile(conversation);
 
   return {
     avatar: profile,
-    href: `/chats/direct/${conversation.conversationId}`,
-    id: conversation.conversationId,
+    href: `/chats/direct/${conversation.id}`,
+    id: conversation.id,
     kind: "direct",
     lastMessage: getMessagePreview(conversation),
-    timeLabel: formatTime(lastMessage?.createdAtMs),
+    timeLabel: formatTime(conversation.lastMessageAtMs),
     title: profile.name,
-    unreadCount: conversation.hasUnreadCareEvent ? 1 : undefined,
   };
 }
 
@@ -102,10 +92,18 @@ export function toGroupConversation(
 }
 
 export function getLatestConversationHref(
-  direct: CompanionConversationResponse | undefined,
+  directs: readonly DirectChatListItem[],
   groups: readonly AgentGroupChatListItem[],
 ) {
-  const directTime = direct?.messages.at(-1)?.createdAtMs ?? -1;
+  const direct = directs.reduce<DirectChatListItem | undefined>(
+    (current, item) =>
+      (item.lastMessageAtMs ?? item.updatedAtMs) >
+      (current?.lastMessageAtMs ?? current?.updatedAtMs ?? -1)
+        ? item
+        : current,
+    undefined,
+  );
+  const directTime = direct?.lastMessageAtMs ?? direct?.updatedAtMs ?? -1;
   const newestGroup = groups.reduce<AgentGroupChatListItem | undefined>(
     (current, group) =>
       (group.lastMessageAtMs ?? -1) > (current?.lastMessageAtMs ?? -1)
@@ -115,12 +113,12 @@ export function getLatestConversationHref(
   );
 
   if (direct && directTime >= (newestGroup?.lastMessageAtMs ?? -1)) {
-    return `/chats/direct/${direct.conversationId}`;
+    return `/chats/direct/${direct.id}`;
   }
 
   if (newestGroup) {
     return `/chats/group/${newestGroup.id}`;
   }
 
-  return direct ? `/chats/direct/${direct.conversationId}` : null;
+  return direct ? `/chats/direct/${direct.id}` : null;
 }

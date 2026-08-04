@@ -6,8 +6,9 @@ import type {
   CompanionCarePlan,
   CompanionCareScene,
   CompanionCareTone,
-  CompanionMemory,
-  UpdateCompanionMemoryRequest,
+  Agent,
+  AgentMemory,
+  UpdateAgentMemoryRequest,
   UpsertCompanionCarePlanRequest,
   WebUserProfile,
 } from "@repo/contracts";
@@ -26,18 +27,16 @@ import {
 } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 
+import { deleteAgentMemory, updateAgentMemory } from "@/src/api/chat.api";
 import {
-  deleteCompanionMemory,
-  updateCompanionMemory,
-} from "@/src/api/chat.api";
-import {
-  companionCareEventsQueryOptions,
+  agentMemoriesQueryOptions,
+  careEventsQueryOptions,
   companionCarePlanQueryOptions,
   companionChatKeys,
-  companionMemoriesQueryOptions,
   generateCompanionCareEventMutationOptions,
   updateCompanionCarePlanMutationOptions,
 } from "@/src/api/chat.query";
+import { userAgentsQueryOptions } from "@/src/api/agent.query";
 import { MoodmateAvatar } from "@/src/components/moodmate/avatar";
 import { getMoodmateAvatarPalette } from "@/src/components/moodmate/models";
 
@@ -345,22 +344,28 @@ function SettingsSwitch({
 
 export function MemoryPanel() {
   const queryClient = useQueryClient();
-  const memoriesQuery = useQuery(companionMemoriesQueryOptions());
+  const agentsQuery = useQuery(userAgentsQueryOptions());
+  const [selectedAgentId, setSelectedAgentId] = useState("");
+  const agents = agentsQuery.data?.items ?? [];
+  const agentId = selectedAgentId || agents[0]?.id || "";
+  const memoriesQuery = useQuery(agentMemoriesQueryOptions(agentId));
   const updateMutation = useMutation({
     mutationFn: (input: {
+      agentId: string;
       memoryId: string;
-      patch: UpdateCompanionMemoryRequest;
-    }) => updateCompanionMemory(input.memoryId, input.patch),
-    onSuccess: () =>
+      patch: UpdateAgentMemoryRequest;
+    }) => updateAgentMemory(input.agentId, input.memoryId, input.patch),
+    onSuccess: (_response, input) =>
       queryClient.invalidateQueries({
-        queryKey: companionChatKeys.memories(),
+        queryKey: companionChatKeys.memories(input.agentId),
       }),
   });
   const deleteMutation = useMutation({
-    mutationFn: (memoryId: string) => deleteCompanionMemory(memoryId),
-    onSuccess: () =>
+    mutationFn: (input: { agentId: string; memoryId: string }) =>
+      deleteAgentMemory(input.agentId, input.memoryId),
+    onSuccess: (_response, input) =>
       queryClient.invalidateQueries({
-        queryKey: companionChatKeys.memories(),
+        queryKey: companionChatKeys.memories(input.agentId),
       }),
   });
 
@@ -369,7 +374,26 @@ export function MemoryPanel() {
       description="当前账号保存的偏好、边界和关系目标。"
       title="记忆管理"
     >
-      {memoriesQuery.isPending ? (
+      {agents.length > 0 ? (
+        <label className="grid gap-1.5 py-3 text-sm font-medium sm:max-w-64">
+          查看朋友
+          <select
+            className="min-h-11 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            disabled={agentsQuery.isPending}
+            onChange={(event) => setSelectedAgentId(event.target.value)}
+            value={agentId}
+          >
+            {agents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+                {agent.source === "system" ? "（系统）" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      {agentsQuery.isPending || (agentId && memoriesQuery.isPending) ? (
         <div
           className="flex min-h-32 items-center justify-center gap-2 text-sm text-muted"
           role="status"
@@ -379,12 +403,15 @@ export function MemoryPanel() {
         </div>
       ) : null}
 
-      {memoriesQuery.isError ? (
+      {agentsQuery.isError || memoriesQuery.isError ? (
         <div className="py-6 text-sm" role="alert">
           <p className="text-danger">记忆加载失败，请检查 API 和 D1 迁移。</p>
           <Button
             className="mt-4"
-            onClick={() => void memoriesQuery.refetch()}
+            onClick={() => {
+              void agentsQuery.refetch();
+              if (agentId) void memoriesQuery.refetch();
+            }}
             type="button"
             variant="outline"
           >
@@ -393,7 +420,19 @@ export function MemoryPanel() {
         </div>
       ) : null}
 
-      {memoriesQuery.data?.items.length === 0 ? (
+      {!agentsQuery.isPending && agents.length === 0 ? (
+        <div className="flex min-h-40 flex-col items-center justify-center py-8 text-center">
+          <span className="grid size-10 place-items-center rounded-full bg-primary-subtle text-primary-strong">
+            <Brain aria-hidden="true" className="size-5" />
+          </span>
+          <p className="mt-3 text-sm font-medium">还没有可查看的朋友</p>
+          <p className="mt-1 max-w-sm text-xs leading-5 text-muted">
+            创建朋友或开始使用系统朋友后，再回来查看对应记忆。
+          </p>
+        </div>
+      ) : null}
+
+      {agentId && memoriesQuery.data?.items.length === 0 ? (
         <div className="flex min-h-40 flex-col items-center justify-center py-8 text-center">
           <span className="grid size-10 place-items-center rounded-full bg-primary-subtle text-primary-strong">
             <Brain aria-hidden="true" className="size-5" />
@@ -410,11 +449,12 @@ export function MemoryPanel() {
           {memoriesQuery.data.items.map((memory) => (
             <MemoryEditor
               deleteError={
-                deleteMutation.isError && deleteMutation.variables === memory.id
+                deleteMutation.isError &&
+                deleteMutation.variables.memoryId === memory.id
               }
               isDeleting={
                 deleteMutation.isPending &&
-                deleteMutation.variables === memory.id
+                deleteMutation.variables.memoryId === memory.id
               }
               isUpdating={
                 updateMutation.isPending &&
@@ -422,9 +462,11 @@ export function MemoryPanel() {
               }
               key={`${memory.id}:${memory.updatedAtMs}`}
               memory={memory}
-              onDelete={() => deleteMutation.mutate(memory.id)}
+              onDelete={() =>
+                deleteMutation.mutate({ agentId, memoryId: memory.id })
+              }
               onUpdate={(patch) =>
-                updateMutation.mutate({ memoryId: memory.id, patch })
+                updateMutation.mutate({ agentId, memoryId: memory.id, patch })
               }
               updateError={
                 updateMutation.isError &&
@@ -450,9 +492,9 @@ function MemoryEditor({
   deleteError: boolean;
   isDeleting: boolean;
   isUpdating: boolean;
-  memory: CompanionMemory;
+  memory: AgentMemory;
   onDelete: () => void;
-  onUpdate: (patch: UpdateCompanionMemoryRequest) => void;
+  onUpdate: (patch: UpdateAgentMemoryRequest) => void;
   updateError: boolean;
 }) {
   const [type, setType] = useState(memory.type);
@@ -629,7 +671,8 @@ const CARE_EVENT_STATUS_LABELS: Record<CompanionCareEvent["status"], string> = {
 export function CarePanel() {
   const queryClient = useQueryClient();
   const planQuery = useQuery(companionCarePlanQueryOptions());
-  const eventsQuery = useQuery(companionCareEventsQueryOptions());
+  const eventsQuery = useQuery(careEventsQueryOptions());
+  const agentsQuery = useQuery(userAgentsQueryOptions());
   const updateMutation = useMutation(
     updateCompanionCarePlanMutationOptions(queryClient),
   );
@@ -683,6 +726,7 @@ export function CarePanel() {
       title="主动关怀"
     >
       <CareForm
+        agents={agentsQuery.data?.items ?? []}
         isSaving={updateMutation.isPending}
         key={`${planQuery.data.plan.id}:${planQuery.data.plan.updatedAtMs}`}
         onSave={(payload) => updateMutation.mutate(payload)}
@@ -736,17 +780,20 @@ export function CarePanel() {
 }
 
 function CareForm({
+  agents,
   isSaving,
   onSave,
   plan,
   saveError,
 }: {
+  agents: Agent[];
   isSaving: boolean;
   onSave: (payload: UpsertCompanionCarePlanRequest) => void;
   plan: CompanionCarePlan;
   saveError: boolean;
 }) {
   const [enabled, setEnabled] = useState(plan.enabled);
+  const [agentId, setAgentId] = useState(plan.agentId ?? "");
   const [frequency, setFrequency] = useState<CompanionCareFrequency>(
     plan.frequency,
   );
@@ -755,6 +802,11 @@ function CareForm({
   const [tone, setTone] = useState<CompanionCareTone>(plan.tone);
   const [customPrompt, setCustomPrompt] = useState(plan.customPrompt ?? "");
   const noSceneSelected = scenes.length === 0;
+  const selectedAgent =
+    agents.find((agent) => agent.id === agentId) ??
+    (plan.agent?.id === agentId ? plan.agent : null);
+  const unavailableAgent =
+    enabled && (!selectedAgent || selectedAgent.status !== "active");
 
   function toggleScene(scene: CompanionCareScene) {
     setScenes((current) =>
@@ -765,11 +817,12 @@ function CareForm({
   }
 
   function handleSave() {
-    if (noSceneSelected) {
+    if (noSceneSelected || unavailableAgent) {
       return;
     }
 
     onSave({
+      agentId: agentId || null,
       customPrompt: customPrompt.trim() || null,
       enabled,
       frequency,
@@ -805,6 +858,36 @@ function CareForm({
           />
         </button>
       </div>
+
+      <label className="grid gap-1.5 text-sm font-medium sm:max-w-48">
+        关怀朋友
+        <select
+          className="min-h-11 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          disabled={isSaving}
+          onChange={(event) => setAgentId(event.target.value)}
+          value={agentId}
+        >
+          <option value="">请选择朋友</option>
+          {agents
+            .filter((agent) => agent.status === "active")
+            .map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+                {agent.source === "system" ? "（系统）" : ""}
+              </option>
+            ))}
+          {plan.agent && plan.agent.status !== "active" ? (
+            <option disabled value={plan.agent.id}>
+              {plan.agent.name}（已停用，请重新选择）
+            </option>
+          ) : null}
+        </select>
+        {unavailableAgent ? (
+          <span className="text-xs font-normal text-danger">
+            当前关怀朋友不可用，请重新选择一位活跃朋友。
+          </span>
+        ) : null}
+      </label>
 
       <label className="grid gap-1.5 text-sm font-medium sm:max-w-48">
         频率
@@ -899,7 +982,7 @@ function CareForm({
 
       <div>
         <Button
-          disabled={isSaving || noSceneSelected}
+          disabled={isSaving || noSceneSelected || unavailableAgent}
           onClick={handleSave}
           type="button"
         >

@@ -24,6 +24,19 @@ export interface GroupChatListRow {
   updatedAtMs: number;
 }
 
+/**
+ * 关联子查询统计群聊的活跃成员数。
+ *
+ * 条件必须用 `eq()` 生成：在 sql 模板里直接写 `${table.column}` 只会渲染成裸列名，
+ * 子查询里的 `"group_chat_id" = "id"` 会被 SQLite 解析成成员表自身两列相比，恒不成立。
+ * 末尾的 `as()` 也不能省：没有别名时结果集的列名是整段子查询文本，取不到值。
+ */
+const activeMemberCountExpr = sql<number>`(
+  SELECT COUNT(*) FROM ${agentGroupChatMembers}
+  WHERE ${eq(agentGroupChatMembers.groupChatId, agentGroupChats.id)}
+    AND ${eq(agentGroupChatMembers.status, "active")}
+)`.as("member_count");
+
 export interface GroupChatMemberWithAgentRow {
   id: string;
   agentId: string;
@@ -115,18 +128,12 @@ export async function listGroupChatsForUser(input: {
 }): Promise<GroupChatListRow[]> {
   const db = createD1Client(input.database);
 
-  const memberCountExpr = sql<number>`(
-    SELECT COUNT(*) FROM ${agentGroupChatMembers}
-    WHERE ${agentGroupChatMembers.groupChatId} = ${agentGroupChats.id}
-      AND ${agentGroupChatMembers.status} = 'active'
-  )`;
-
   const rows = await db
     .select({
       createdAtMs: agentGroupChats.createdAtMs,
       id: agentGroupChats.id,
       lastMessageAtMs: agentGroupChats.lastMessageAtMs,
-      memberCount: memberCountExpr,
+      memberCount: activeMemberCountExpr,
       messageCount: agentGroupChats.messageCount,
       summary: agentGroupChats.summary,
       title: agentGroupChats.title,
@@ -170,18 +177,12 @@ export async function getGroupChatWithMemberCount(input: {
 }): Promise<GroupChatListRow | null> {
   const db = createD1Client(input.database);
 
-  const memberCountExpr = sql<number>`(
-    SELECT COUNT(*) FROM ${agentGroupChatMembers}
-    WHERE ${agentGroupChatMembers.groupChatId} = ${agentGroupChats.id}
-      AND ${agentGroupChatMembers.status} = 'active'
-  )`;
-
   const rows = await db
     .select({
       createdAtMs: agentGroupChats.createdAtMs,
       id: agentGroupChats.id,
       lastMessageAtMs: agentGroupChats.lastMessageAtMs,
-      memberCount: memberCountExpr,
+      memberCount: activeMemberCountExpr,
       messageCount: agentGroupChats.messageCount,
       summary: agentGroupChats.summary,
       title: agentGroupChats.title,

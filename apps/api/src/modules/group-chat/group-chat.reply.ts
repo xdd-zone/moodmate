@@ -7,11 +7,17 @@ import {
   toAiModel,
   toChatAppError,
 } from "@/modules/chat/chat.ai-model";
-import { generateText, type AiGenerationResult } from "@/infra/ai";
+import {
+  generateText,
+  type AiCallObserver,
+  type AiGenerationResult,
+} from "@/infra/ai";
 import { AppError } from "@/shared/app-error";
 
-import type { ChatProviderConfig } from "@/modules/chat/chat.service";
-import type { ChatCompletionMessage } from "@/modules/chat/chat.service";
+import type {
+  ChatCompletionMessage,
+  ChatProviderConfig,
+} from "@/modules/chat/chat.types";
 import type {
   GroupChatMemberWithAgentRow,
   GroupChatMessageWithAgentRow,
@@ -245,6 +251,7 @@ export async function buildAgentReply(input: {
   signal: AbortSignal;
   userText: string;
   intent?: GroupReplyIntentSignal;
+  observer: AiCallObserver;
   selectionReason?: string;
 }): Promise<string> {
   const memoryText = input.activeMemories
@@ -272,6 +279,7 @@ export async function buildAgentReply(input: {
 
   return generateGroupChatText({
     messages,
+    observer: input.observer,
     providerConfig: input.providerConfig,
     signal: input.signal,
   });
@@ -284,6 +292,7 @@ export async function buildAgentReply(input: {
  */
 async function generateGroupChatText(input: {
   messages: ChatCompletionMessage[];
+  observer: AiCallObserver;
   providerConfig: ChatProviderConfig;
   signal: AbortSignal;
 }): Promise<string> {
@@ -293,6 +302,7 @@ async function generateGroupChatText(input: {
     result = await generateText({
       model: toAiModel(input.providerConfig),
       messages: toAiMessages(input.messages),
+      observer: input.observer,
       signal: input.signal,
     });
   } catch (error) {
@@ -426,6 +436,7 @@ export async function buildCrossAgentReply(input: {
   userText: string;
   respondToName: string;
   angle: string;
+  observer: AiCallObserver;
 }): Promise<string> {
   const memoryText = input.activeMemories
     .map((memory) => `- ${memory.content}`)
@@ -452,6 +463,7 @@ export async function buildCrossAgentReply(input: {
 
   const text = await generateGroupChatText({
     messages,
+    observer: input.observer,
     providerConfig: input.providerConfig,
     signal: input.signal,
   });

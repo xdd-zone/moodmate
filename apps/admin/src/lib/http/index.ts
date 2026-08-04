@@ -17,7 +17,7 @@ export type HttpRequestOptions = {
   query?: HttpQuery;
 };
 
-type HttpMethod = "GET" | "POST";
+type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 type HttpRequestBody =
   | { kind: "form"; value: FormData }
@@ -86,7 +86,7 @@ function createRequestInit(
     method,
   };
 
-  if (method === "GET") {
+  if (method === "GET" || method === "DELETE") {
     return requestInit;
   }
 
@@ -204,6 +204,24 @@ export const http = {
       kind: "json",
       value: payload,
     });
+  },
+  patch<TPayload, TData>(
+    path: string,
+    payload: TPayload,
+    responseSchema: z.ZodType<TData>,
+    options?: HttpRequestOptions,
+  ) {
+    return request("PATCH", path, responseSchema, options, {
+      kind: "json",
+      value: payload,
+    });
+  },
+  delete<TData>(
+    path: string,
+    responseSchema: z.ZodType<TData>,
+    options?: HttpRequestOptions,
+  ) {
+    return request("DELETE", path, responseSchema, options);
   },
   postForm<TData>(
     path: string,

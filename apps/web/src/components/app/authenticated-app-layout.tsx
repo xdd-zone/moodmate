@@ -14,7 +14,7 @@ import {
   useState,
 } from "react";
 
-import { companionConversationQueryOptions } from "@/src/api/chat.query";
+import { directChatsQueryOptions } from "@/src/api/direct-chat.query";
 import { getWebUserProfile } from "@/src/api/user.api";
 import {
   clearClientSession,
@@ -68,9 +68,9 @@ export function AuthenticatedAppLayout({
   const [profile, setProfile] = useState<WebUserProfile | null>(null);
   const isChatsRoute = pathname.startsWith("/chats");
   const unreadConversationQuery = useQuery({
-    ...companionConversationQueryOptions(),
+    ...directChatsQueryOptions(),
     enabled: profile !== null && isChatsRoute,
-    select: (conversation) => conversation.hasUnreadCareEvent,
+    select: () => false,
   });
   const logout = useCallback(() => {
     clearClientSession();

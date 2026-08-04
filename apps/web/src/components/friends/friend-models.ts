@@ -1,4 +1,4 @@
-import type { UserAgent } from "@repo/contracts";
+import type { Agent } from "@repo/contracts";
 
 import {
   getMoodmateAvatarPalette,
@@ -27,7 +27,7 @@ export const friendProfilePlaceholders = {
   ],
 } as const;
 
-export function getFriendProfile(agent: UserAgent): MoodmateProfile {
+export function getFriendProfile(agent: Agent): MoodmateProfile {
   return {
     headline: agent.headline?.trim() || "MoodMate 朋友",
     id: agent.id,
@@ -37,7 +37,7 @@ export function getFriendProfile(agent: UserAgent): MoodmateProfile {
   };
 }
 
-export function getFriendTags(agent: UserAgent): string[] {
+export function getFriendTags(agent: Agent): string[] {
   const content = [
     agent.headline,
     agent.description,
@@ -55,7 +55,7 @@ export function getFriendTags(agent: UserAgent): string[] {
 }
 
 export function matchesFriendFilter(
-  agent: UserAgent,
+  agent: Agent,
   filter: FriendFilter,
 ): boolean {
   if (filter === "all") return agent.status === "active";

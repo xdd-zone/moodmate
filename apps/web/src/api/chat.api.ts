@@ -1,91 +1,55 @@
 import {
+  AgentMemoriesResponseSchema,
   CompanionCareEventsResponseSchema,
   CompanionCarePlanResponseSchema,
-  CompanionConversationMessagesResponseSchema,
-  CompanionConversationResponseSchema,
-  CompanionMemoriesResponseSchema,
-  DeleteCompanionMemoryResponseSchema,
+  DeleteAgentMemoryResponseSchema,
   GenerateCompanionCareEventResponseSchema,
-  SubmitCompanionMessageFeedbackResponseSchema,
-  UpdateCompanionMemoryResponseSchema,
+  UpdateAgentMemoryResponseSchema,
   type GenerateCompanionCareEventRequest,
-  type SubmitCompanionMessageFeedbackRequest,
-  type UpdateCompanionMemoryRequest,
+  type UpdateAgentMemoryRequest,
   type UpsertCompanionCarePlanRequest,
 } from "@repo/contracts";
 
 import { http, type HttpRequestOptions } from "@/src/lib/http";
 
-export function getCompanionConversation(options?: HttpRequestOptions) {
-  return http.get(
-    "/rpc/chat/companion/conversation",
-    CompanionConversationResponseSchema,
-    options,
-  );
-}
-
-export function getCompanionConversationMessages(
-  cursor: string,
+export function getAgentMemories(
+  agentId: string,
   options?: HttpRequestOptions,
 ) {
-  return http.get(
-    "/rpc/chat/companion/messages",
-    CompanionConversationMessagesResponseSchema,
-    { ...options, query: { ...options?.query, cursor } },
-  );
+  return http.get("/rpc/agent-memories", AgentMemoriesResponseSchema, {
+    ...options,
+    query: { ...options?.query, agentId },
+  });
 }
 
-export function getCompanionMemories(options?: HttpRequestOptions) {
-  return http.get(
-    "/rpc/chat/companion/memories",
-    CompanionMemoriesResponseSchema,
-    options,
-  );
-}
-
-export function updateCompanionMemory(
+export function updateAgentMemory(
+  agentId: string,
   memoryId: string,
-  input: UpdateCompanionMemoryRequest,
+  input: UpdateAgentMemoryRequest,
   options?: HttpRequestOptions,
 ) {
   return http.patch(
-    `/rpc/chat/companion/memories/${encodeURIComponent(memoryId)}`,
+    `/rpc/agent-memories/${encodeURIComponent(memoryId)}`,
     input,
-    UpdateCompanionMemoryResponseSchema,
-    options,
+    UpdateAgentMemoryResponseSchema,
+    { ...options, query: { ...options?.query, agentId } },
   );
 }
 
-export function deleteCompanionMemory(
+export function deleteAgentMemory(
+  agentId: string,
   memoryId: string,
   options?: HttpRequestOptions,
 ) {
   return http.delete(
-    `/rpc/chat/companion/memories/${encodeURIComponent(memoryId)}`,
-    DeleteCompanionMemoryResponseSchema,
-    options,
-  );
-}
-
-export function submitCompanionMessageFeedback(
-  messageId: string,
-  input: SubmitCompanionMessageFeedbackRequest,
-  options?: HttpRequestOptions,
-) {
-  return http.post(
-    `/rpc/chat/companion/messages/${encodeURIComponent(messageId)}/feedback`,
-    input,
-    SubmitCompanionMessageFeedbackResponseSchema,
-    options,
+    `/rpc/agent-memories/${encodeURIComponent(memoryId)}`,
+    DeleteAgentMemoryResponseSchema,
+    { ...options, query: { ...options?.query, agentId } },
   );
 }
 
 export function getCompanionCarePlan(options?: HttpRequestOptions) {
-  return http.get(
-    "/rpc/chat/companion/care-plan",
-    CompanionCarePlanResponseSchema,
-    options,
-  );
+  return http.get("/rpc/care-plan", CompanionCarePlanResponseSchema, options);
 }
 
 export function updateCompanionCarePlan(
@@ -93,7 +57,7 @@ export function updateCompanionCarePlan(
   options?: HttpRequestOptions,
 ) {
   return http.patch(
-    "/rpc/chat/companion/care-plan",
+    "/rpc/care-plan",
     input,
     CompanionCarePlanResponseSchema,
     options,
@@ -102,7 +66,7 @@ export function updateCompanionCarePlan(
 
 export function getCompanionCareEvents(options?: HttpRequestOptions) {
   return http.get(
-    "/rpc/chat/companion/care-events",
+    "/rpc/care-events",
     CompanionCareEventsResponseSchema,
     options,
   );
@@ -113,7 +77,7 @@ export function generateCompanionCareEvent(
   options?: HttpRequestOptions,
 ) {
   return http.post(
-    "/rpc/chat/companion/care-events/generate",
+    "/rpc/care-events/generate",
     input,
     GenerateCompanionCareEventResponseSchema,
     options,

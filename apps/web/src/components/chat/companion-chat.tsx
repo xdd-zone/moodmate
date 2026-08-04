@@ -2,7 +2,8 @@
 
 import { useChat } from "@ai-sdk/react";
 import type {
-  CompanionConversationResponse,
+  DirectChatListItem,
+  DirectChatMessage,
   CompanionMessageFeedbackRating,
 } from "@repo/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,11 +18,11 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { getCompanionConversationMessages } from "@/src/api/chat.api";
+import { getDirectChatMessages } from "@/src/api/direct-chat.api";
 import {
-  companionChatKeys,
-  submitCompanionMessageFeedbackMutationOptions,
-} from "@/src/api/chat.query";
+  directChatKeys,
+  submitDirectChatFeedbackMutationOptions,
+} from "@/src/api/direct-chat.query";
 import type { MoodmateProfile } from "@/src/components/moodmate/models";
 import { getWebClientEnv } from "@/src/env/client";
 import { fetchWithClientSession } from "@/src/lib/http";
@@ -36,7 +37,9 @@ type CompanionChatPaneProps = {
   onInformationToggle: () => void;
   onOpenList: () => void;
   profile: MoodmateProfile;
-  serverConversation: CompanionConversationResponse;
+  serverConversation: DirectChatListItem;
+  serverMessages: DirectChatMessage[];
+  nextCursor: string | null;
 };
 
 export function getRelationshipStageLabel(messageCount: number) {
@@ -53,26 +56,27 @@ export function CompanionChatPane({
   onOpenList,
   profile,
   serverConversation,
+  serverMessages,
+  nextCursor: initialNextCursor,
 }: CompanionChatPaneProps) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const transport = useMemo(
     () =>
       new TextStreamChatTransport<CompanionUiMessage>({
-        api: `${getWebClientEnv().NEXT_PUBLIC_API_BASE_URL}/rpc/chat/companion`,
+        api: `${getWebClientEnv().NEXT_PUBLIC_API_BASE_URL}/rpc/direct-chats/${serverConversation.id}/messages`,
         fetch: fetchWithClientSession,
         prepareSendMessagesRequest({ api, body, messages }) {
           return {
             api,
             body: {
               ...body,
-              conversationId: serverConversation.conversationId,
               messages: messages.slice(-20),
             },
           };
         },
       }),
-    [serverConversation.conversationId],
+    [serverConversation.id],
   );
   const {
     clearError,
@@ -83,32 +87,33 @@ export function CompanionChatPane({
     status,
     stop,
   } = useChat<CompanionUiMessage>({
-    id: serverConversation.conversationId,
-    messages: serverConversation.messages.map(toUiMessage),
+    id: serverConversation.id,
+    messages: serverMessages.map(toUiMessage),
     onFinish({ isAbort, isDisconnect, isError }) {
       if (!isAbort && !isDisconnect && !isError) {
         void queryClient.invalidateQueries({
-          queryKey: companionChatKeys.conversation(),
+          queryKey: directChatKeys.messages(serverConversation.id),
         });
       }
     },
     transport,
   });
   const isSending = status === "submitted" || status === "streaming";
-  const [nextCursor, setNextCursor] = useState(serverConversation.nextCursor);
+  const isAgentAvailable = serverConversation.agent.status === "active";
+  const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
   const [historyLoadError, setHistoryLoadError] = useState(false);
   const [historicalAssistantMessageIds, setHistoricalAssistantMessageIds] =
     useState<string[]>(() =>
-      serverConversation.messages
+      serverMessages
         .filter((message) => message.role === "assistant")
         .map((message) => message.id),
     );
   const [feedbackByMessageId, setFeedbackByMessageId] = useState<
     Record<string, CompanionMessageFeedbackRating>
-  >(() => collectFeedback(serverConversation.messages));
+  >(() => collectFeedback(serverMessages));
   const feedbackMutation = useMutation(
-    submitCompanionMessageFeedbackMutationOptions(queryClient),
+    submitDirectChatFeedbackMutationOptions(queryClient),
   );
 
   function handleSubmitFeedback(
@@ -118,7 +123,7 @@ export function CompanionChatPane({
     if (feedbackMutation.isPending) return;
 
     feedbackMutation.mutate(
-      { messageId, payload: { rating } },
+      { conversationId: serverConversation.id, messageId, payload: { rating } },
       {
         onSuccess: (result) => {
           setFeedbackByMessageId((current) => ({
@@ -133,7 +138,7 @@ export function CompanionChatPane({
   function handleSend() {
     const text = draft.trim();
 
-    if (!text || isSending) return;
+    if (!text || isSending || !isAgentAvailable) return;
 
     clearError();
     setDraft("");
@@ -147,9 +152,12 @@ export function CompanionChatPane({
     setIsLoadingMoreHistory(true);
 
     try {
-      const result = await getCompanionConversationMessages(nextCursor);
-      const olderMessages = result.messages.map(toUiMessage);
-      const olderAssistantIds = result.messages
+      const result = await getDirectChatMessages(
+        serverConversation.id,
+        nextCursor,
+      );
+      const olderMessages = result.items.map(toUiMessage);
+      const olderAssistantIds = result.items
         .filter((message) => message.role === "assistant")
         .map((message) => message.id);
 
@@ -157,7 +165,7 @@ export function CompanionChatPane({
         ...new Set([...olderAssistantIds, ...current]),
       ]);
       setFeedbackByMessageId((current) => ({
-        ...collectFeedback(result.messages),
+        ...collectFeedback(result.items),
         ...current,
       }));
       setMessages((current) => {
@@ -204,7 +212,7 @@ export function CompanionChatPane({
           {isSending ? (
             <ChatHeaderTyping label={`${assistantProfile.name}正在输入`} />
           ) : (
-            <p>在线</p>
+            <p>{isAgentAvailable ? "在线" : "当前不可用，历史消息仍可查看"}</p>
           )}
         </div>
         <div className="moodmate-chat__actions">
@@ -290,11 +298,16 @@ export function CompanionChatPane({
         ) : null}
 
         <ChatComposer
+          disabled={!isAgentAvailable}
           isSending={isSending}
           onChange={setDraft}
           onStop={() => void stop()}
           onSubmit={handleSend}
-          placeholder={`和${assistantProfile.name}说点什么`}
+          placeholder={
+            isAgentAvailable
+              ? `和${assistantProfile.name}说点什么`
+              : "这位朋友当前不可用"
+          }
           value={draft}
         />
       </section>
@@ -302,9 +315,7 @@ export function CompanionChatPane({
   );
 }
 
-function toUiMessage(
-  message: CompanionConversationResponse["messages"][number],
-): CompanionUiMessage {
+function toUiMessage(message: DirectChatMessage): CompanionUiMessage {
   return {
     id: message.id,
     metadata: { createdAtMs: message.createdAtMs },
@@ -314,7 +325,7 @@ function toUiMessage(
 }
 
 function collectFeedback(
-  messages: CompanionConversationResponse["messages"],
+  messages: DirectChatMessage[],
 ): Record<string, CompanionMessageFeedbackRating> {
   const ratings: Record<string, CompanionMessageFeedbackRating> = {};
 

@@ -10,7 +10,14 @@ import { createAdminUser, getAdminUsers } from "./users.api";
 export const adminUserKeys = {
   all: ["admin-users"] as const,
   list: (query: UserListQuery) =>
-    [...adminUserKeys.all, "list", query.page, query.pageSize] as const,
+    [
+      ...adminUserKeys.all,
+      "list",
+      query.page,
+      query.pageSize,
+      query.keyword ?? "",
+      query.status ?? "",
+    ] as const,
 };
 
 export function adminUsersQueryOptions(query: UserListQuery) {

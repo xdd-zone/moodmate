@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { AgentSchema } from "../agents/agent.contract";
+
 export const CompanionCareSceneSchema = z.enum([
   "morning",
   "night",
@@ -20,6 +22,8 @@ export const CompanionCareToneSchema = z.enum(["light", "gentle", "intimate"]);
 export const CompanionCareEventStatusSchema = z.enum(["generated", "read"]);
 
 export const CompanionCarePlanSchema = z.object({
+  agent: AgentSchema.nullable(),
+  agentId: z.uuid().nullable(),
   id: z.string().min(1),
   enabled: z.boolean(),
   frequency: CompanionCareFrequencySchema,
@@ -33,6 +37,7 @@ export const CompanionCarePlanSchema = z.object({
 });
 
 export const UpsertCompanionCarePlanRequestSchema = z.object({
+  agentId: z.uuid().nullable(),
   enabled: z.boolean(),
   frequency: CompanionCareFrequencySchema,
   preferredTime: z.string().trim().max(20).optional().nullable(),
@@ -42,6 +47,7 @@ export const UpsertCompanionCarePlanRequestSchema = z.object({
 });
 
 export const CompanionCareEventSchema = z.object({
+  agentId: z.uuid().nullable(),
   id: z.string().min(1),
   scene: CompanionCareSceneSchema,
   status: CompanionCareEventStatusSchema,

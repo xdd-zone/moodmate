@@ -9,6 +9,7 @@
  * `AiError` 向上传播由业务边界转换；`aborted` 保持取消语义向上抛。
  */
 
+import { AiError } from "../errors";
 import { getAiProvider } from "../provider-registry";
 import type {
   AiEventStream,
@@ -17,6 +18,7 @@ import type {
   AiMessage,
   AiModel,
   AiTool,
+  AiCallObserver,
 } from "../types";
 import { runToolCallingLoop } from "./execute-tools";
 
@@ -30,6 +32,7 @@ export interface GenerateTextOptions {
   signal?: AbortSignal;
   /** 工具循环最大模型调用轮数，默认 5。 */
   maxSteps?: number;
+  observer?: AiCallObserver;
 }
 
 /**
@@ -51,15 +54,26 @@ export async function generateText(
       messages: options.messages,
       tools: options.tools,
       generationOptions,
+      observer: options.observer,
       ...(options.maxSteps !== undefined ? { maxSteps: options.maxSteps } : {}),
     });
   }
 
-  return provider.generate({
-    model: options.model,
-    messages: options.messages,
-    options: generationOptions,
+  const callId = await options.observer?.onStart({
+    structuredOutputMethod: null,
   });
+  try {
+    const result = await provider.generate({
+      model: options.model,
+      messages: options.messages,
+      options: generationOptions,
+    });
+    if (callId) await options.observer?.onComplete(callId, result);
+    return result;
+  } catch (error) {
+    if (callId) await options.observer?.onError(callId, error);
+    throw error;
+  }
 }
 
 export interface StreamTextOptions {
@@ -68,6 +82,7 @@ export interface StreamTextOptions {
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
+  observer?: AiCallObserver;
 }
 
 /**
@@ -76,12 +91,48 @@ export interface StreamTextOptions {
  */
 export function streamText(options: StreamTextOptions): AiEventStream {
   const provider = getAiProvider(options.model.api);
+  return observeStream(
+    provider.stream({
+      model: options.model,
+      messages: options.messages,
+      options: toGenerationOptions(options),
+    }),
+    options.observer,
+  );
+}
 
-  return provider.stream({
-    model: options.model,
-    messages: options.messages,
-    options: toGenerationOptions(options),
-  });
+async function* observeStream(
+  stream: AiEventStream,
+  observer?: AiCallObserver,
+): AiEventStream {
+  const callId = await observer?.onStart({ structuredOutputMethod: null });
+  let settled = false;
+  try {
+    for await (const event of stream) {
+      if (event.type === "finish" && callId) {
+        settled = true;
+        await observer?.onComplete(callId, event);
+      }
+      if (event.type === "error" && callId) {
+        settled = true;
+        await observer?.onError(callId, event.error);
+      }
+      yield event;
+    }
+  } catch (error) {
+    if (callId && !settled) {
+      settled = true;
+      await observer?.onError(callId, error);
+    }
+    throw error;
+  } finally {
+    if (callId && !settled) {
+      await observer?.onError(
+        callId,
+        new AiError("aborted", "模型流在完成前被中止"),
+      );
+    }
+  }
 }
 
 function toGenerationOptions(options: {

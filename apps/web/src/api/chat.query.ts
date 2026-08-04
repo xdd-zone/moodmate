@@ -5,17 +5,14 @@ import {
 } from "@tanstack/react-query";
 import type {
   GenerateCompanionCareEventRequest,
-  SubmitCompanionMessageFeedbackRequest,
   UpsertCompanionCarePlanRequest,
 } from "@repo/contracts";
 
 import {
   generateCompanionCareEvent,
+  getAgentMemories,
   getCompanionCareEvents,
   getCompanionCarePlan,
-  getCompanionConversation,
-  getCompanionMemories,
-  submitCompanionMessageFeedback,
   updateCompanionCarePlan,
 } from "./chat.api";
 
@@ -23,21 +20,15 @@ export const companionChatKeys = {
   all: ["companion-chat"] as const,
   careEvents: () => [...companionChatKeys.all, "care-events"] as const,
   carePlan: () => [...companionChatKeys.all, "care-plan"] as const,
-  conversation: () => [...companionChatKeys.all, "conversation"] as const,
-  memories: () => [...companionChatKeys.all, "memories"] as const,
+  memories: (agentId: string) =>
+    [...companionChatKeys.all, "memories", agentId] as const,
 };
 
-export function companionConversationQueryOptions() {
+export function agentMemoriesQueryOptions(agentId: string) {
   return queryOptions({
-    queryFn: ({ signal }) => getCompanionConversation({ init: { signal } }),
-    queryKey: companionChatKeys.conversation(),
-  });
-}
-
-export function companionMemoriesQueryOptions() {
-  return queryOptions({
-    queryFn: ({ signal }) => getCompanionMemories({ init: { signal } }),
-    queryKey: companionChatKeys.memories(),
+    enabled: Boolean(agentId),
+    queryFn: ({ signal }) => getAgentMemories(agentId, { init: { signal } }),
+    queryKey: companionChatKeys.memories(agentId),
   });
 }
 
@@ -48,7 +39,7 @@ export function companionCarePlanQueryOptions() {
   });
 }
 
-export function companionCareEventsQueryOptions() {
+export function careEventsQueryOptions() {
   return queryOptions({
     queryFn: ({ signal }) => getCompanionCareEvents({ init: { signal } }),
     queryKey: companionChatKeys.careEvents(),
@@ -78,24 +69,6 @@ export function generateCompanionCareEventMutationOptions(
       void queryClient.invalidateQueries({
         queryKey: companionChatKeys.careEvents(),
       });
-      void queryClient.invalidateQueries({
-        queryKey: companionChatKeys.conversation(),
-      });
     },
-  });
-}
-
-export function submitCompanionMessageFeedbackMutationOptions(
-  queryClient: QueryClient,
-) {
-  return mutationOptions({
-    mutationFn: (input: {
-      messageId: string;
-      payload: SubmitCompanionMessageFeedbackRequest;
-    }) => submitCompanionMessageFeedback(input.messageId, input.payload),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: companionChatKeys.conversation(),
-      }),
   });
 }

@@ -83,6 +83,24 @@ export type {
   UpsertCompanionCarePlanRequest,
 } from "./chat/companion-care.contract";
 export {
+  AgentMemoriesResponseSchema,
+  AgentMemorySchema,
+  AgentMemorySourceMessageSchema,
+  AgentMemoryStatusSchema,
+  DeleteAgentMemoryResponseSchema,
+  UpdateAgentMemoryRequestSchema,
+  UpdateAgentMemoryResponseSchema,
+} from "./agents/agent-memory.contract";
+export type {
+  AgentMemoriesResponse,
+  AgentMemory,
+  AgentMemorySourceMessage,
+  AgentMemoryStatus,
+  DeleteAgentMemoryResponse,
+  UpdateAgentMemoryRequest,
+  UpdateAgentMemoryResponse,
+} from "./agents/agent-memory.contract";
+export {
   CompanionIntentPrimarySchema,
   ConversationEmotionSchema,
   ConversationIntentSchema,
@@ -236,6 +254,8 @@ export {
   LlmConfigItemSchema,
   LlmConfigListResponseSchema,
   LlmConfigMutationResponseSchema,
+  LlmConfigTestCheckIdSchema,
+  LlmConfigTestCheckSchema,
   LlmConfigTestRequestSchema,
   LlmConfigTestResponseSchema,
   LlmConfigUpdateRequestSchema,
@@ -247,11 +267,18 @@ export type {
   LlmConfigItem,
   LlmConfigListResponse,
   LlmConfigMutationResponse,
+  LlmConfigTestCheck,
+  LlmConfigTestCheckId,
   LlmConfigTestRequest,
   LlmConfigTestResponse,
   LlmConfigUpdateRequest,
 } from "./llm/llm-config.contract";
 export {
+  AgentDetailResponseSchema,
+  AgentListResponseSchema,
+  AgentSchema,
+  AgentSourceSchema,
+  AgentStatusSchema,
   CreateUserAgentRequestSchema,
   CreateUserAgentResponseSchema,
   DeleteUserAgentResponseSchema,
@@ -263,6 +290,11 @@ export {
   UserAgentStatusSchema,
 } from "./agents/agent.contract";
 export type {
+  Agent,
+  AgentDetailResponse,
+  AgentListResponse,
+  AgentSource,
+  AgentStatus,
   CreateUserAgentRequest,
   CreateUserAgentResponse,
   DeleteUserAgentResponse,
@@ -273,6 +305,8 @@ export type {
   UserAgentListResponse,
   UserAgentStatus,
 } from "./agents/agent.contract";
+export * from "./chat/direct-chat.contract";
+export * from "./admin/operations.contract";
 export {
   AddAgentGroupChatMembersRequestSchema,
   AddAgentGroupChatMembersResponseSchema,

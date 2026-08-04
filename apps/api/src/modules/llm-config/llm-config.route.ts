@@ -71,9 +71,11 @@ export function createLlmConfigRoute() {
       }),
       async (c) => {
         const result = await testLlmConfig({
+          adminUserId: c.var.adminSession.userId,
           adminRoles: c.var.adminSession.roles,
           bindings: c.env,
           payload: c.req.valid("json"),
+          requestId: c.var.requestId,
         });
         const data = LlmConfigTestResponseSchema.parse(result);
 

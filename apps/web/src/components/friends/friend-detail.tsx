@@ -1,6 +1,6 @@
 "use client";
 
-import type { UserAgent } from "@repo/contracts";
+import type { Agent } from "@repo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createDirectChatMutationOptions } from "@/src/api/direct-chat.query";
 
 import {
   deleteUserAgentMutationOptions,
@@ -41,10 +42,13 @@ export function FriendDetail({ friendId }: FriendDetailProps) {
   const deleteMutation = useMutation(
     deleteUserAgentMutationOptions(queryClient),
   );
+  const chatMutation = useMutation(
+    createDirectChatMutationOptions(queryClient),
+  );
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  function handleDelete(agent: UserAgent) {
+  function handleDelete(agent: Agent) {
     const confirmed = window.confirm(`确认暂别朋友「${agent.name}」？`);
 
     if (!confirmed) return;
@@ -122,22 +126,35 @@ export function FriendDetail({ friendId }: FriendDetailProps) {
             <h1>朋友档案</h1>
           </div>
           <div className="moodmate-page-header__actions">
+            {agent.editable ? (
+              <button
+                className="moodmate-button moodmate-button--secondary"
+                disabled={agent.status !== "active"}
+                onClick={() => setIsEditorOpen(true)}
+                type="button"
+              >
+                <Pencil aria-hidden="true" />
+                <span>编辑</span>
+              </button>
+            ) : null}
             <button
-              className="moodmate-button moodmate-button--secondary"
-              disabled={agent.status !== "active"}
-              onClick={() => setIsEditorOpen(true)}
-              type="button"
-            >
-              <Pencil aria-hidden="true" />
-              <span>编辑</span>
-            </button>
-            <Link
               className="moodmate-button moodmate-button--primary"
-              href="/chats"
+              disabled={agent.status !== "active" || chatMutation.isPending}
+              onClick={() =>
+                chatMutation.mutate(agent.id, {
+                  onSuccess: (data) =>
+                    router.push(`/chats/direct/${data.conversation.id}`),
+                  onError: (error) =>
+                    setActionError(
+                      error instanceof Error ? error.message : "无法发起聊天",
+                    ),
+                })
+              }
+              type="button"
             >
               <MessageCircle aria-hidden="true" />
               <span>开始聊天</span>
-            </Link>
+            </button>
           </div>
         </header>
 

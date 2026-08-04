@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
 interface ChatComposerProps {
+  disabled?: boolean;
   isSending: boolean;
   onChange: (value: string) => void;
   onStop: () => void;
@@ -14,6 +15,7 @@ interface ChatComposerProps {
 }
 
 export function ChatComposer({
+  disabled = false,
   isSending,
   onChange,
   onStop,
@@ -22,7 +24,7 @@ export function ChatComposer({
   value,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const canSubmit = Boolean(value.trim()) && !isSending;
+  const canSubmit = Boolean(value.trim()) && !disabled && !isSending;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -71,6 +73,7 @@ export function ChatComposer({
           输入消息
         </label>
         <textarea
+          disabled={disabled}
           id="chat-message"
           onChange={(event) => onChange(event.currentTarget.value)}
           onKeyDown={handleKeyDown}

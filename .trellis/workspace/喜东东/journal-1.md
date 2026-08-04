@@ -1465,7 +1465,6 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 
 - None - task complete
 
-
 ## Session 44: 复刻 Web 登录页并接入 GitHub OAuth
 
 **Date**: 2026-07-31
@@ -1483,8 +1482,8 @@ API 新增 Anthropic Messages 与 OpenAI Responses Provider，模型配置按 ap
 
 ### Git Commits
 
-| Hash | Message |
-|------|---------|
+| Hash      | Message       |
+| --------- | ------------- |
 | `91ad328` | (see git log) |
 | `f237de5` | (see git log) |
 

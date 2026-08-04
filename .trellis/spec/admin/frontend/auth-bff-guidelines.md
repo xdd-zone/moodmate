@@ -39,6 +39,7 @@ moodmate_admin_refresh_token
 - `proxy.ts` 只有在 access 和 refresh cookie 都不存在时跳转 `/login`，不能请求 Hono、验 JWT 或执行 refresh。
 - access cookie 缺失但 refresh cookie 存在时，session BFF 返回 `AUTH.ACCESS_EXPIRED`，让浏览器进入续期流程。
 - `withAdminSessionRecovery()` 只处理 `AUTH.ACCESS_EXPIRED`。并发请求共享一个 refresh Promise，成功后每个原请求最多重试一次。
+- 登录成功后先等待 `POST /api/auth/login` 完成，再使用 `window.location.assign("/overview")` 做完整页面导航。不要用 `router.replace("/")` 依赖根路由的二次重定向，否则本地开发环境的 RSC 导航可能在 Cookie 写入和页面保护之间发生竞态并回到 `/login`。
 - 非续期 401 或 refresh 失败进入 `/login`。logout 不依赖上游 token 仍然有效，始终清除两个 cookie。
 
 ## 4. 校验与错误矩阵
@@ -52,6 +53,7 @@ moodmate_admin_refresh_token
 | Hono 明确返回 `AUTH.ACCESS_EXPIRED` | 浏览器发起一次 single-flight refresh                    |
 | refresh 失败                        | BFF 清 cookie，浏览器进入 `/login`                      |
 | 重试后的原请求再次 401              | 不再 refresh，浏览器进入 `/login`                       |
+| login 成功                          | 写入两个 cookie，完整导航到 `/overview`                 |
 | logout 上游凭证无效或请求失败       | 本地仍清 cookie，并向浏览器返回 `{ success: true }`     |
 | 上游返回非 JSON 或不符合 contract   | HTTP 502、`SYSTEM.INTERNAL_ERROR`                       |
 
@@ -64,6 +66,7 @@ moodmate_admin_refresh_token
 ## 6. 必做检查
 
 - 未登录访问 `/`：跳转 `/login`。
+- 使用本地管理员账号登录：`POST /api/auth/login` 返回 200 后进入 `/overview`，不回到 `/login`。
 - 登录、session、refresh 响应：`data` 不含 `accessToken`、`refreshToken` 或 `jti`。
 - 登录响应头：两个 cookie 都包含 `HttpOnly`、`SameSite=Lax` 和 `Path=/`。
 - 只保留 refresh cookie：`/` 返回页面，session 返回 `AUTH.ACCESS_EXPIRED`，refresh 成功并重新写入两个 cookie。
@@ -74,6 +77,12 @@ moodmate_admin_refresh_token
 ## 7. 错误与正确写法
 
 ```ts
+// 错误：RSC 导航可能早于 Cookie 在浏览器侧可用，触发受保护页面回跳
+router.replace("/");
+
+// 正确：登录响应完成后完整加载受保护页面
+window.location.assign("/overview");
+
 // 错误：access cookie 自然到期后直接判定整个 session 不可恢复
 if (!accessToken) {
   return authFailure(BizCode.AUTH_ACCESS_MISSING);

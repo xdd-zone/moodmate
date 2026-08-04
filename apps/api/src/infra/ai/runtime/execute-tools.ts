@@ -27,6 +27,7 @@ import type {
   AiToolContext,
   AiToolDefinition,
   AiToolResultMessage,
+  AiCallObserver,
 } from "../types";
 
 const DEFAULT_MAX_STEPS = 5;
@@ -42,6 +43,7 @@ export interface ToolCallingLoopParams {
   generationOptions: AiGenerationOptions;
   /** 默认 5 轮模型调用。 */
   maxSteps?: number;
+  observer?: AiCallObserver;
 }
 
 /**
@@ -62,12 +64,22 @@ export async function runToolCallingLoop(
   for (let step = 0; step < maxSteps; step += 1) {
     throwIfAborted(signal);
 
-    const result = await params.provider.generate({
-      model: params.model,
-      messages,
-      options: params.generationOptions,
-      tools: toolDefinitions,
+    const callId = await params.observer?.onStart({
+      structuredOutputMethod: null,
     });
+    let result: AiGenerationResult;
+    try {
+      result = await params.provider.generate({
+        model: params.model,
+        messages,
+        options: params.generationOptions,
+        tools: toolDefinitions,
+      });
+      if (callId) await params.observer?.onComplete(callId, result);
+    } catch (error) {
+      if (callId) await params.observer?.onError(callId, error);
+      throw error;
+    }
 
     const toolCalls = result.message.toolCalls ?? [];
 

@@ -25,8 +25,10 @@ export async function listUsers(input: {
 }): Promise<UserListResponse> {
   assertCanManageUsers(input.adminRoles);
   const result = await findUserList(input.bindings.DB, {
+    ...(input.query.keyword ? { keyword: input.query.keyword } : {}),
     limit: input.query.pageSize,
     offset: (input.query.page - 1) * input.query.pageSize,
+    ...(input.query.status ? { status: input.query.status } : {}),
   });
 
   return {
@@ -94,6 +96,12 @@ export async function createUser(input: {
         id: userId,
         lastLoginAtMs: null,
         status: "active",
+        lastActiveAtMs: null,
+        messageCount: 0,
+        directMessageCount: 0,
+        groupMessageCount: 0,
+        friendCount: 0,
+        groupChatCount: 0,
       },
       [role],
     ),

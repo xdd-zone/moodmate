@@ -23,7 +23,7 @@ import { resolveActiveLlmProviderConfig } from "@/modules/llm-config/llm-config.
 import { AppError } from "@/shared/app-error";
 import type { ApiBindings } from "@/shared/hono-env";
 
-import type { ChatProviderConfig } from "@/modules/chat/chat.service";
+import type { ChatProviderConfig } from "@/modules/chat/chat.types";
 
 import {
   presentDetail,
@@ -344,18 +344,24 @@ export async function removeGroupChatMember(input: {
 
 async function resolveGroupChatProviderConfig(
   bindings: ApiBindings,
-): Promise<ChatProviderConfig> {
+): Promise<{ llmConfigId: string; providerConfig: ChatProviderConfig }> {
   const active = await resolveActiveLlmProviderConfig(bindings);
 
   return {
-    api: active.api,
-    apiKey: active.apiKey,
-    baseURL: active.baseURL.trim().replace(/\/+$/, ""),
-    disableThinking:
-      active.providerOptions?.["openai-chat-completions"]?.disableThinking ??
-      false,
-    model: active.model,
-    providerName: active.providerName,
+    llmConfigId: active.id,
+    providerConfig: {
+      api: active.api,
+      apiKey: active.apiKey,
+      baseURL: active.baseURL.trim().replace(/\/+$/, ""),
+      disableThinking:
+        active.providerOptions?.[
+          active.api === "openai-responses"
+            ? "openai-responses"
+            : "openai-chat-completions"
+        ]?.disableThinking ?? false,
+      model: active.model,
+      providerName: active.providerName,
+    },
   };
 }
 
@@ -363,6 +369,7 @@ export async function sendGroupChatMessage(input: {
   bindings: ApiBindings;
   groupChatId: string;
   message: string;
+  requestId: string;
   signal: AbortSignal;
   userId: string;
 }): Promise<SendAgentGroupChatMessageResponse> {
@@ -376,6 +383,22 @@ export async function sendGroupChatMessage(input: {
     database: input.bindings.DB,
     groupChatId: input.groupChatId,
   });
+
+  const agentRecords =
+    members.length > 0
+      ? await listOwnedUserAgentsByIds({
+          agentIds: members.map((member) => member.agentId),
+          database: input.bindings.DB,
+          userId: input.userId,
+        })
+      : [];
+  const agentRecordsById: Record<string, UserAgentRecord> = {};
+  for (const record of agentRecords) {
+    agentRecordsById[record.id] = record;
+  }
+  const respondingMembers = members.filter(
+    (member) => agentRecordsById[member.agentId] !== undefined,
+  );
 
   const recent = await listGroupChatMessages({
     database: input.bindings.DB,
@@ -406,8 +429,8 @@ export async function sendGroupChatMessage(input: {
     turnIndex,
   };
 
-  const providerConfig =
-    members.length > 0
+  const provider =
+    respondingMembers.length > 0
       ? await resolveGroupChatProviderConfig(input.bindings)
       : null;
 
@@ -429,21 +452,9 @@ export async function sendGroupChatMessage(input: {
   } | null = null;
   let selectedBy = "langgraph_v1";
 
-  if (members.length > 0 && providerConfig) {
-    // 进图前预取上下文：全体活跃成员的记忆（按 agentId 隔离）与人设记录。
-    const agentRecords = await listOwnedUserAgentsByIds({
-      agentIds: members.map((member) => member.agentId),
-      database: input.bindings.DB,
-      userId: input.userId,
-    });
-
-    const agentRecordsById: Record<string, UserAgentRecord> = {};
-    for (const record of agentRecords) {
-      agentRecordsById[record.id] = record;
-    }
-
+  if (respondingMembers.length > 0 && provider) {
     const agentMemoriesByAgentId: Record<string, AgentMemoryRecord[]> = {};
-    for (const member of members) {
+    for (const member of respondingMembers) {
       agentMemoriesByAgentId[member.agentId] = await listActiveAgentMemories({
         agentId: member.agentId,
         database: input.bindings.DB,
@@ -453,14 +464,20 @@ export async function sendGroupChatMessage(input: {
     }
 
     const result = await orchestrateGroupChatReplies({
-      providerConfig,
+      providerConfig: provider.providerConfig,
       groupChat,
-      agents: members,
+      agents: respondingMembers,
       recentMessages: [...recent, userRow],
       userMessage: userRow,
       userText,
       agentMemoriesByAgentId,
       agentRecordsById,
+      aiUsage: {
+        bindings: input.bindings,
+        llmConfigId: provider.llmConfigId,
+        requestId: input.requestId,
+        userId: input.userId,
+      },
       signal: input.signal,
     });
 
@@ -517,9 +534,9 @@ export async function sendGroupChatMessage(input: {
       metadataJson: JSON.stringify({
         crossReplyReason: row.crossReplyReason,
         crossReplyRound: row.crossReplyRound,
-        model: providerConfig?.model ?? null,
+        model: provider?.providerConfig.model ?? null,
         orchestration,
-        providerName: providerConfig?.providerName ?? null,
+        providerName: provider?.providerConfig.providerName ?? null,
         replyKind: row.replyKind,
         respondToAgentId: row.respondToAgentId,
         selectedBy,

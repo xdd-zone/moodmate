@@ -46,6 +46,14 @@ export function listUsers(accessToken: string, query: UserListQuery) {
     pageSize: String(parsedQuery.pageSize),
   });
 
+  if (parsedQuery.keyword) {
+    searchParams.set("keyword", parsedQuery.keyword);
+  }
+
+  if (parsedQuery.status) {
+    searchParams.set("status", parsedQuery.status);
+  }
+
   return requestUsersApi(
     `/rpc/admin/users?${searchParams.toString()}`,
     UserListResponseSchema,

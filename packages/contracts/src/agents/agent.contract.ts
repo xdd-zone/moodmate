@@ -1,5 +1,35 @@
 import { z } from "zod";
 
+export const AgentSourceSchema = z.enum(["system", "user"]);
+export const AgentStatusSchema = z.enum(["active", "disabled", "archived"]);
+
+export const AgentSchema = z.object({
+  id: z.uuid(),
+  source: AgentSourceSchema,
+  ownerUserId: z.uuid().nullable(),
+  name: z.string().min(1).max(120),
+  headline: z.string().nullable(),
+  description: z.string().nullable(),
+  storyBackground: z.string().nullable(),
+  personaPrompt: z.string().nullable(),
+  tonePrompt: z.string().nullable(),
+  guardrailsPrompt: z.string().nullable(),
+  defaultPrompt: z.string().nullable(),
+  imageKey: z.string().nullable(),
+  status: AgentStatusSchema,
+  editable: z.boolean(),
+  createdAtMs: z.number().int().nonnegative(),
+  updatedAtMs: z.number().int().nonnegative(),
+});
+
+export const AgentListResponseSchema = z.object({
+  items: z.array(AgentSchema),
+});
+
+export const AgentDetailResponseSchema = z.object({
+  agent: AgentSchema,
+});
+
 export const UserAgentStatusSchema = z.enum(["active", "archived"]);
 
 export const UserAgentSchema = z.object({
@@ -70,6 +100,11 @@ export const DeleteUserAgentResponseSchema = z.object({
 });
 
 export type UserAgentStatus = z.infer<typeof UserAgentStatusSchema>;
+export type AgentSource = z.infer<typeof AgentSourceSchema>;
+export type AgentStatus = z.infer<typeof AgentStatusSchema>;
+export type Agent = z.infer<typeof AgentSchema>;
+export type AgentListResponse = z.infer<typeof AgentListResponseSchema>;
+export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
 export type UserAgent = z.infer<typeof UserAgentSchema>;
 export type CreateUserAgentRequest = z.infer<
   typeof CreateUserAgentRequestSchema

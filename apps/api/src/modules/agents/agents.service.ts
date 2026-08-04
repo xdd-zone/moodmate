@@ -1,6 +1,9 @@
 import {
   BizCode,
+  type Agent,
+  type AgentMemory,
   type CreateUserAgentRequest,
+  type UpdateAgentMemoryRequest,
   type UpdateUserAgentRequest,
   type UserAgent,
 } from "@repo/contracts";
@@ -8,12 +11,19 @@ import {
 import { AppError } from "@/shared/app-error";
 import type { ApiBindings } from "@/shared/hono-env";
 
-import { presentUserAgent } from "./agents.presenter";
+import {
+  presentAgent,
+  presentAgentMemory,
+  presentUserAgent,
+} from "./agents.presenter";
 import {
   archiveUserAgent,
   createUserAgent,
   getUserAgentById,
   listUserAgents,
+  listAgentMemories,
+  deleteAgentMemory,
+  updateAgentMemory,
   updateUserAgent,
   type UpdateUserAgentPatch,
 } from "./agents.repository";
@@ -39,20 +49,20 @@ function normalizeOptional(value: string | null | undefined): string | null {
 export async function listUserAgentsForUser(input: {
   bindings: ApiBindings;
   userId: string;
-}): Promise<{ items: UserAgent[] }> {
+}): Promise<{ items: Agent[] }> {
   const records = await listUserAgents({
     database: input.bindings.DB,
     userId: input.userId,
   });
 
-  return { items: records.map(presentUserAgent) };
+  return { items: records.map((record) => presentAgent(record, input.userId)) };
 }
 
 export async function getUserAgentDetail(input: {
   agentId: string;
   bindings: ApiBindings;
   userId: string;
-}): Promise<{ agent: UserAgent }> {
+}): Promise<{ agent: Agent }> {
   const record = await getUserAgentById({
     agentId: input.agentId,
     database: input.bindings.DB,
@@ -63,7 +73,7 @@ export async function getUserAgentDetail(input: {
     throw forbidden();
   }
 
-  return { agent: presentUserAgent(record) };
+  return { agent: presentAgent(record, input.userId) };
 }
 
 export async function createUserAgentForUser(input: {
@@ -179,6 +189,121 @@ export async function archiveUserAgentForUser(input: {
     nowMs: Date.now(),
     userId: input.userId,
   });
+
+  return { success: true };
+}
+
+export async function listAgentMemoriesForUser(input: {
+  agentId: string;
+  bindings: ApiBindings;
+  userId: string;
+}): Promise<{ items: AgentMemory[] }> {
+  const agent = await getUserAgentById({
+    agentId: input.agentId,
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+
+  if (!agent) {
+    throw forbidden();
+  }
+
+  const rows = await listAgentMemories({
+    agentId: input.agentId,
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+
+  return {
+    items: rows.map(({ memory, sourceMessage }) =>
+      presentAgentMemory({ memory, sourceMessage }),
+    ),
+  };
+}
+
+export async function updateAgentMemoryForUser(input: {
+  agentId: string;
+  bindings: ApiBindings;
+  memoryId: string;
+  patch: UpdateAgentMemoryRequest;
+  userId: string;
+}): Promise<{ memory: AgentMemory }> {
+  const agent = await getUserAgentById({
+    agentId: input.agentId,
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+
+  if (!agent) {
+    throw forbidden();
+  }
+
+  const memory = await updateAgentMemory({
+    agentId: input.agentId,
+    database: input.bindings.DB,
+    memoryId: input.memoryId,
+    nowMs: Date.now(),
+    patch: input.patch,
+    userId: input.userId,
+  });
+
+  if (!memory) {
+    throw new AppError(
+      BizCode.COMMON_NOT_FOUND,
+      "没有找到这条记忆，刷新列表后重试",
+      404,
+    );
+  }
+
+  const rows = await listAgentMemories({
+    agentId: input.agentId,
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+  const updated = rows.find((row) => row.memory.id === memory.id);
+
+  if (!updated) {
+    throw new AppError(
+      BizCode.COMMON_NOT_FOUND,
+      "没有找到这条记忆，刷新列表后重试",
+      404,
+    );
+  }
+
+  return { memory: presentAgentMemory(updated) };
+}
+
+export async function deleteAgentMemoryForUser(input: {
+  agentId: string;
+  bindings: ApiBindings;
+  memoryId: string;
+  userId: string;
+}): Promise<{ success: true }> {
+  const agent = await getUserAgentById({
+    agentId: input.agentId,
+    database: input.bindings.DB,
+    userId: input.userId,
+  });
+
+  if (!agent) {
+    throw forbidden();
+  }
+
+  const deleted = await deleteAgentMemory({
+    agentId: input.agentId,
+    database: input.bindings.DB,
+    memoryId: input.memoryId,
+    nowMs: Date.now(),
+    userId: input.userId,
+  });
+
+  if (!deleted) {
+    throw new AppError(
+      BizCode.COMMON_NOT_FOUND,
+      "没有找到这条记忆，刷新列表后重试",
+      404,
+    );
+  }
 
   return { success: true };
 }

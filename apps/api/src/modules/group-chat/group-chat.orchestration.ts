@@ -3,12 +3,14 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { z } from "zod";
 
 import { generateObject, isAiError } from "@/infra/ai";
+import { createAiCallObserver } from "@/modules/ai-usage";
 import { fromLangChainMessages, toAiModel } from "@/modules/chat/chat.ai-model";
 import type {
   AgentMemoryRecord,
   UserAgentRecord,
 } from "@/modules/agents/agents.schema";
-import type { ChatProviderConfig } from "@/modules/chat/chat.service";
+import type { ChatProviderConfig } from "@/modules/chat/chat.types";
+import type { ApiBindings } from "@/shared/hono-env";
 
 import type {
   GroupChatMemberWithAgentRow,
@@ -138,6 +140,13 @@ export interface GroupChatOrchestrationResult {
   usedFallback: boolean;
 }
 
+interface GroupChatAiUsageContext {
+  bindings: ApiBindings;
+  llmConfigId: string;
+  requestId: string;
+  userId: string;
+}
+
 const GroupChatOrchestrationState = Annotation.Root({
   providerConfig: Annotation<ChatProviderConfig>(),
   groupChat: Annotation<AgentGroupChatRecord>(),
@@ -147,6 +156,7 @@ const GroupChatOrchestrationState = Annotation.Root({
   userText: Annotation<string>(),
   agentMemoriesByAgentId: Annotation<Record<string, AgentMemoryRecord[]>>(),
   agentRecordsById: Annotation<Record<string, UserAgentRecord>>(),
+  aiUsage: Annotation<GroupChatAiUsageContext>(),
   userEmotion: Annotation<GroupChatUserEmotion | null>(),
   speakingContext: Annotation<GroupSpeakingContext | null>(),
   intent: Annotation<GroupChatIntent | null>(),
@@ -158,6 +168,46 @@ const GroupChatOrchestrationState = Annotation.Root({
   quality: Annotation<GroupChatReplyQuality | null>(),
   signal: Annotation<AbortSignal | undefined>(),
 });
+
+function createGroupChatAiObserver(input: {
+  agent?: UserAgentRecord;
+  aiUsage: GroupChatAiUsageContext;
+  groupChatId: string;
+  providerConfig: ChatProviderConfig;
+  scenario:
+    | "group_intent_analysis"
+    | "group_emotion_analysis"
+    | "group_agent_selection"
+    | "group_agent_reply"
+    | "group_cross_reply_plan"
+    | "group_cross_reply"
+    | "group_reply_quality";
+}) {
+  const model = toAiModel(input.providerConfig);
+
+  return createAiCallObserver({
+    ...(input.agent
+      ? {
+          agent: {
+            id: input.agent.id,
+            name: input.agent.name,
+            source: input.agent.source,
+          },
+        }
+      : {}),
+    bindings: input.aiUsage.bindings,
+    conversationId: input.groupChatId,
+    conversationType: "group",
+    initiatorId: input.aiUsage.userId,
+    initiatorType: "web_user",
+    llmConfigId: input.aiUsage.llmConfigId,
+    model,
+    requestId: input.aiUsage.requestId,
+    scenario: input.scenario,
+    subjectType: input.agent ? "agent" : "system",
+    userId: input.aiUsage.userId,
+  });
+}
 
 /**
  * 判断错误是否来自用户取消：AiError 的 aborted code 或 signal 已置 aborted。
@@ -453,6 +503,7 @@ function buildFallbackGroupChatIntent(input: {
 }
 
 async function classifyGroupIntentWithLangChain(params: {
+  aiUsage: GroupChatAiUsageContext;
   providerConfig: ChatProviderConfig;
   groupChat: AgentGroupChatRecord;
   agents: GroupChatMemberWithAgentRow[];
@@ -477,6 +528,12 @@ async function classifyGroupIntentWithLangChain(params: {
       schema: GroupChatIntentSchema,
       schemaName: "group_chat_intent",
       temperature: 0,
+      observer: createGroupChatAiObserver({
+        aiUsage: params.aiUsage,
+        groupChatId: params.groupChat.id,
+        providerConfig: params.providerConfig,
+        scenario: "group_intent_analysis",
+      }),
       ...(params.signal ? { signal: params.signal } : {}),
     });
 
@@ -499,6 +556,8 @@ async function classifyGroupIntentWithLangChain(params: {
  * 只判断情绪与陪伴需求，不选 Agent、不生成回复。
  */
 async function detectGroupUserEmotionWithLangChain(params: {
+  aiUsage: GroupChatAiUsageContext;
+  groupChatId: string;
   providerConfig: ChatProviderConfig;
   recentMessages: GroupChatMessageWithAgentRow[];
   userText: string;
@@ -518,6 +577,12 @@ async function detectGroupUserEmotionWithLangChain(params: {
       schema: GroupChatUserEmotionSchema,
       schemaName: "group_chat_user_emotion",
       temperature: 0,
+      observer: createGroupChatAiObserver({
+        aiUsage: params.aiUsage,
+        groupChatId: params.groupChatId,
+        providerConfig: params.providerConfig,
+        scenario: "group_emotion_analysis",
+      }),
       ...(params.signal ? { signal: params.signal } : {}),
     });
 
@@ -623,6 +688,8 @@ function normalizeAgentSelection(params: {
 }
 
 async function selectGroupAgentsWithLangChain(params: {
+  aiUsage: GroupChatAiUsageContext;
+  groupChatId: string;
   providerConfig: ChatProviderConfig;
   agents: GroupChatMemberWithAgentRow[];
   intent: GroupChatIntent;
@@ -668,6 +735,12 @@ async function selectGroupAgentsWithLangChain(params: {
       schema: GroupChatAgentSelectionSchema,
       schemaName: "group_chat_agent_selection",
       temperature: 0,
+      observer: createGroupChatAiObserver({
+        aiUsage: params.aiUsage,
+        groupChatId: params.groupChatId,
+        providerConfig: params.providerConfig,
+        scenario: "group_agent_selection",
+      }),
       ...(params.signal ? { signal: params.signal } : {}),
     });
 
@@ -724,6 +797,7 @@ async function generateSingleReply(params: {
   userText: string;
   intent: GroupChatIntent;
   selectionReason: string;
+  aiUsage: GroupChatAiUsageContext;
   signal: AbortSignal;
 }): Promise<PlannedAgentReply> {
   const agentRecord = params.agentRecordsById[params.agent.agentId];
@@ -749,6 +823,13 @@ async function generateSingleReply(params: {
       userText: params.userText,
       intent: params.intent,
       selectionReason: params.selectionReason,
+      observer: createGroupChatAiObserver({
+        agent: agentRecord,
+        aiUsage: params.aiUsage,
+        groupChatId: params.groupChat.id,
+        providerConfig: params.providerConfig,
+        scenario: "group_agent_reply",
+      }),
     });
 
     return {
@@ -789,6 +870,7 @@ async function generateGroupReplies(params: {
   intent: GroupChatIntent;
   mode: GroupChatAgentSelection["mode"];
   selectionReason: string;
+  aiUsage: GroupChatAiUsageContext;
   signal: AbortSignal;
 }): Promise<PlannedAgentReply[]> {
   const baseMessages = [...params.recentMessages, params.userMessage];
@@ -807,6 +889,7 @@ async function generateGroupReplies(params: {
           userText: params.userText,
           intent: params.intent,
           selectionReason: params.selectionReason,
+          aiUsage: params.aiUsage,
           signal: params.signal,
         }),
       ),
@@ -834,6 +917,7 @@ async function generateGroupReplies(params: {
       userText: params.userText,
       intent: params.intent,
       selectionReason: params.selectionReason,
+      aiUsage: params.aiUsage,
       signal: params.signal,
     });
 
@@ -844,6 +928,8 @@ async function generateGroupReplies(params: {
 }
 
 async function checkGroupReplyQualityWithLangChain(params: {
+  aiUsage: GroupChatAiUsageContext;
+  groupChatId: string;
   providerConfig: ChatProviderConfig;
   intent: GroupChatIntent;
   userText: string;
@@ -884,6 +970,12 @@ async function checkGroupReplyQualityWithLangChain(params: {
       schema: GroupChatReplyQualitySchema,
       schemaName: "group_chat_reply_quality",
       temperature: 0,
+      observer: createGroupChatAiObserver({
+        aiUsage: params.aiUsage,
+        groupChatId: params.groupChatId,
+        providerConfig: params.providerConfig,
+        scenario: "group_reply_quality",
+      }),
       ...(params.signal ? { signal: params.signal } : {}),
     });
 
@@ -1011,6 +1103,8 @@ function normalizeCrossReplyPlan(params: {
  * 全部结构化方法失败时返回 enabled=false 的降级计划；用户取消向上抛。
  */
 async function planCrossRepliesWithLangChain(params: {
+  aiUsage: GroupChatAiUsageContext;
+  groupChatId: string;
   providerConfig: ChatProviderConfig;
   agents: GroupChatMemberWithAgentRow[];
   primaryReplies: PlannedAgentReply[];
@@ -1037,6 +1131,12 @@ async function planCrossRepliesWithLangChain(params: {
       schema: GroupChatCrossReplyPlanSchema,
       schemaName: "group_chat_cross_reply_plan",
       temperature: 0,
+      observer: createGroupChatAiObserver({
+        aiUsage: params.aiUsage,
+        groupChatId: params.groupChatId,
+        providerConfig: params.providerConfig,
+        scenario: "group_cross_reply_plan",
+      }),
       ...(params.signal ? { signal: params.signal } : {}),
     });
 
@@ -1056,6 +1156,7 @@ async function classifyIntentNode(
 ) {
   return {
     intent: await classifyGroupIntentWithLangChain({
+      aiUsage: state.aiUsage,
       providerConfig: state.providerConfig,
       groupChat: state.groupChat,
       agents: state.agents,
@@ -1070,6 +1171,8 @@ async function detectEmotionNode(
   state: typeof GroupChatOrchestrationState.State,
 ) {
   const userEmotion = await detectGroupUserEmotionWithLangChain({
+    aiUsage: state.aiUsage,
+    groupChatId: state.groupChat.id,
     providerConfig: state.providerConfig,
     recentMessages: state.recentMessages,
     userText: state.userText,
@@ -1113,6 +1216,8 @@ async function selectAgentsNode(
   }
 
   const { selection, selectedAgents } = await selectGroupAgentsWithLangChain({
+    aiUsage: state.aiUsage,
+    groupChatId: state.groupChat.id,
     providerConfig: state.providerConfig,
     agents: state.agents,
     intent,
@@ -1148,6 +1253,7 @@ async function generateRepliesNode(
     intent,
     mode: state.selection?.mode ?? "single",
     selectionReason: state.selection?.reason ?? "",
+    aiUsage: state.aiUsage,
     signal: state.signal ?? new AbortController().signal,
   });
 
@@ -1171,6 +1277,8 @@ async function generateCrossAgentRepliesNode(
   }
 
   const rawPlan = await planCrossRepliesWithLangChain({
+    aiUsage: state.aiUsage,
+    groupChatId: state.groupChat.id,
     providerConfig: state.providerConfig,
     agents: state.agents,
     primaryReplies,
@@ -1233,6 +1341,13 @@ async function generateCrossAgentRepliesNode(
         userText: state.userText,
         respondToName,
         angle: plan.angle,
+        observer: createGroupChatAiObserver({
+          agent: agentRecord,
+          aiUsage: state.aiUsage,
+          groupChatId: state.groupChat.id,
+          providerConfig: state.providerConfig,
+          scenario: "group_cross_reply",
+        }),
       });
 
       crossReplies.push({
@@ -1276,6 +1391,8 @@ async function checkQualityNode(
     });
 
   const quality = await checkGroupReplyQualityWithLangChain({
+    aiUsage: state.aiUsage,
+    groupChatId: state.groupChat.id,
     providerConfig: state.providerConfig,
     intent,
     userText: state.userText,
@@ -1306,6 +1423,7 @@ const groupChatOrchestrationGraph = new StateGraph(GroupChatOrchestrationState)
   .compile();
 
 export interface OrchestrateGroupChatRepliesParams {
+  aiUsage: GroupChatAiUsageContext;
   providerConfig: ChatProviderConfig;
   groupChat: AgentGroupChatRecord;
   agents: GroupChatMemberWithAgentRow[];
@@ -1328,6 +1446,7 @@ export async function orchestrateGroupChatReplies(
     const result = await groupChatOrchestrationGraph.invoke(
       {
         providerConfig: params.providerConfig,
+        aiUsage: params.aiUsage,
         groupChat: params.groupChat,
         agents: params.agents,
         recentMessages: params.recentMessages,
@@ -1428,6 +1547,7 @@ async function runFallbackOrchestration(
     intent,
     mode: selection.mode,
     selectionReason: selection.reason,
+    aiUsage: params.aiUsage,
     signal: params.signal,
   });
 

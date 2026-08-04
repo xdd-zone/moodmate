@@ -20,6 +20,36 @@ interface OpenAiErrorContext {
   durationMs: number;
 }
 
+const RUNTIME_ABORT_MAX_DEPTH = 5;
+
+/**
+ * workerd 在请求上下文销毁时会直接掐断进行中的 subrequest。这类错误不带 HTTP 状态，
+ * 也不保证触发调用方的 AbortSignal，只能从消息文本识别。
+ * 客户端提前断开就走这条路径，它不是模型服务故障，记成 aborted 才不会污染失败率。
+ */
+const RUNTIME_ABORT_PATTERNS = [
+  "Network connection lost",
+  "internal error; reference =",
+];
+
+function isRuntimeAbort(error: unknown): boolean {
+  let current: unknown = error;
+
+  for (let depth = 0; depth < RUNTIME_ABORT_MAX_DEPTH; depth += 1) {
+    if (!(current instanceof Error)) return false;
+
+    const message = current.message;
+
+    if (RUNTIME_ABORT_PATTERNS.some((pattern) => message.includes(pattern))) {
+      return true;
+    }
+
+    current = (current as { cause?: unknown }).cause;
+  }
+
+  return false;
+}
+
 /** OpenAI SDK error 转为 AI runtime 的稳定错误。 */
 export function mapOpenAiSdkError(
   error: unknown,
@@ -33,6 +63,13 @@ export function mapOpenAiSdkError(
 
   if (context.signal?.aborted || error instanceof APIUserAbortError) {
     return new AiError("aborted", "请求已取消", {
+      metadata: baseMetadata,
+      cause: error,
+    });
+  }
+
+  if (isRuntimeAbort(error)) {
+    return new AiError("aborted", "请求被运行时中断", {
       metadata: baseMetadata,
       cause: error,
     });

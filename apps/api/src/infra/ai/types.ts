@@ -26,6 +26,10 @@ export interface AiProviderOptions {
     /** 关闭上游推理过程（映射为当前上游接受的请求扩展字段）。 */
     disableThinking?: boolean;
   };
+  "openai-responses"?: {
+    /** 关闭上游推理过程（映射为 `reasoning.effort = "none"`）。 */
+    disableThinking?: boolean;
+  };
 }
 
 /**
@@ -108,6 +112,21 @@ export interface AiGenerationResult {
   message: AiAssistantMessage;
   usage: AiUsage | null;
   finishReason: AiFinishReason;
+}
+
+export interface AiCallObserver {
+  onStart(input: {
+    structuredOutputMethod: AiStructuredOutputMethod | null;
+  }): Promise<string>;
+  onComplete(
+    callId: string,
+    result: { finishReason: AiFinishReason; usage: AiUsage | null },
+  ): Promise<void>;
+  onError(
+    callId: string,
+    error: unknown,
+    result?: { finishReason: AiFinishReason; usage: AiUsage | null },
+  ): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------

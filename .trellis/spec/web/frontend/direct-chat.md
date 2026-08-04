@@ -1,33 +1,32 @@
-# Web 伴侣聊天
+# Web 按朋友单聊
 
 ## 1. 适用范围
 
-修改 `/chats/direct/[id]` 对话、历史恢复、长期记忆管理、AI SDK transport、本地 LLM 配置或 assistant 逐字显示时使用本规范。`ChatWorkspaceGuard` 恢复登录态，`ChatWorkspace` 统一单聊与群聊的会话列表和外壳，消息协议仍由各自组件处理，请求函数位于 `apps/web/src/api/`。
+修改 `/chats/direct/[id]` 对话、发起单聊、历史恢复、长期记忆管理、AI SDK transport 或 assistant 逐字显示时使用本规范。`ChatWorkspaceGuard` 恢复登录态，`ChatWorkspace` 统一单聊与群聊的会话列表和外壳，消息协议仍由各自组件处理，请求函数位于 `apps/web/src/api/`。
 
 ## 2. 公开签名
 
 ```ts
-readLocalLlmConfig(): LocalLlmConfig | null;
-readEnabledLocalLlmConfig(): CompanionChatLlmConfig | null;
-saveLocalLlmConfig(input: LocalLlmConfig): LocalLlmConfig;
-clearLocalLlmConfig(): void;
 fetchWithClientSession: typeof fetch;
-getCompanionConversation(options?): Promise<CompanionConversationResponse>;
-getCompanionConversationMessages(cursor, options?): Promise<CompanionConversationMessagesResponse>;
-getCompanionMemories(options?): Promise<CompanionMemoriesResponse>;
-updateCompanionMemory(memoryId, input, options?): Promise<UpdateCompanionMemoryResponse>;
-deleteCompanionMemory(memoryId, options?): Promise<DeleteCompanionMemoryResponse>;
-submitCompanionMessageFeedback(messageId, input, options?): Promise<SubmitCompanionMessageFeedbackResponse>;
+getDirectChats(options?): Promise<DirectChatListResponse>;
+createDirectChat(input: { agentId: string }, options?): Promise<CreateDirectChatResponse>;
+getDirectChat(conversationId, options?): Promise<DirectChatDetailResponse>;
+getDirectChatMessages(conversationId, cursor?, options?): Promise<DirectChatMessagesResponse>;
+submitDirectChatFeedback(conversationId, messageId, input, options?): Promise<SubmitDirectChatMessageFeedbackResponse>;
 ```
 
-AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BASE_URL}/rpc/chat/companion`。
+Query 层在 `api/direct-chat.query.ts`：`directChatKeys`、三个 query options 和 `createDirectChatMutationOptions`。记忆与主动关怀仍走 `api/chat.query.ts` 的 `companionChatKeys`（`memories(agentId)`、`carePlan()`、`careEvents()`）。
+
+AI SDK 使用 `TextStreamChatTransport<CompanionUiMessage>` 请求 `${NEXT_PUBLIC_API_BASE_URL}/rpc/direct-chats/${conversationId}/messages`，地址按当前会话 ID 拼，不是固定路径。
+
+浏览器侧本地 LLM 配置已移除：模型连接只由 Admin 配置并激活，Web 不再读写 `web:local-llm-config:v1`，也不再把 API Key 交给聊天请求。
 
 ## 3. 合同
 
-- 本地存储 key 是 `web:local-llm-config:v1`，读取 JSON 后必须通过 Zod schema。
-- 保存前去掉字段首尾空格和 Base URL 末尾 `/`。
-- 只有 `enabled: true` 的完整配置会进入聊天请求。
-- API Key 只保存在当前浏览器，并在发送聊天时交给 Moodmate API 代理。
+- 发起单聊走 `createDirectChat`，幂等：已有会话直接返回，成功后跳转 `/chats/direct/${conversationId}`。
+- 朋友档案的「开始聊天」和聊天头像菜单的「发起私聊」调用同一个 mutation，不各写一套。
+- 按钮在请求期间禁用并显示状态；朋友 `status !== "active"` 时禁用；失败留在当前页并显示具体错误。
+- 系统朋友不显示编辑和归档操作，用户自建朋友保留原有操作。
 - transport 使用 `fetchWithClientSession`，复用 access token、单例 refresh Promise 和一次重试规则。
 - 进入 `/chats` 后并行读取默认单聊和群聊列表，按最后消息时间进入最近会话；两边都没有消息时优先单聊。
 - `/chats/direct/[id]` 加载和失败状态不能初始化 `useChat`；路由 ID 与服务端 `conversationId` 不一致时替换为规范 URL。
@@ -42,7 +41,7 @@ AI SDK 使用 `TextStreamChatTransport<UIMessage>` 请求 `${NEXT_PUBLIC_API_BAS
 - 记忆管理放在设置的“记忆”区域，展示类型、内容、重要度、状态、更新时间和可空来源消息。
 - 记忆编辑、启停和删除成功后使 `companionChatKeys.memories()` 失效；删除前必须二次确认。
 - HTTP 客户端的 PATCH 带 JSON 请求体；DELETE 不发送请求体，两者沿用认证刷新和统一响应解析。
-- 反馈按钮（点赞/点踩）只挂在 `historicalAssistantMessageIdSet` 内的持久化 assistant 消息气泡下，避开流式临时 ID；按钮带 `aria-label`/`aria-pressed`，按 `feedback.rating` 显示选中态。提交走 `submitCompanionMessageFeedback` mutation，成功后本地即时更新选中态并使会话 query 失效回显。
+- 反馈按钮（点赞/点踩）只挂在 `historicalAssistantMessageIdSet` 内的持久化 assistant 消息气泡下，避开流式临时 ID；按钮带 `aria-label`/`aria-pressed`，按 `feedback.rating` 显示选中态。提交走 `submitDirectChatFeedback` mutation，成功后本地即时更新选中态并使会话 query 失效回显。
 
 ## 4. 校验与错误矩阵
 

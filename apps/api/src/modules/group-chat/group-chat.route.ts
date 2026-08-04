@@ -130,6 +130,7 @@ export function createGroupChatRoute() {
           bindings: c.env,
           groupChatId: c.req.valid("param").groupChatId,
           message: c.req.valid("json").message,
+          requestId: c.var.requestId,
           signal: c.req.raw.signal,
           userId: c.var.webSession.userId,
         });

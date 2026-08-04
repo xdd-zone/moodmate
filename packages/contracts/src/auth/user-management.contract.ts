@@ -4,9 +4,13 @@ import { createPasswordLoginRequestSchema } from "./password-login.contract";
 
 const passwordSchema = createPasswordLoginRequestSchema().shape.password;
 
+export const UserStatusSchema = z.enum(["active", "suspended", "deleted"]);
+
 export const UserListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
+  keyword: z.string().trim().max(120).optional(),
+  status: UserStatusSchema.exclude(["deleted"]).optional(),
 });
 
 export type UserListQuery = z.infer<typeof UserListQuerySchema>;
@@ -20,8 +24,6 @@ export const UserRoleSchema = z.object({
 
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
-export const UserStatusSchema = z.enum(["active", "suspended", "deleted"]);
-
 export const UserListItemSchema = z.object({
   createdAtMs: z.number().int().nonnegative(),
   displayName: z.string().min(1),
@@ -30,6 +32,12 @@ export const UserListItemSchema = z.object({
   lastLoginAtMs: z.number().int().nonnegative().nullable(),
   roles: z.array(UserRoleSchema),
   status: UserStatusSchema,
+  lastActiveAtMs: z.number().int().nonnegative().nullable(),
+  messageCount: z.number().int().nonnegative(),
+  directMessageCount: z.number().int().nonnegative(),
+  groupMessageCount: z.number().int().nonnegative(),
+  friendCount: z.number().int().nonnegative(),
+  groupChatCount: z.number().int().nonnegative(),
 });
 
 export type UserListItem = z.infer<typeof UserListItemSchema>;

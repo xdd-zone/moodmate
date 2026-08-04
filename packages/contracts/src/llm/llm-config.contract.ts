@@ -95,6 +95,7 @@ export const LlmConfigTestRequestSchema = z
     baseURL: LlmConfigBaseUrlSchema,
     model: z.string().trim().min(1).max(120),
     apiKey: z.string().trim().min(1).max(400).optional(),
+    disableThinking: z.boolean().optional(),
   })
   .refine((value) => Boolean(value.apiKey) || Boolean(value.configId), {
     message: "请填写 API Key，或提供已有配置的 configId 以复用原 Key",
@@ -102,10 +103,43 @@ export const LlmConfigTestRequestSchema = z
 
 export type LlmConfigTestRequest = z.infer<typeof LlmConfigTestRequestSchema>;
 
+/**
+ * 模型能力检测项。
+ *
+ * - `connectivity`：非流式最小请求，验证 Base URL、API Key、协议与模型名。
+ * - `streaming`：流式请求，聊天回复依赖这一项。
+ * - `json_schema` / `function` / `json_object`：三种结构化输出方法各测一次，
+ *   结果同时要求输出能通过 Zod 校验。分析类调用按这个顺序降级使用。
+ */
+export const LlmConfigTestCheckIdSchema = z.enum([
+  "connectivity",
+  "streaming",
+  "json_schema",
+  "function",
+  "json_object",
+]);
+
+export type LlmConfigTestCheckId = z.infer<typeof LlmConfigTestCheckIdSchema>;
+
+export const LlmConfigTestCheckSchema = z.object({
+  id: LlmConfigTestCheckIdSchema,
+  ok: z.boolean(),
+  latencyMs: z.number().int().nonnegative().optional(),
+  message: z.string().optional(),
+});
+
+export type LlmConfigTestCheck = z.infer<typeof LlmConfigTestCheckSchema>;
+
+/**
+ * `ok` 只反映配置是否可用于聊天：连通性与流式必须都通过。
+ * 三种结构化输出方法全部不支持时配置仍然可用，分析类调用会退到纯文本加本地解析，
+ * 因此它们只作为能力清单展示。
+ */
 export const LlmConfigTestResponseSchema = z.object({
   ok: z.boolean(),
   latencyMs: z.number().int().nonnegative().optional(),
   message: z.string().optional(),
+  checks: z.array(LlmConfigTestCheckSchema),
 });
 
 export type LlmConfigTestResponse = z.infer<typeof LlmConfigTestResponseSchema>;

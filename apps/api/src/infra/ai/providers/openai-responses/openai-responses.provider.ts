@@ -38,10 +38,14 @@ function createClient(request: AiProviderRequest): OpenAI {
 }
 
 function buildBaseBody(request: AiProviderRequest): ResponseCreateParamsBase {
+  const disableThinking =
+    request.model.providerOptions?.[OPENAI_RESPONSES]?.disableThinking ?? false;
+
   return {
     model: request.model.model,
     store: false,
     ...toResponsesRequestParts(request),
+    ...(disableThinking ? { reasoning: { effort: "none" as const } } : {}),
     ...(request.options?.temperature !== undefined
       ? { temperature: request.options.temperature }
       : {}),

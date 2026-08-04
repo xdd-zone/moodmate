@@ -1,13 +1,17 @@
 import { zValidator } from "@hono/zod-validator";
 import {
   BizCode,
+  AgentDetailResponseSchema,
+  AgentListResponseSchema,
+  AgentMemoriesResponseSchema,
   CreateUserAgentRequestSchema,
   CreateUserAgentResponseSchema,
+  DeleteAgentMemoryResponseSchema,
   DeleteUserAgentResponseSchema,
+  UpdateAgentMemoryRequestSchema,
+  UpdateAgentMemoryResponseSchema,
   UpdateUserAgentRequestSchema,
   UpdateUserAgentResponseSchema,
-  UserAgentDetailResponseSchema,
-  UserAgentListResponseSchema,
   buildSuccess,
 } from "@repo/contracts";
 import { Hono } from "hono";
@@ -21,12 +25,17 @@ import { createMeta } from "@/shared/meta";
 import {
   archiveUserAgentForUser,
   createUserAgentForUser,
+  deleteAgentMemoryForUser,
   getUserAgentDetail,
+  listAgentMemoriesForUser,
   listUserAgentsForUser,
+  updateAgentMemoryForUser,
   updateUserAgentForUser,
 } from "./agents.service";
 
 const agentParamsSchema = z.object({ agentId: z.uuid() });
+const memoryParamsSchema = z.object({ memoryId: z.uuid() });
+const memoryQuerySchema = z.object({ agentId: z.uuid() });
 
 function invalidRequest(message: string, details?: unknown) {
   return new AppError(BizCode.COMMON_INVALID_REQUEST, message, 400, details);
@@ -39,7 +48,7 @@ export function createAgentsRoute() {
         bindings: c.env,
         userId: c.var.webSession.userId,
       });
-      const data = UserAgentListResponseSchema.parse(result);
+      const data = AgentListResponseSchema.parse(result);
 
       return c.json(buildSuccess(data, createMeta(c.var.requestId)));
     })
@@ -74,7 +83,7 @@ export function createAgentsRoute() {
           bindings: c.env,
           userId: c.var.webSession.userId,
         });
-        const data = UserAgentDetailResponseSchema.parse(result);
+        const data = AgentDetailResponseSchema.parse(result);
 
         return c.json(buildSuccess(data, createMeta(c.var.requestId)));
       },
@@ -116,6 +125,75 @@ export function createAgentsRoute() {
           userId: c.var.webSession.userId,
         });
         const data = DeleteUserAgentResponseSchema.parse(result);
+
+        return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+      },
+    )
+    .get(
+      "/rpc/agent-memories",
+      requireWebAccess,
+      zValidator("query", memoryQuerySchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("朋友 ID 无效", result.error.issues);
+      }),
+      async (c) => {
+        const result = await listAgentMemoriesForUser({
+          agentId: c.req.valid("query").agentId,
+          bindings: c.env,
+          userId: c.var.webSession.userId,
+        });
+        const data = AgentMemoriesResponseSchema.parse(result);
+
+        return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+      },
+    )
+    .patch(
+      "/rpc/agent-memories/:memoryId",
+      requireWebAccess,
+      zValidator("param", memoryParamsSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("记忆 ID 无效", result.error.issues);
+      }),
+      zValidator("query", memoryQuerySchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("朋友 ID 无效", result.error.issues);
+      }),
+      zValidator("json", UpdateAgentMemoryRequestSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("记忆内容无效", result.error.issues);
+      }),
+      async (c) => {
+        const result = await updateAgentMemoryForUser({
+          agentId: c.req.valid("query").agentId,
+          bindings: c.env,
+          memoryId: c.req.valid("param").memoryId,
+          patch: c.req.valid("json"),
+          userId: c.var.webSession.userId,
+        });
+        const data = UpdateAgentMemoryResponseSchema.parse(result);
+
+        return c.json(buildSuccess(data, createMeta(c.var.requestId)));
+      },
+    )
+    .delete(
+      "/rpc/agent-memories/:memoryId",
+      requireWebAccess,
+      zValidator("param", memoryParamsSchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("记忆 ID 无效", result.error.issues);
+      }),
+      zValidator("query", memoryQuerySchema, (result) => {
+        if (result.success) return;
+        throw invalidRequest("朋友 ID 无效", result.error.issues);
+      }),
+      async (c) => {
+        const result = await deleteAgentMemoryForUser({
+          agentId: c.req.valid("query").agentId,
+          bindings: c.env,
+          memoryId: c.req.valid("param").memoryId,
+          userId: c.var.webSession.userId,
+        });
+        const data = DeleteAgentMemoryResponseSchema.parse(result);
 
         return c.json(buildSuccess(data, createMeta(c.var.requestId)));
       },

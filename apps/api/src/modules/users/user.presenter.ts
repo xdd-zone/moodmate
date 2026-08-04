@@ -14,6 +14,12 @@ export function presentUser(
     lastLoginAtMs: user.lastLoginAtMs,
     roles: [...roles],
     status: user.status,
+    lastActiveAtMs: user.lastActiveAtMs ? Number(user.lastActiveAtMs) : null,
+    messageCount: Number(user.messageCount),
+    directMessageCount: Number(user.directMessageCount),
+    groupMessageCount: Number(user.groupMessageCount),
+    friendCount: Number(user.friendCount),
+    groupChatCount: Number(user.groupChatCount),
   };
 }
 

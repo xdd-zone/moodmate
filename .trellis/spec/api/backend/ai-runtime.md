@@ -2,7 +2,7 @@
 
 ## 1. 适用范围
 
-新增或修改 `apps/api/src/infra/ai` 的类型、Provider、runtime、错误模型、协议注册，或改动业务模块调用模型的方式时使用本规范。业务侧（chat / group-chat / llm-config）与 runtime 的桥接契约见 `companion-chat.md` 第 12 节。
+新增或修改 `apps/api/src/infra/ai` 的类型、Provider、runtime、错误模型、协议注册，或改动业务模块调用模型的方式时使用本规范。业务侧（direct-chat / group-chat / llm-config）与 runtime 的桥接契约见 `direct-chat.md` 第 12 节。
 
 实现位于 `apps/api/src/infra/ai`。它是 API 里调用上游模型的唯一位置，业务模块不自己创建模型客户端，也不解析 OpenAI 协议。
 
@@ -62,26 +62,42 @@ interface AiModel {
   apiKey: string; // 只存在于请求期内存，不进事件、错误 metadata 或日志
   providerOptions?: {
     "openai-chat-completions"?: { disableThinking?: boolean };
+    "openai-responses"?: { disableThinking?: boolean };
   };
 }
 ```
 
 - registry 按 `AiModel.api` 选实现，不按 `providerName` 写分支。
-- `disableThinking` 只通过 `providerOptions["openai-chat-completions"]` 传，Provider 映射为上游 `thinking: { type: "disabled" }`。业务模块不拼原始 request body。
+- `disableThinking` 按协议映射到不同上游字段：`openai-chat-completions` 发 `thinking: { type: "disabled" }`，`openai-responses` 发 `reasoning: { effort: "none" }`。业务模块不拼原始 request body。新增协议时如果不加映射，配置项会静默失效——上游对不认识的参数通常不报错。
 - `packages/contracts` 的 `LlmConfigApiSchema` 使用同样的三个协议值。create、update 和 test 请求可以传 `api`；省略时使用 `openai-chat-completions`。
-- Admin 创建、编辑和连接测试都传所选 `api`。`disableThinking` 只在 `openai-chat-completions` 下显示和发送；其他协议不构造该字段或 Provider option。
+- Admin 创建、编辑和连接测试都传所选 `api`。`disableThinking` 在 `openai-chat-completions` 和 `openai-responses` 下显示和发送，判断走 `supportsThinkingControl()`，不在多处硬编码协议名。
 - `resolveActiveLlmProviderConfig()`、单聊和群聊必须保留已保存的 `api`，不能在业务层重新写成默认协议。
 - Provider 向 SDK 显式传 90 秒 timeout、`maxRetries: 0` 和调用方 `AbortSignal`。
 
-结构化输出：`generateObject()` 接收 Zod schema，转 JSON Schema 交给 Provider，返回后再用同一 Zod schema 校验。方法按固定顺序 `json_schema -> function -> json_object` 轮询，切换逻辑在 runtime，Provider 只忠实应用当前 method。
+结构化输出：`generateObject()` 接收 Zod schema，转 JSON Schema 交给 Provider，返回后再用同一 Zod schema 校验。方法按固定顺序 `json_schema -> function -> json_object` 轮询，切换逻辑在 runtime，Provider 只忠实应用当前 method。`methods` 选项可以限定只试某一种，管理端能力检测用它单测每个方法而不触发降级。
+
+`generateObject()` 内部还做两件事，都不能省：
+
+- 调 Provider 前用 `withThinkingDisabled()` 关掉推理。推理和结构化输出在多数上游上冲突：推理过程吃掉 `maxTokens` 预算，正文写不完导致 JSON 截断（记录里表现为 `invalid_output` 且 `completion_tokens` 正好等于上限）；部分上游还直接拒绝推理模式下的 `tool_choice`。回复生成走 `generateText` / `streamText`，仍按配置保留推理。`direct-chat.structured.ts` 的纯文本回退也要套这一层，它同样是结构化输出用途。
+- 走 `json_object` 时注入含 json 字样和 JSON Schema 的系统消息。该方法本身不传 schema，而 OpenAI 及兼容实现都要求提示里出现 json 字样，否则直接 400。不注入的话这一档永远失败，能力检测还会把它误报成模型不支持。
 
 协议能力：
 
 | 协议                      | 文本与工具调用                           | structured output                                    | 请求约束                                      |
 | ------------------------- | ---------------------------------------- | ---------------------------------------------------- | --------------------------------------------- |
-| `openai-chat-completions` | Chat Completions message / tool call     | `json_schema`、`function`、`json_object`             | 保留既有 `disableThinking` 行为               |
+| `openai-chat-completions` | Chat Completions message / tool call     | `json_schema`、`function`、`json_object`             | `disableThinking` 发 `thinking.type`          |
 | `anthropic-messages`      | `tool_use` / `tool_result`               | 只支持强制 `function`；其他方法抛 `invalid_response` | `max_tokens` 默认 4096                        |
 | `openai-responses`        | `function_call` / `function_call_output` | `json_schema`、强制 `function`、`json_object`        | `store: false`；`max_output_tokens` 最小为 16 |
+
+表里写的是协议本身支持什么。具体模型支持到哪一步要实测，同一个模型在两种协议下能力可能不同。`deepseek-v4-flash` 的实测结果：
+
+| 方法          | `openai-chat-completions`                                                    | `openai-responses` |
+| ------------- | ---------------------------------------------------------------------------- | ------------------ |
+| `json_schema` | 400 `This response_format type is unavailable now`                           | 可用               |
+| `function`    | 可用（需关推理，否则 400 `Thinking mode does not support this tool_choice`） | 同左               |
+| `json_object` | 可用（提示必须含 json 字样）                                                 | 同左               |
+
+所以这个模型走 `openai-responses` 时首个方法就成功，走 `openai-chat-completions` 时必然降级一次到 `function`。选协议前用 Admin 的模型能力测试跑一遍，不要照搬别的模型的结论。DeepSeek 的 Responses API 目前只支持 `deepseek-v4-flash`。
 
 Anthropic 流只从 `input_json_delta.partial_json` 累加工具参数；`content_block_start.input` 不作为参数增量重复拼接。OpenAI Responses 收到 `response.function_call_arguments.done` 或 `response.output_item.done` 时，要补发尚未出现的参数尾部，再发最终 `tool-call`。两种协议都必须先看到正常终止事件，才能发内部 `finish`；流提前结束时返回 `invalid_response`。
 
@@ -97,6 +113,7 @@ Anthropic 流只从 `input_json_delta.partial_json` 累加工具参数；`conten
 | 限流                             | `rate_limited`              |
 | 响应头 / 连接超时                | `timeout`                   |
 | 调用方取消                       | `aborted`                   |
+| 运行时掐断连接                   | `aborted`                   |
 | 无法连接                         | `network`                   |
 | 400 / 422（含方法不被支持）      | `invalid_response`          |
 | 无 choice / 空文本               | `invalid_response`          |
@@ -109,7 +126,9 @@ Anthropic 流只从 `input_json_delta.partial_json` 累加工具参数；`conten
 
 - `generateObject` 只有 `invalid_response`（方法不被支持）或 `invalid_output` 才切下一种方法；认证 / 限流 / 超时 / 取消 / 网络错误立即向上抛，不重试、不切换。
 - `aborted` 保持取消语义向上抛，工具执行中的取消不包装成 tool result。
-- runtime 与 Provider 不创建 `AppError`，不依赖 Hono / D1 / contracts。业务边界（chat / group-chat / llm-config service）把 `AiError` 转成 `BizCode`、HTTP status 和中文文案。
+- runtime 与 Provider 不创建 `AppError`，不依赖 Hono / D1 / contracts。业务边界（direct-chat / group-chat / llm-config service）把 `AiError` 转成 `BizCode`、HTTP status 和中文文案。
+
+客户端提前断开时，workerd 会直接掐断进行中的 subrequest，抛出的错误不带 HTTP 状态，也不保证触发调用方的 `AbortSignal`——所以不能只靠 `signal.aborted` 判断。`mapOpenAiSdkError` 额外按消息文本识别 `Network connection lost` 和 `internal error; reference =` 两个 workerd 特征，映射成 `aborted`。这类中断不是模型服务故障，落成 `network` 或 `upstream_error` 会让运营看板的失败率把用户关页面算成上游出错。文本匹配依赖运行时错误措辞，升级 workerd 后要复核这两个模式还在不在。
 
 日志只记录可安全字段（`status`、`requestId`、`providerName`、`model`、`durationMs`），工具日志只记名称、耗时和结果状态。禁止记录 API Key、Authorization、完整 prompt、完整工具参数、完整工具结果或原始上游错误体。
 

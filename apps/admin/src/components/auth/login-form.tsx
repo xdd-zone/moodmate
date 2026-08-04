@@ -8,7 +8,6 @@ import { Input } from "@repo/ui/input";
 import { ThemeToggle } from "@repo/ui/theme-toggle";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import type { FormEvent } from "react";
 
@@ -17,9 +16,9 @@ import { adminSessionKeys } from "@/src/auth/session.query";
 import { HttpRequestError } from "@/src/lib/http";
 
 const ADMIN_MODULES = [
-  { number: "01", name: "情绪记录" },
+  { number: "01", name: "数据概览" },
   { number: "02", name: "用户管理" },
-  { number: "03", name: "角色权限" },
+  { number: "03", name: "朋友管理" },
 ] as const;
 
 type FieldErrors = {
@@ -46,7 +45,6 @@ function getPasswordError(value: string) {
 
 export function LoginForm() {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const passwordRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] =
@@ -98,8 +96,7 @@ export function LoginForm() {
       try {
         const session = await loginAdmin(result.data);
         queryClient.setQueryData(adminSessionKeys.current(), session);
-        router.replace("/");
-        router.refresh();
+        window.location.assign("/overview");
       } catch (error) {
         setErrorMessage(
           error instanceof HttpRequestError
@@ -136,7 +133,7 @@ export function LoginForm() {
               <span className="block">MoodMate 管理台</span>
             </h1>
             <p className="mt-3 max-w-[50ch] text-[0.84375rem] leading-[1.7] text-muted min-[561px]:mt-6 min-[561px]:text-[0.9375rem]">
-              使用管理员账号继续。登录后可以处理情绪记录、用户账号与角色权限。
+              使用管理员账号继续。登录后可以查看运营数据，管理用户与朋友配置。
             </p>
 
             <div

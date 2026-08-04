@@ -1,6 +1,6 @@
 "use client";
 
-import type { CreateUserAgentRequest, UserAgent } from "@repo/contracts";
+import type { Agent, CreateUserAgentRequest } from "@repo/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -33,7 +33,7 @@ const emptyForm: FriendFormState = {
   tonePrompt: "",
 };
 
-function toFormState(agent: UserAgent | null): FriendFormState {
+function toFormState(agent: Agent | null): FriendFormState {
   if (!agent) return emptyForm;
 
   return {
@@ -68,7 +68,7 @@ function toRequestPayload(form: FriendFormState): CreateUserAgentRequest {
 }
 
 type FriendEditorDialogProps = {
-  agent: UserAgent | null;
+  agent: Agent | null;
   onClose: () => void;
   onSaved?: () => void;
   open: boolean;

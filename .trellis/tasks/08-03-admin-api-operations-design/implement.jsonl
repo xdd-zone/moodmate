@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/api/backend/direct-chat.md", "reason": "按朋友单聊的会话、历史、记忆、分析与主动关怀契约"}
+{"file": ".trellis/spec/api/backend/admin-operations.md", "reason": "Admin 运营数据接口、Token 归属与失败率口径"}
+{"file": ".trellis/spec/api/backend/ai-runtime.md", "reason": "structured output 降级、推理开关映射与错误分类"}
+{"file": ".trellis/spec/api/backend/d1.md", "reason": "migration 应用规则与本地库重建方式"}
+{"file": ".trellis/spec/api/backend/database-guidelines.md", "reason": "Drizzle sql 模板里关联子查询的写法约束"}
+{"file": ".trellis/spec/api/backend/group-chat.md", "reason": "群聊编排与单聊共用的 runtime 边界"}
+{"file": ".trellis/spec/admin/frontend/index.md", "reason": "Admin 页面、BFF 与查询层规范入口"}
+{"file": ".trellis/spec/web/frontend/direct-chat.md", "reason": "Web 发起单聊、历史恢复与逐字显示"}
+{"file": ".trellis/spec/contracts/shared/index.md", "reason": "contract 只放 schema 与 DTO 的边界"}

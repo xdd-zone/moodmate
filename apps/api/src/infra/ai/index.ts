@@ -22,6 +22,7 @@ export type {
   AiUsage,
   AiFinishReason,
   AiGenerationResult,
+  AiCallObserver,
   AiGenerationOptions,
   AiResponseFormat,
   AiStructuredOutputMethod,
@@ -50,7 +51,10 @@ export type {
   StreamTextOptions,
 } from "./runtime/generate-text";
 
-export { generateObject } from "./runtime/generate-object";
+export {
+  generateObject,
+  withThinkingDisabled,
+} from "./runtime/generate-object";
 export type {
   GenerateObjectOptions,
   GenerateObjectResult,

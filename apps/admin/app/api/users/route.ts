@@ -22,6 +22,8 @@ export async function GET(request: Request) {
   const query = UserListQuerySchema.safeParse({
     page: url.searchParams.get("page") ?? undefined,
     pageSize: url.searchParams.get("pageSize") ?? undefined,
+    keyword: url.searchParams.get("keyword") ?? undefined,
+    status: url.searchParams.get("status") ?? undefined,
   });
 
   if (!query.success) {

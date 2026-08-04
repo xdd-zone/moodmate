@@ -4,12 +4,12 @@ import type { BaseMessage } from "@langchain/core/messages";
 import { isAiError, type AiMessage, type AiModel } from "@/infra/ai";
 import { AppError } from "@/shared/app-error";
 
-import type { ChatCompletionMessage, ChatProviderConfig } from "./chat.service";
+import type { ChatCompletionMessage, ChatProviderConfig } from "./chat.types";
 
 /**
  * 把业务侧的 ChatProviderConfig 转成 AI runtime 的 AiModel。
- * api 决定 registry 使用的协议实现；disableThinking 只映射到
- * openai-chat-completions 的受控 Provider 选项。
+ * api 决定 registry 使用的协议实现；disableThinking 映射到对应协议的受控
+ * Provider 选项（chat-completions 走 `thinking`，responses 走 `reasoning.effort`）。
  */
 export function toAiModel(config: ChatProviderConfig): AiModel {
   return {
@@ -18,12 +18,11 @@ export function toAiModel(config: ChatProviderConfig): AiModel {
     model: config.model,
     baseURL: config.baseURL,
     apiKey: config.apiKey,
-    ...(config.api === "openai-chat-completions"
+    ...(config.api === "openai-chat-completions" ||
+    config.api === "openai-responses"
       ? {
           providerOptions: {
-            "openai-chat-completions": {
-              disableThinking: config.disableThinking,
-            },
+            [config.api]: { disableThinking: config.disableThinking },
           },
         }
       : {}),

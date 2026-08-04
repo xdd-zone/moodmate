@@ -7,6 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   Bot,
+  MessageSquareWarning,
+  ContactRound,
   Images,
   LayoutDashboard,
   LogOut,
@@ -14,9 +16,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
-  Settings,
   ShieldCheck,
-  Smile,
   Users,
   X,
 } from "lucide-react";
@@ -37,21 +37,45 @@ import {
 import { AdminAvatar } from "@/src/components/profile/admin-avatar";
 
 type NavItem = {
-  count?: string;
-  href?: string;
+  href: string;
   icon: ComponentType<{ className?: string }>;
   label: string;
-  soon?: boolean;
 };
 
-const NAV_ITEMS: readonly NavItem[] = [
-  { icon: LayoutDashboard, label: "数据概览", soon: true },
-  { count: "2.4k", href: "/moods", icon: Smile, label: "情绪记录" },
-  { href: "/users", icon: Users, label: "用户管理" },
-  { href: "/roles", icon: ShieldCheck, label: "角色权限" },
-  { href: "/default-avatar", icon: Images, label: "默认头像" },
-  { href: "/llm-configs", icon: Bot, label: "模型配置" },
-  { href: "/settings", icon: Settings, label: "系统设置" },
+type NavGroup = {
+  id: string;
+  items: readonly NavItem[];
+  label: string;
+};
+
+const NAV_GROUPS: readonly NavGroup[] = [
+  {
+    id: "overview",
+    items: [{ href: "/overview", icon: LayoutDashboard, label: "数据概览" }],
+    label: "概览",
+  },
+  {
+    id: "operations",
+    items: [
+      { href: "/users", icon: Users, label: "用户管理" },
+      { href: "/friends", icon: ContactRound, label: "朋友管理" },
+      { href: "/feedback", icon: MessageSquareWarning, label: "消息反馈" },
+    ],
+    label: "运营",
+  },
+  {
+    id: "ai",
+    items: [{ href: "/llm-configs", icon: Bot, label: "模型配置" }],
+    label: "AI",
+  },
+  {
+    id: "system",
+    items: [
+      { href: "/default-avatar", icon: Images, label: "默认头像" },
+      { href: "/roles", icon: ShieldCheck, label: "角色权限" },
+    ],
+    label: "系统",
+  },
 ] as const;
 
 const SIDEBAR_STORAGE_KEY = "admin-sidebar-collapsed";
@@ -131,7 +155,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <Link
             aria-label="moodmate 管理台首页"
             className="admin-brand"
-            href="/moods"
+            href="/overview"
             onClick={() => setMobileSidebarOpen(false)}
           >
             <span aria-hidden="true" className="admin-logo-mark">
@@ -141,46 +165,41 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </Link>
 
           <nav aria-label="后台模块" className="admin-sidebar-nav">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = item.href
-                ? isPathActive(pathname, item.href)
-                : false;
-
-              if (!item.href) {
-                return (
-                  <span
-                    aria-disabled="true"
-                    className="admin-sidebar-nav-item admin-sidebar-nav-item-soon"
-                    key={item.label}
-                    title="数据概览模块建设中"
-                  >
-                    <Icon aria-hidden="true" className="size-4" />
-                    <span className="admin-sidebar-nav-label">
-                      {item.label}
-                    </span>
-                    <span className="admin-sidebar-nav-meta">待建</span>
-                  </span>
-                );
-              }
-
-              return (
-                <Link
-                  aria-current={active ? "page" : undefined}
-                  className={`admin-sidebar-nav-item${active ? " admin-sidebar-nav-item-active" : ""}`}
-                  href={item.href}
-                  key={item.href}
-                  onClick={() => setMobileSidebarOpen(false)}
-                  title={sidebarCollapsed ? item.label : undefined}
+            {NAV_GROUPS.map((group) => (
+              <div
+                aria-labelledby={`admin-nav-group-${group.id}`}
+                className="admin-sidebar-nav-group"
+                key={group.id}
+                role="group"
+              >
+                <p
+                  className="admin-sidebar-nav-group-label"
+                  id={`admin-nav-group-${group.id}`}
                 >
-                  <Icon aria-hidden="true" className="size-4" />
-                  <span className="admin-sidebar-nav-label">{item.label}</span>
-                  {item.count ? (
-                    <span className="admin-sidebar-nav-meta">{item.count}</span>
-                  ) : null}
-                </Link>
-              );
-            })}
+                  {group.label}
+                </p>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isPathActive(pathname, item.href);
+
+                  return (
+                    <Link
+                      aria-current={active ? "page" : undefined}
+                      className={`admin-sidebar-nav-item${active ? " admin-sidebar-nav-item-active" : ""}`}
+                      href={item.href}
+                      key={item.href}
+                      onClick={() => setMobileSidebarOpen(false)}
+                      title={sidebarCollapsed ? item.label : undefined}
+                    >
+                      <Icon aria-hidden="true" className="size-4" />
+                      <span className="admin-sidebar-nav-label">
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
 
           <Button

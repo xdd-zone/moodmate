@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/api/backend/admin-operations.md", "reason": "核对 Token 恒等式、usage 缺失记 null 与失败率按 operation 聚合"}
+{"file": ".trellis/spec/api/backend/direct-chat.md", "reason": "核对会话唯一约束、用户隔离、流式与取消行为"}
+{"file": ".trellis/spec/api/backend/ai-runtime.md", "reason": "核对结构化输出关推理、json_object 提示注入与错误码矩阵"}
+{"file": ".trellis/spec/api/backend/database-guidelines.md", "reason": "核对计数类子查询没有踩裸列名与缺别名两个坑"}
+{"file": ".trellis/spec/api/backend/quality-guidelines.md", "reason": "API 层类型边界与禁止写法"}
+{"file": ".trellis/spec/admin/frontend/quality-guidelines.md", "reason": "Admin 侧类型、BFF 与查询层检查项"}
+{"file": ".trellis/spec/web/frontend/quality-guidelines.md", "reason": "Web 侧类型与组件检查项"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "contract、API、BFF、页面四层数据流一致性"}

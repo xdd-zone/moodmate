@@ -6,12 +6,24 @@ import {
   type LlmConfigCreateRequest,
   type LlmConfigListResponse,
   type LlmConfigMutationResponse,
+  type LlmConfigTestCheck,
+  type LlmConfigTestCheckId,
   type LlmConfigTestRequest,
   type LlmConfigTestResponse,
   type LlmConfigUpdateRequest,
 } from "@repo/contracts";
+import { z } from "zod";
 
-import { AiError, generateText } from "@/infra/ai";
+import {
+  AiError,
+  type AiEventStream,
+  type AiModel,
+  type AiStructuredOutputMethod,
+  generateObject,
+  generateText,
+  streamText,
+} from "@/infra/ai";
+import { createAiCallObserver } from "@/modules/ai-usage";
 import { AppError } from "@/shared/app-error";
 import { getApiEnv } from "@/shared/env";
 import type { ApiBindings } from "@/shared/hono-env";
@@ -32,11 +44,31 @@ import type { LlmProviderConfigRecord } from "./llm-config.schema";
 const TEST_TIMEOUT_MS = 15_000;
 
 /**
+ * 能力检测用的最小 schema。刻意保留 enum、数值区间和数组上限，
+ * 因为部分上游对这些 JSON Schema 关键字或 strict 模式支持不一致。
+ */
+const PROBE_SCHEMA = z.object({
+  mood: z.enum(["calm", "tired"]),
+  score: z.number().min(0).max(1),
+  tags: z.array(z.string()).max(2),
+});
+
+const PROBE_MESSAGES = [
+  {
+    role: "system" as const,
+    content:
+      "把用户这句话判断成结构化结果：mood 取 calm 或 tired，score 是 0 到 1 的把握度，tags 最多两个短标签。",
+  },
+  { role: "user" as const, content: "今天有点累，不太想说话" },
+];
+
+/**
  * 已解密的活动模型连接形状，字段与 design.md 的 AiModel 对齐。
  * 阶段 2 建好 `@/infra/ai` 类型后，可再对齐或替换为 AiModel。
  * apiKey 只存在于请求期内存，不写入事件、错误 metadata 或持久化日志。
  */
 export interface ResolvedLlmConnection {
+  id: string;
   api: LlmConfigApi;
   providerName: string;
   model: string;
@@ -44,6 +76,9 @@ export interface ResolvedLlmConnection {
   apiKey: string;
   providerOptions?: {
     "openai-chat-completions"?: {
+      disableThinking?: boolean;
+    };
+    "openai-responses"?: {
       disableThinking?: boolean;
     };
   };
@@ -175,33 +210,102 @@ export async function deleteLlmConfigById(input: {
 }
 
 export async function testLlmConfig(input: {
+  adminUserId: string;
   adminRoles: readonly string[];
   bindings: ApiBindings;
   payload: LlmConfigTestRequest;
+  requestId: string;
 }): Promise<LlmConfigTestResponse> {
   assertCanManageLlmConfig(input.adminRoles);
   const apiKey = await resolveTestApiKey(input.bindings, input.payload);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
   const startedAt = Date.now();
+  const api = input.payload.api ?? DEFAULT_LLM_CONFIG_API;
+  const model: AiModel = {
+    api,
+    providerName: input.payload.providerName,
+    model: input.payload.model,
+    baseURL: normalizeBaseURL(input.payload.baseURL),
+    apiKey,
+    ...(api === "openai-chat-completions" || api === "openai-responses"
+      ? {
+          providerOptions: {
+            [api]: { disableThinking: input.payload.disableThinking ?? false },
+          },
+        }
+      : {}),
+  };
 
-  try {
-    // 用最小非流式生成请求走 AI runtime，验证认证、协议和模型可用；
-    // 不再在 llm-config 里自行 fetch 上游。
-    await generateText({
-      model: {
-        api: input.payload.api ?? DEFAULT_LLM_CONFIG_API,
-        providerName: input.payload.providerName,
-        model: input.payload.model,
-        baseURL: normalizeBaseURL(input.payload.baseURL),
-        apiKey,
-      },
-      messages: [{ role: "user", content: "ping" }],
-      maxTokens: 1,
-      signal: controller.signal,
+  const newObserver = () =>
+    createAiCallObserver({
+      bindings: input.bindings,
+      conversationType: "none",
+      initiatorId: input.adminUserId,
+      initiatorType: "admin",
+      llmConfigId: input.payload.configId,
+      model,
+      requestId: input.requestId,
+      scenario: "llm_config_test",
+      subjectType: "system",
     });
 
-    return { ok: true, latencyMs: Date.now() - startedAt, message: "连接成功" };
+  try {
+    // 连通性先单独跑：失败时后面几项没有意义，直接短路，避免白发请求。
+    const connectivity = await runTestCheck(
+      "connectivity",
+      controller.signal,
+      () =>
+        generateText({
+          model,
+          messages: [{ role: "user", content: "ping" }],
+          maxTokens: 16,
+          observer: newObserver(),
+          signal: controller.signal,
+        }),
+    );
+
+    if (!connectivity.ok) {
+      return {
+        ok: false,
+        latencyMs: Date.now() - startedAt,
+        message: connectivity.message ?? "无法连接模型服务",
+        checks: [connectivity],
+      };
+    }
+
+    const [streaming, ...structured] = await Promise.all([
+      runTestCheck("streaming", controller.signal, () =>
+        consumeStream(
+          streamText({
+            model,
+            messages: [{ role: "user", content: "说一句十个字以内的问候" }],
+            maxTokens: 64,
+            observer: newObserver(),
+            signal: controller.signal,
+          }),
+        ),
+      ),
+      ...(["json_schema", "function", "json_object"] as const).map((method) =>
+        runTestCheck(method, controller.signal, () =>
+          probeStructuredOutput(
+            method,
+            model,
+            newObserver(),
+            controller.signal,
+          ),
+        ),
+      ),
+    ]);
+
+    const checks = [connectivity, streaming, ...structured];
+
+    return {
+      ok: streaming.ok,
+      latencyMs: Date.now() - startedAt,
+      message: describeTestResult(streaming, structured),
+      checks,
+    };
   } catch (error) {
     return toTestFailureResponse(error, controller.signal);
   } finally {
@@ -209,26 +313,101 @@ export async function testLlmConfig(input: {
   }
 }
 
+/** 跑单项检测，把异常收敛成检测结果，不让一项失败中断整轮。 */
+async function runTestCheck(
+  id: LlmConfigTestCheckId,
+  signal: AbortSignal,
+  run: () => Promise<unknown>,
+): Promise<LlmConfigTestCheck> {
+  const startedAt = Date.now();
+
+  try {
+    await run();
+
+    return { id, ok: true, latencyMs: Date.now() - startedAt };
+  } catch (error) {
+    return {
+      id,
+      ok: false,
+      latencyMs: Date.now() - startedAt,
+      message: toCheckFailureMessage(error, signal),
+    };
+  }
+}
+
+/** 只测指定的一种 structured output 方法，输出还要能过 Zod 才算通过。 */
+async function probeStructuredOutput(
+  method: AiStructuredOutputMethod,
+  model: AiModel,
+  observer: ReturnType<typeof createAiCallObserver>,
+  signal: AbortSignal,
+): Promise<void> {
+  await generateObject({
+    model,
+    messages: [...PROBE_MESSAGES],
+    schema: PROBE_SCHEMA,
+    schemaName: "llm_config_probe",
+    maxTokens: 600,
+    methods: [method],
+    observer,
+    signal,
+  });
+}
+
+/** 消费完整事件流；上游发出 error 事件时抛出，交给 runTestCheck 记为失败。 */
+async function consumeStream(stream: AiEventStream): Promise<void> {
+  for await (const event of stream) {
+    if (event.type === "error") {
+      throw event.error;
+    }
+  }
+}
+
+/** 汇总一句管理端可读的结论，说明哪些结构化方法可用。 */
+function describeTestResult(
+  streaming: LlmConfigTestCheck,
+  structured: readonly LlmConfigTestCheck[],
+): string {
+  if (!streaming.ok) {
+    return `连接成功，但流式输出不可用：${streaming.message ?? "未知原因"}`;
+  }
+
+  const usable = structured
+    .filter((check) => check.ok)
+    .map((check) => check.id);
+
+  if (usable.length === 0) {
+    return "连接与流式输出正常。三种结构化输出方法都不支持，分析类调用会退到纯文本加本地解析。";
+  }
+
+  return `连接与流式输出正常。可用的结构化输出方法：${usable.join("、")}。`;
+}
+
 /** 把连接测试异常转成管理端可读的失败响应，不暴露 API Key 与上游原始错误体。 */
 function toTestFailureResponse(
   error: unknown,
   signal: AbortSignal,
 ): LlmConfigTestResponse {
+  return {
+    ok: false,
+    message: toCheckFailureMessage(error, signal),
+    checks: [],
+  };
+}
+
+/** 单项检测的失败原因转管理端可读短句。 */
+function toCheckFailureMessage(error: unknown, signal: AbortSignal): string {
   if (signal.aborted) {
-    return { ok: false, message: "连接超时，请检查 Base URL 与网络" };
+    return "请求超时，请检查 Base URL 与网络";
   }
 
   if (error instanceof AiError) {
-    return { ok: false, message: describeAiError(error) };
+    return describeAiError(error);
   }
 
-  return {
-    ok: false,
-    message:
-      error instanceof Error && error.message
-        ? error.message
-        : "无法连接模型服务",
-  };
+  return error instanceof Error && error.message
+    ? error.message
+    : "无法连接模型服务";
 }
 
 /** AiError 转管理端可读的中文短句。 */
@@ -277,17 +456,16 @@ export async function resolveActiveLlmProviderConfig(
   const api = normalizeLlmConfigApi(record.api);
 
   return {
+    id: record.id,
     api,
     providerName: record.providerName,
     model: record.model,
     baseURL: record.baseUrl,
     apiKey,
-    ...(api === "openai-chat-completions"
+    ...(api === "openai-chat-completions" || api === "openai-responses"
       ? {
           providerOptions: {
-            "openai-chat-completions": {
-              disableThinking: record.disableThinking === 1,
-            },
+            [api]: { disableThinking: record.disableThinking === 1 },
           },
         }
       : {}),

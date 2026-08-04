@@ -20,23 +20,19 @@
 
 - 根目录 `package.json` 使用 `pnpm@11.9.0`，Node 要求 `>=22`。
 - `apps/web` 已经有公开首页 `app/(site)/page.tsx` 和应用入口 `app/(app)/app/page.tsx`。
-- `apps/admin` 现在只有基础首页 `app/page.tsx`。
+- `apps/admin` 已有 `/overview`、`/users`、`/friends`、`/feedback`、`/llm-configs`、`/default-avatar` 和 `/roles` 页面；首页重定向到 `/overview`。
 - `apps/api` 已经实现 `/`、`/health`、`/rpc/system/ping`、`/rpc/system/readiness`。
 - `apps/api` 已经有 requestId、CORS、安全响应头、统一错误返回。
 - `packages/contracts` 已经有 `ApiResponse<T>`、`BizCode`、`buildSuccess()`、`buildFailure()` 和 `system` contracts。
 - `apps/api/wrangler.jsonc` 已在默认开发环境启用本地 D1 和头像 R2；KV、AI 和队列 binding 尚未启用。
 
-现在还没有实现这些内容：
+当前仍未实现：
 
-- 登录、session、token refresh。
-- D1 表、migration、seed。
 - 用户头像和 Agent 头像上传。
-- Agent、聊天、记忆、主动关怀。
-- LLM provider 配置和调用。
-- 订阅、账单、内容审核。
-- 自动任务入口。
+- 自动运行主动关怀的 Workers Cron 入口。
+- 订阅、账单和内容审核。
 
-文档里出现这些能力时，默认表示要做的设计，不表示代码已经写完。
+登录、D1 数据、统一 Agent、direct chat、记忆、主动关怀手动触发、LLM 配置、AI 调用记录和 Admin 运营查询已经有源码实现。
 
 ## 目标和非目标
 
@@ -47,12 +43,12 @@
 - 新接口先写 `packages/contracts`，再写 API route 和前端请求函数。
 - 新业务模块按 route、service、repository、presenter 或 mapper 分开写。
 
-下一阶段目标：
+当前业务目标：
 
 - 用户可以登录，记录情绪、原因和下一步行动。
-- 用户可以创建或选择 Agent，并发起私聊。
-- API 可以保存用户资料、情绪记录、Agent、消息和记忆。
-- Admin 可以管理用户、Agent 模板、默认头像、LLM 配置和服务状态。
+- 用户可以创建用户朋友，也可以选择系统朋友，并从朋友档案或头像菜单发起幂等单聊。
+- API 使用 `agents`、`agent_conversations`、`agent_conversation_messages`、`agent_memories` 和 `agent_message_feedbacks` 保存朋友、会话、消息、记忆和反馈。
+- Admin 可以查看真实运营概览、用户业务计数、朋友配置、消息反馈和 AI Token 用量；系统朋友可以创建、编辑、停用、启用和删除未使用记录。
 
 本期不做：
 
@@ -212,12 +208,13 @@ apps/admin/
 
 ```text
 apps/admin/app/(dashboard)/
+├── overview/
 ├── users/
-├── agent-templates/
+├── friends/
+├── feedback/
 ├── default-avatars/
-├── moderation/
-├── llm-settings/
-└── system/
+├── llm-configs/
+└── roles/
 ```
 
 ### `packages/contracts`
@@ -446,7 +443,7 @@ Agent 可以读取最近的情绪记录，但不能把聊天消息直接写成�
 
 ### `agent`
 
-`agent` 负责用户的 AI 陪伴对象。
+`agent` 负责统一的系统朋友和用户朋友。
 
 这里放：
 
@@ -458,27 +455,19 @@ Agent 可以读取最近的情绪记录，但不能把聊天消息直接写成�
 - 边界说明。
 - 开场白。
 - 默认 prompt。
-- 状态。
-- 可见范围。
+- 状态：系统朋友为 `active|disabled`，用户朋友为 `active|archived`。
+- 来源和所属用户。系统朋友全局共享定义，用户朋友只对所属用户可用。
 
-状态先支持：
-
-```text
-draft
-published
-archived
-```
-
-后台 Agent 模板和用户自己的 Agent 分开存。用户从模板创建 Agent 时，API 复制一份给当前用户。
+系统朋友和用户朋友共用 `agents.id`，会话、记忆、群聊成员和 AI 调用记录都引用这个 ID。Web 只能修改当前用户拥有的用户朋友；Admin 只能写系统朋友，用户朋友在后台只读。
 
 ### `chat`
 
-`chat` 负责私聊。
+`chat` 负责 direct chat 和 group chat。
 
 这里放：
 
-- 会话。
-- 消息。
+- `agent_conversations`：用户与朋友唯一一条会话，唯一键是 `userId + agentId`。
+- `agent_conversation_messages`：用户消息和 assistant 消息，按 `conversationId` 分页。
 - 用户消息。
 - assistant 消息。
 - 最近消息。
@@ -491,20 +480,20 @@ completed
 failed
 ```
 
-发送消息流程：
+direct chat 发送流程：
 
 ```text
 Web 请求函数提交用户消息
-  -> API 校验用户和 Agent 归属
+  -> API 校验用户与活跃 Agent 的归属
   -> 写入 user message
   -> 读取 Agent prompt、最近消息、可用记忆、最近情绪记录
   -> 调 LLM
   -> 写入 assistant message
   -> 更新会话时间
-  -> 返回 assistant message DTO
+  -> 流式返回 assistant 文本并写入 assistant message
 ```
 
-一期使用非流式返回。做流式前，先把返回协议写进 contracts。
+系统朋友停用或用户朋友归档后，历史会话可读取，但不能新建会话或触发新的 AI 回复。旧 companion 表在开发 migration 中直接删除，不保留兼容读取。
 
 ### `memory`
 
@@ -535,7 +524,7 @@ deleted
 
 `care` 负责主动关怀。
 
-一期只做手动触发。用户点按钮后，API 读取用户、Agent、记忆和最近情绪记录，再调 LLM 生成关怀消息。
+用户每次只能保存一份计划，并指定一位活跃系统朋友或自己的活跃用户朋友。用户点按钮后，API 读取该朋友和 direct chat 历史，调 LLM 生成消息，并把消息写入对应 direct chat。
 
 这里放：
 
@@ -546,9 +535,8 @@ deleted
 - 语气。
 - 自定义提示。
 - 下次运行时间。
-- 关怀消息。
-- 已读时间。
-- 最近失败原因。
+- `agent_care_plans`：朋友、启用状态、频率、场景、语气和下次运行时间。
+- `agent_care_events`：朋友、direct conversation、消息 ID、已读时间和场景；正文只保存在 direct message。
 
 自动触发放到二期。二期优先用 Workers Cron，不急着拆 `apps/worker`。
 
@@ -732,10 +720,11 @@ API 统一返回 `ApiResponse<T>`。
 /rpc/user/profile
 /rpc/assets/avatar
 /rpc/mood/entries
-/rpc/agent/my
-/rpc/chat/conversations
-/rpc/memory
-/rpc/care
+/rpc/agents
+/rpc/agent-memories
+/rpc/direct-chats
+/rpc/care-plan
+/rpc/care-events
 ```
 
 后台接口：
@@ -745,12 +734,13 @@ API 统一返回 `ApiResponse<T>`。
 /auth/admin/token/refresh
 /auth/admin/logout
 
-/rpc/admin/users
-/rpc/admin/agent-templates
-/rpc/admin/default-avatars
-/rpc/admin/moderation
-/rpc/admin/llm-settings
-/rpc/admin/system
+/rpc/admin/operations/*
+/rpc/admin/users/*
+/rpc/admin/agents/*
+/rpc/admin/feedback/*
+/rpc/admin/llm-configs/*
+/rpc/admin/default-avatars/*
+/rpc/admin/roles/*
 ```
 
 规则：
@@ -806,15 +796,14 @@ Web 资源按 `userId` 检查。用户只能看自己的 Agent、情绪记录、
 
 ## LLM 调用
 
-聊天和主动关怀都由 API 调 LLM。
+聊天、群聊和主动关怀都由 API 调 LLM。每次实际上游请求都写入 `ai_call_records`，记录场景、朋友或系统流程、模型、Token、耗时、状态和 requestId，不保存 Prompt、回复正文或聊天原文。
 
-私聊 prompt 读取顺序：
+direct chat prompt 读取顺序：
 
 ```text
 系统安全说明
   -> Agent 默认 prompt
   -> 用户可用记忆
-  -> 最近情绪记录
   -> 最近对话消息
   -> 当前用户消息
 ```
@@ -830,14 +819,14 @@ LLM 出错时：
 
 ## 主动关怀和任务
 
-一期主动关怀手动触发：
+主动关怀手动触发：
 
 ```text
 Web 点击生成关怀
-  -> API 检查用户、Agent 和关怀设置
-  -> 读取记忆和最近情绪记录
+  -> API 检查用户、指定朋友和关怀设置
+  -> 读取该朋友的 direct chat 历史
   -> 调 LLM
-  -> 写入 care event
+  -> 写入 direct conversation message 和 care event
   -> 返回关怀消息 DTO
 ```
 
@@ -934,9 +923,9 @@ packages/ui/src/theme.css 或共享组件
 ## 当前维护风险
 
 - `packages/ui` 已由 Web 和 Admin 实际使用。新增共享组件时仍要先确认两个入口都有真实调用方。
-- `apps/admin` 还停在 starter 页面，下一阶段做后台时要先建 `(auth)` 和 `(dashboard)` 目录。
-- `apps/web` 现在还没有 `src/api` 和统一 `http`。新增业务页面前先补请求函数目录。
-- 本地 D1 已有认证表和默认头像版本表，默认头像 R2 已接入。用户头像和 Agent 头像尚未实现，前端不能生成文件 key 或上传路径。
+- `apps/admin` 的业务页面通过同源 BFF 访问 Admin API，浏览器不接触 API access token。
+- `apps/web` 的朋友列表、direct chat 和主动关怀使用 `src/api` 下的 typed request/query 函数。
+- 本地 D1 已应用 `0016_admin_api_operations_rebuild.sql`，旧 companion 表已删除；开发环境执行 seed 前要确认 migration 已应用。
 
 ## 检查命令
 

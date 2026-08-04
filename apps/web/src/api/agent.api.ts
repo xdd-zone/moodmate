@@ -1,9 +1,9 @@
 import {
   CreateUserAgentResponseSchema,
+  AgentDetailResponseSchema,
+  AgentListResponseSchema,
   DeleteUserAgentResponseSchema,
   UpdateUserAgentResponseSchema,
-  UserAgentDetailResponseSchema,
-  UserAgentListResponseSchema,
   type CreateUserAgentRequest,
   type UpdateUserAgentRequest,
 } from "@repo/contracts";
@@ -11,7 +11,7 @@ import {
 import { http, type HttpRequestOptions } from "@/src/lib/http";
 
 export function getUserAgents(options?: HttpRequestOptions) {
-  return http.get("/rpc/agents", UserAgentListResponseSchema, options);
+  return http.get("/rpc/agents", AgentListResponseSchema, options);
 }
 
 export function getUserAgentDetail(
@@ -20,7 +20,7 @@ export function getUserAgentDetail(
 ) {
   return http.get(
     `/rpc/agents/${encodeURIComponent(agentId)}`,
-    UserAgentDetailResponseSchema,
+    AgentDetailResponseSchema,
     options,
   );
 }

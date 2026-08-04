@@ -7,6 +7,8 @@ import {
   type LlmConfigCreateRequest,
   type LlmConfigApi,
   type LlmConfigItem,
+  type LlmConfigTestCheckId,
+  type LlmConfigTestResponse,
   type LlmConfigUpdateRequest,
 } from "@repo/contracts";
 import { Badge } from "@repo/ui/badge";
@@ -57,6 +59,19 @@ function getLlmApiBaseUrlPlaceholder(api: LlmConfigApi): string {
     ? "https://api.anthropic.com"
     : "https://api.openai.com/v1";
 }
+
+/** 只有这两种协议有受控的思考开关：chat-completions 走 thinking，responses 走 reasoning.effort。 */
+function supportsThinkingControl(api: LlmConfigApi): boolean {
+  return api === "openai-chat-completions" || api === "openai-responses";
+}
+
+const TEST_CHECK_LABELS: Record<LlmConfigTestCheckId, string> = {
+  connectivity: "连通性",
+  streaming: "流式输出",
+  json_schema: "结构化输出 json_schema",
+  function: "结构化输出 function",
+  json_object: "结构化输出 json_object",
+};
 
 function toErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -236,8 +251,7 @@ function ConfigCard({
           ) : (
             <Badge variant="outline">未激活</Badge>
           )}
-          {config.api === "openai-chat-completions" &&
-          config.disableThinking ? (
+          {supportsThinkingControl(config.api) && config.disableThinking ? (
             <Badge variant="outline">禁用 thinking</Badge>
           ) : null}
         </div>
@@ -349,10 +363,11 @@ function ConfigDrawer({
     createFormState(config),
   );
   const [formError, setFormError] = useState("");
-  const [testResult, setTestResult] = useState<{
-    ok: boolean;
-    text: string;
-  } | null>(null);
+  const [testResult, setTestResult] = useState<
+    | { kind: "error"; message: string }
+    | { kind: "result"; response: LlmConfigTestResponse }
+    | null
+  >(null);
   const isEdit = config !== null;
 
   const saveMutation = useMutation({
@@ -378,17 +393,12 @@ function ConfigDrawer({
     mutationFn: testAdminLlmConfig,
     onError: (error) => {
       setTestResult({
-        ok: false,
-        text: toErrorMessage(error, "测试连接失败，请稍后重试"),
+        kind: "error",
+        message: toErrorMessage(error, "模型测试失败，请稍后重试"),
       });
     },
-    onSuccess: (result) => {
-      setTestResult({
-        ok: result.ok,
-        text: `${result.message ?? (result.ok ? "连接成功" : "连接失败")}${
-          result.latencyMs !== undefined ? `（${result.latencyMs}ms）` : ""
-        }`,
-      });
+    onSuccess: (response) => {
+      setTestResult({ kind: "result", response });
     },
   });
 
@@ -419,7 +429,7 @@ function ConfigDrawer({
       api: form.api,
       apiKey: form.apiKey,
       baseURL: form.baseURL,
-      ...(form.api === "openai-chat-completions"
+      ...(supportsThinkingControl(form.api)
         ? { disableThinking: form.disableThinking }
         : {}),
       model: form.model,
@@ -450,7 +460,7 @@ function ConfigDrawer({
     const payload: LlmConfigUpdateRequest = {
       api: form.api,
       baseURL: trimmedBaseURL,
-      ...(form.api === "openai-chat-completions"
+      ...(supportsThinkingControl(form.api)
         ? { disableThinking: form.disableThinking }
         : {}),
       model: trimmedModel,
@@ -508,6 +518,9 @@ function ConfigDrawer({
       baseURL: form.baseURL.trim(),
       model: form.model.trim(),
       providerName: form.providerName.trim(),
+      ...(supportsThinkingControl(form.api)
+        ? { disableThinking: form.disableThinking }
+        : {}),
       ...(trimmedApiKey ? { apiKey: trimmedApiKey } : {}),
       ...(config ? { configId: config.id } : {}),
     });
@@ -642,7 +655,7 @@ function ConfigDrawer({
               />
             </FormField>
 
-            {form.api === "openai-chat-completions" ? (
+            {supportsThinkingControl(form.api) ? (
               <label className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface px-3 py-2.5">
                 <span className="min-w-0">
                   <span className="block text-xs font-medium">
@@ -665,7 +678,14 @@ function ConfigDrawer({
 
             <div className="rounded-md border border-border bg-surface p-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium">连接测试</span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium">
+                    模型能力测试
+                  </span>
+                  <span className="mt-0.5 block text-[0.6875rem] leading-4 text-muted">
+                    依次检测连通性、流式输出和三种结构化输出方法。
+                  </span>
+                </span>
                 <Button
                   disabled={testMutation.isPending}
                   onClick={handleTest}
@@ -674,18 +694,63 @@ function ConfigDrawer({
                   variant="outline"
                 >
                   <Plug className="size-4" />
-                  {testMutation.isPending ? "测试中…" : "测试连接"}
+                  {testMutation.isPending ? "测试中…" : "开始测试"}
                 </Button>
               </div>
-              {testResult ? (
+              {testResult?.kind === "error" ? (
                 <p
-                  className={`mt-2 text-[0.6875rem] leading-4 ${
-                    testResult.ok ? "text-success" : "text-danger"
-                  }`}
-                  role="status"
+                  className="mt-2 text-[0.6875rem] leading-4 text-danger"
+                  role="alert"
                 >
-                  {testResult.text}
+                  {testResult.message}
                 </p>
+              ) : null}
+              {testResult?.kind === "result" ? (
+                <div className="mt-2" role="status">
+                  <p
+                    className={`text-[0.6875rem] leading-4 ${
+                      testResult.response.ok ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {testResult.response.message}
+                    {testResult.response.latencyMs !== undefined
+                      ? `（共 ${testResult.response.latencyMs}ms）`
+                      : ""}
+                  </p>
+                  {testResult.response.checks.length > 0 ? (
+                    <ul className="mt-2 grid gap-1">
+                      {testResult.response.checks.map((check) => (
+                        <li
+                          className="flex items-start gap-1.5 text-[0.6875rem] leading-4"
+                          key={check.id}
+                        >
+                          {check.ok ? (
+                            <CheckCircle2
+                              aria-hidden="true"
+                              className="mt-px size-3 shrink-0 text-success"
+                            />
+                          ) : (
+                            <X
+                              aria-hidden="true"
+                              className="mt-px size-3 shrink-0 text-danger"
+                            />
+                          )}
+                          <span className="min-w-0">
+                            {TEST_CHECK_LABELS[check.id]}
+                            <span className="text-muted">
+                              {check.latencyMs !== undefined
+                                ? ` ${check.latencyMs}ms`
+                                : ""}
+                              {check.ok
+                                ? ""
+                                : ` — ${check.message ?? "不支持"}`}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 

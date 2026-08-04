@@ -1,6 +1,6 @@
 "use client";
 
-import type { UserAgent } from "@repo/contracts";
+import type { Agent } from "@repo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
@@ -38,7 +38,7 @@ export function FriendsList() {
   );
   const [filter, setFilter] = useState<FriendFilter>("all");
   const [search, setSearch] = useState("");
-  const [editingAgent, setEditingAgent] = useState<UserAgent | null>(null);
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const agents = useMemo(
@@ -66,12 +66,12 @@ export function FriendsList() {
     setIsEditorOpen(true);
   }
 
-  function openEdit(agent: UserAgent) {
+  function openEdit(agent: Agent) {
     setEditingAgent(agent);
     setIsEditorOpen(true);
   }
 
-  async function handleDelete(agent: UserAgent) {
+  async function handleDelete(agent: Agent) {
     const confirmed = window.confirm(`确认暂别朋友「${agent.name}」？`);
 
     if (!confirmed) return;
@@ -204,8 +204,10 @@ export function FriendsList() {
                   deleteMutation.variables === agent.id
                 }
                 key={agent.id}
-                onDelete={() => void handleDelete(agent)}
-                onEdit={() => openEdit(agent)}
+                onDelete={
+                  agent.editable ? () => void handleDelete(agent) : undefined
+                }
+                onEdit={agent.editable ? () => openEdit(agent) : undefined}
               />
             ))
           )}
@@ -227,10 +229,10 @@ function FriendCard({
   onDelete,
   onEdit,
 }: {
-  agent: UserAgent;
+  agent: Agent;
   isDeleting: boolean;
-  onDelete: () => void;
-  onEdit: () => void;
+  onDelete?: () => void;
+  onEdit?: () => void;
 }) {
   const profile = getFriendProfile(agent);
 
@@ -259,29 +261,33 @@ function FriendCard({
           亲密连结
         </span>
         <div className="moodmate-contact-card__actions">
-          <button
-            aria-label={`编辑 ${agent.name}`}
-            className="moodmate-icon-button"
-            onClick={onEdit}
-            title="编辑"
-            type="button"
-          >
-            <Pencil aria-hidden="true" />
-          </button>
-          <button
-            aria-label={`暂别 ${agent.name}`}
-            className="moodmate-icon-button moodmate-icon-button--danger"
-            disabled={isDeleting}
-            onClick={onDelete}
-            title="暂别这位朋友"
-            type="button"
-          >
-            {isDeleting ? (
-              <LoaderCircle aria-hidden="true" className="moodmate-spin" />
-            ) : (
-              <Trash2 aria-hidden="true" />
-            )}
-          </button>
+          {onEdit ? (
+            <button
+              aria-label={`编辑 ${agent.name}`}
+              className="moodmate-icon-button"
+              onClick={onEdit}
+              title="编辑"
+              type="button"
+            >
+              <Pencil aria-hidden="true" />
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button
+              aria-label={`暂别 ${agent.name}`}
+              className="moodmate-icon-button moodmate-icon-button--danger"
+              disabled={isDeleting}
+              onClick={onDelete}
+              title="暂别这位朋友"
+              type="button"
+            >
+              {isDeleting ? (
+                <LoaderCircle aria-hidden="true" className="moodmate-spin" />
+              ) : (
+                <Trash2 aria-hidden="true" />
+              )}
+            </button>
+          ) : null}
           <Link
             aria-label={`查看 ${agent.name} 的档案`}
             className="moodmate-contact-card__open"
