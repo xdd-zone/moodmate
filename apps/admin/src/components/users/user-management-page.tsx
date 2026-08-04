@@ -198,55 +198,56 @@ export function UserManagementPage() {
         </Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table className="min-w-[78rem] table-fixed">
-              <TableHeader>
-                <TableRow className="bg-surface">
-                  <TableHead className="w-60">用户</TableHead>
-                  <TableHead className="w-48">角色</TableHead>
-                  <TableHead className="w-24">状态</TableHead>
-                  <TableHead className="w-40">注册时间</TableHead>
-                  <TableHead className="w-40">最后登录</TableHead>
-                  <TableHead className="w-40">最近活跃</TableHead>
-                  <TableHead className="w-24">单聊消息</TableHead>
-                  <TableHead className="w-24">群聊消息</TableHead>
-                  <TableHead className="w-24">朋友</TableHead>
-                  <TableHead className="w-24">群聊</TableHead>
-                  <TableHead className="w-32">操作</TableHead>
+          <Table
+            className="min-w-[104rem] table-fixed"
+            containerClassName="admin-table-scroll admin-table-scroll-framed"
+          >
+            <TableHeader>
+              <TableRow className="bg-surface">
+                <TableHead className="w-64">用户</TableHead>
+                <TableHead className="w-72">角色</TableHead>
+                <TableHead className="w-28">状态</TableHead>
+                <TableHead className="w-40">注册时间</TableHead>
+                <TableHead className="w-40">最后登录</TableHead>
+                <TableHead className="w-40">最近活跃</TableHead>
+                <TableHead className="w-28">单聊消息</TableHead>
+                <TableHead className="w-28">群聊消息</TableHead>
+                <TableHead className="w-24">朋友</TableHead>
+                <TableHead className="w-24">群聊</TableHead>
+                <TableHead className="w-28">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {usersQuery.isPending ? (
+                <TableRow>
+                  <TableCell className="py-16 text-center" colSpan={11}>
+                    <span className="inline-flex items-center gap-2 text-sm text-muted">
+                      <LoaderCircle className="size-4 animate-spin" />
+                      正在加载用户
+                    </span>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {usersQuery.isPending ? (
-                  <TableRow>
-                    <TableCell className="py-16 text-center" colSpan={11}>
-                      <span className="inline-flex items-center gap-2 text-sm text-muted">
-                        <LoaderCircle className="size-4 animate-spin" />
-                        正在加载用户
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ) : users.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      className="py-16 text-center text-sm text-muted"
-                      colSpan={11}
-                    >
-                      暂无用户
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <UserRow
-                      key={user.id}
-                      onDetail={() => setDetailUserId(user.id)}
-                      onUsage={() => setUsageUserId(user.id)}
-                      user={user}
-                    />
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    className="py-16 text-center text-sm text-muted"
+                    colSpan={11}
+                  >
+                    暂无用户
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <UserRow
+                    key={user.id}
+                    onDetail={() => setDetailUserId(user.id)}
+                    onUsage={() => setUsageUserId(user.id)}
+                    user={user}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
 
           <footer className="flex flex-wrap items-center gap-3 border-t border-border px-4 py-3">
             <p className="text-xs text-muted tabular-nums">
@@ -347,19 +348,27 @@ function UserRow({
           {STATUS_LABELS[user.status]}
         </Badge>
       </TableCell>
-      <TableCell className="text-xs text-muted tabular-nums">
+      <TableCell className="whitespace-nowrap text-xs text-muted tabular-nums">
         {formatTime(user.createdAtMs)}
       </TableCell>
-      <TableCell className="text-xs text-muted tabular-nums">
+      <TableCell className="whitespace-nowrap text-xs text-muted tabular-nums">
         {formatTime(user.lastLoginAtMs)}
       </TableCell>
-      <TableCell className="text-xs text-muted tabular-nums">
+      <TableCell className="whitespace-nowrap text-xs text-muted tabular-nums">
         {formatTime(user.lastActiveAtMs)}
       </TableCell>
-      <TableCell>{user.directMessageCount}</TableCell>
-      <TableCell>{user.groupMessageCount}</TableCell>
-      <TableCell>{user.friendCount}</TableCell>
-      <TableCell>{user.groupChatCount}</TableCell>
+      <TableCell className="whitespace-nowrap tabular-nums">
+        {user.directMessageCount}
+      </TableCell>
+      <TableCell className="whitespace-nowrap tabular-nums">
+        {user.groupMessageCount}
+      </TableCell>
+      <TableCell className="whitespace-nowrap tabular-nums">
+        {user.friendCount}
+      </TableCell>
+      <TableCell className="whitespace-nowrap tabular-nums">
+        {user.groupChatCount}
+      </TableCell>
       <TableCell>
         <div className="flex gap-1">
           <Button
@@ -476,42 +485,49 @@ function UserDetailDrawer({
           </section>
           <section>
             <h3 className="text-sm font-semibold">朋友与单聊</h3>
-            <div className="mt-3 overflow-x-auto border-t border-border">
-              <Table className="min-w-[32rem]">
-                <TableHeader>
+            <Table
+              className="mt-3 min-w-[44rem] table-fixed"
+              containerClassName="admin-table-scroll admin-table-scroll-compact"
+            >
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-48">朋友</TableHead>
+                  <TableHead className="w-24">来源</TableHead>
+                  <TableHead className="w-28">状态</TableHead>
+                  <TableHead className="w-24">消息</TableHead>
+                  <TableHead className="w-40">最近活跃</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.friends.length === 0 ? (
                   <TableRow>
-                    <TableHead>朋友</TableHead>
-                    <TableHead>来源</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>消息</TableHead>
-                    <TableHead>最近活跃</TableHead>
+                    <TableCell className="text-center text-muted" colSpan={5}>
+                      暂无朋友或单聊
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.friends.length === 0 ? (
-                    <TableRow>
-                      <TableCell className="text-center text-muted" colSpan={5}>
-                        暂无朋友或单聊
+                ) : (
+                  data.friends.map((friend) => (
+                    <TableRow key={friend.id}>
+                      <TableCell className="truncate" title={friend.name}>
+                        {friend.name}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {friend.source === "system" ? "系统" : "用户"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {friend.status}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {friend.messageCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatCallTime(friend.lastActiveAtMs)}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    data.friends.map((friend) => (
-                      <TableRow key={friend.id}>
-                        <TableCell>{friend.name}</TableCell>
-                        <TableCell>
-                          {friend.source === "system" ? "系统" : "用户"}
-                        </TableCell>
-                        <TableCell>{friend.status}</TableCell>
-                        <TableCell>{friend.messageCount}</TableCell>
-                        <TableCell>
-                          {formatCallTime(friend.lastActiveAtMs)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </section>
           <section>
             <h3 className="text-sm font-semibold">群聊</h3>
@@ -646,67 +662,87 @@ function UserUsageDrawer({
               ))}
             </div>
             <h3 className="mt-7 text-sm font-semibold">用量主体</h3>
-            <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-              <Table className="min-w-[76rem]">
-                <TableHeader>
+            <Table
+              className="mt-3 min-w-[91rem] table-fixed"
+              containerClassName="admin-table-scroll admin-table-scroll-compact"
+            >
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-48">主体</TableHead>
+                  <TableHead className="w-28">类型</TableHead>
+                  <TableHead className="w-24">来源</TableHead>
+                  <TableHead className="w-28">累计输入</TableHead>
+                  <TableHead className="w-28">累计输出</TableHead>
+                  <TableHead className="w-28">累计总量</TableHead>
+                  <TableHead className="w-28">累计调用</TableHead>
+                  <TableHead className="w-28">今日输入</TableHead>
+                  <TableHead className="w-28">今日输出</TableHead>
+                  <TableHead className="w-28">今日总量</TableHead>
+                  <TableHead className="w-28">今日调用</TableHead>
+                  <TableHead className="w-40">最近调用</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {usage.data.subjects.length === 0 ? (
                   <TableRow>
-                    <TableHead>主体</TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>来源</TableHead>
-                    <TableHead>累计输入</TableHead>
-                    <TableHead>累计输出</TableHead>
-                    <TableHead>累计总量</TableHead>
-                    <TableHead>累计调用</TableHead>
-                    <TableHead>今日输入</TableHead>
-                    <TableHead>今日输出</TableHead>
-                    <TableHead>今日总量</TableHead>
-                    <TableHead>今日调用</TableHead>
-                    <TableHead>最近调用</TableHead>
+                    <TableCell
+                      className="py-8 text-center text-muted"
+                      colSpan={12}
+                    >
+                      暂无调用记录
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {usage.data.subjects.length === 0 ? (
-                    <TableRow>
+                ) : (
+                  usage.data.subjects.map((subject) => (
+                    <TableRow key={subject.agentId ?? "system"}>
                       <TableCell
-                        className="py-8 text-center text-muted"
-                        colSpan={12}
+                        className="truncate"
+                        title={subject.agentName ?? "系统流程"}
                       >
-                        暂无调用记录
+                        {subject.agentName ?? "系统流程"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {subject.subjectType === "agent" ? "朋友" : "系统流程"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {subject.agentSource === "system"
+                          ? "系统"
+                          : subject.agentSource === "user"
+                            ? "用户"
+                            : "-"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.total.promptTokens}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.total.completionTokens}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.total.totalTokens}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.total.callCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.today.promptTokens}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.today.completionTokens}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.today.totalTokens}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {subject.today.callCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatCallTime(subject.lastCalledAtMs)}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    usage.data.subjects.map((subject) => (
-                      <TableRow key={subject.agentId ?? "system"}>
-                        <TableCell>{subject.agentName ?? "系统流程"}</TableCell>
-                        <TableCell>
-                          {subject.subjectType === "agent"
-                            ? "朋友"
-                            : "系统流程"}
-                        </TableCell>
-                        <TableCell>
-                          {subject.agentSource === "system"
-                            ? "系统"
-                            : subject.agentSource === "user"
-                              ? "用户"
-                              : "-"}
-                        </TableCell>
-                        <TableCell>{subject.total.promptTokens}</TableCell>
-                        <TableCell>{subject.total.completionTokens}</TableCell>
-                        <TableCell>{subject.total.totalTokens}</TableCell>
-                        <TableCell>{subject.total.callCount}</TableCell>
-                        <TableCell>{subject.today.promptTokens}</TableCell>
-                        <TableCell>{subject.today.completionTokens}</TableCell>
-                        <TableCell>{subject.today.totalTokens}</TableCell>
-                        <TableCell>{subject.today.callCount}</TableCell>
-                        <TableCell>
-                          {formatCallTime(subject.lastCalledAtMs)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </>
         ) : (
           <p className="mt-6 text-sm text-muted">正在加载用量</p>
@@ -802,71 +838,90 @@ function UserUsageDrawer({
               {toErrorMessage(calls.error, "调用明细加载失败")}
             </p>
           ) : (
-            <div className="mt-5 overflow-x-auto rounded-lg border border-border">
-              <Table className="min-w-[92rem]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>时间</TableHead>
-                    <TableHead>场景</TableHead>
-                    <TableHead>主体</TableHead>
-                    <TableHead>会话</TableHead>
-                    <TableHead>Provider / 模型</TableHead>
-                    <TableHead>输入</TableHead>
-                    <TableHead>输出</TableHead>
-                    <TableHead>总量</TableHead>
-                    <TableHead>耗时</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>错误</TableHead>
-                    <TableHead>requestId</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {calls.data && calls.data.items.length > 0 ? (
-                    calls.data.items.map((call) => (
-                      <TableRow key={call.id}>
-                        <TableCell>{formatTime(call.startedAtMs)}</TableCell>
-                        <TableCell>{call.scenario}</TableCell>
-                        <TableCell>{call.agentName ?? "系统流程"}</TableCell>
-                        <TableCell>
-                          {call.conversationType === "none"
-                            ? "-"
-                            : `${call.conversationType} · ${call.conversationId ?? "-"}`}
-                        </TableCell>
-                        <TableCell>
-                          {call.providerName} / {call.model}
-                        </TableCell>
-                        <TableCell>
-                          {formatToken(call.usageStatus, call.promptTokens)}
-                        </TableCell>
-                        <TableCell>
-                          {formatToken(call.usageStatus, call.completionTokens)}
-                        </TableCell>
-                        <TableCell>
-                          {formatToken(call.usageStatus, call.totalTokens)}
-                        </TableCell>
-                        <TableCell>
-                          {call.durationMs === null
-                            ? "-"
-                            : `${call.durationMs} ms`}
-                        </TableCell>
-                        <TableCell>{formatCallStatus(call)}</TableCell>
-                        <TableCell>{call.errorCode ?? "-"}</TableCell>
-                        <TableCell>{call.requestId}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
+            <Table
+              className="mt-5 min-w-[125rem] table-fixed"
+              containerClassName="admin-table-scroll admin-table-scroll-compact"
+            >
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-40">时间</TableHead>
+                  <TableHead className="w-40">场景</TableHead>
+                  <TableHead className="w-48">主体</TableHead>
+                  <TableHead className="w-64">会话</TableHead>
+                  <TableHead className="w-64">Provider / 模型</TableHead>
+                  <TableHead className="w-28">输入</TableHead>
+                  <TableHead className="w-28">输出</TableHead>
+                  <TableHead className="w-28">总量</TableHead>
+                  <TableHead className="w-28">耗时</TableHead>
+                  <TableHead className="w-28">状态</TableHead>
+                  <TableHead className="w-40">错误</TableHead>
+                  <TableHead className="w-64">requestId</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {calls.data && calls.data.items.length > 0 ? (
+                  calls.data.items.map((call) => (
+                    <TableRow key={call.id}>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatTime(call.startedAtMs)}
+                      </TableCell>
+                      <TableCell className="truncate" title={call.scenario}>
+                        {call.scenario}
+                      </TableCell>
                       <TableCell
-                        className="py-8 text-center text-muted"
-                        colSpan={12}
+                        className="truncate"
+                        title={call.agentName ?? "系统流程"}
                       >
-                        {calls.isPending ? "正在加载调用明细" : "暂无调用记录"}
+                        {call.agentName ?? "系统流程"}
+                      </TableCell>
+                      <TableCell className="truncate">
+                        {call.conversationType === "none"
+                          ? "-"
+                          : `${call.conversationType} · ${call.conversationId ?? "-"}`}
+                      </TableCell>
+                      <TableCell className="truncate">
+                        {call.providerName} / {call.model}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatToken(call.usageStatus, call.promptTokens)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatToken(call.usageStatus, call.completionTokens)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatToken(call.usageStatus, call.totalTokens)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {call.durationMs === null
+                          ? "-"
+                          : `${call.durationMs} ms`}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatCallStatus(call)}
+                      </TableCell>
+                      <TableCell
+                        className="truncate"
+                        title={call.errorCode ?? "-"}
+                      >
+                        {call.errorCode ?? "-"}
+                      </TableCell>
+                      <TableCell className="truncate" title={call.requestId}>
+                        {call.requestId}
                       </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      className="py-8 text-center text-muted"
+                      colSpan={12}
+                    >
+                      {calls.isPending ? "正在加载调用明细" : "暂无调用记录"}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           )}
           <footer className="mt-4 flex items-center gap-3">
             <p className="text-xs text-muted tabular-nums">

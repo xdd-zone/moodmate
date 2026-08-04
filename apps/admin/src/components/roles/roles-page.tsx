@@ -135,8 +135,16 @@ export function RolesPage() {
         </Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[46rem] border-collapse text-sm">
+          <div className="admin-table-scroll admin-table-scroll-framed">
+            <table className="w-full min-w-[67rem] table-fixed border-collapse text-sm">
+              <colgroup>
+                <col className="w-64" />
+                <col className="w-48" />
+                <col className="w-32" />
+                <col className="w-28" />
+                <col className="w-40" />
+                <col className="w-56" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-border">
                   {["角色", "code", "应用", "状态", "创建时间", "操作"].map(
@@ -207,16 +215,18 @@ function RoleRow({
           ) : null}
         </div>
       </td>
-      <td className="px-3.5 py-3 text-xs text-muted">{role.code}</td>
-      <td className="px-3.5 py-3">
+      <td className="truncate px-3.5 py-3 text-xs text-muted" title={role.code}>
+        {role.code}
+      </td>
+      <td className="whitespace-nowrap px-3.5 py-3">
         <Badge variant="outline">{role.applicationCode}</Badge>
       </td>
-      <td className="px-3.5 py-3">
+      <td className="whitespace-nowrap px-3.5 py-3">
         <Badge variant={role.status === "active" ? "secondary" : "outline"}>
           {STATUS_LABELS[role.status]}
         </Badge>
       </td>
-      <td className="px-3.5 py-3 text-xs text-muted tabular-nums">
+      <td className="whitespace-nowrap px-3.5 py-3 text-xs text-muted tabular-nums">
         {formatTime(role.createdAtMs)}
       </td>
       <td className="px-3.5 py-3">

@@ -88,27 +88,35 @@ export function OverviewPage() {
           <div className="mt-8 grid gap-8 xl:grid-cols-2">
             <section className="min-w-0">
               <h2 className="text-sm font-semibold">最近 7 天趋势</h2>
-              <div className="mt-3 overflow-x-auto border-t border-border">
-                <table className="w-full min-w-[32rem] text-left text-xs">
+              <div className="admin-table-scroll admin-table-scroll-compact mt-3">
+                <table className="w-full min-w-[36rem] table-fixed text-left text-xs">
+                  <colgroup>
+                    <col className="w-36" />
+                    <col className="w-36" />
+                    <col className="w-36" />
+                    <col className="w-36" />
+                  </colgroup>
                   <thead className="text-muted">
                     <tr>
-                      <th className="py-3 font-medium">日期</th>
-                      <th className="py-3 font-medium">用户消息</th>
-                      <th className="py-3 font-medium">AI 调用</th>
-                      <th className="py-3 font-medium">Token</th>
+                      <th className="px-3 py-3 font-medium">日期</th>
+                      <th className="px-3 py-3 font-medium">用户消息</th>
+                      <th className="px-3 py-3 font-medium">AI 调用</th>
+                      <th className="px-3 py-3 font-medium">Token</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data!.trend.map((item) => (
                       <tr className="border-t border-border" key={item.date}>
-                        <td className="py-3">{item.date}</td>
-                        <td className="py-3 tabular-nums">
+                        <td className="whitespace-nowrap px-3 py-3">
+                          {item.date}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                           {number.format(item.messageCount)}
                         </td>
-                        <td className="py-3 tabular-nums">
+                        <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                           {number.format(item.aiCallCount)}
                         </td>
-                        <td className="py-3 tabular-nums">
+                        <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                           {number.format(item.totalTokens)}
                         </td>
                       </tr>
@@ -175,29 +183,51 @@ export function OverviewPage() {
             {data!.recentFailures.length === 0 ? (
               <p className="mt-3 text-xs text-muted">暂无失败调用</p>
             ) : (
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[54rem] text-left text-xs">
+              <div className="admin-table-scroll admin-table-scroll-compact mt-3">
+                <table className="w-full min-w-[76rem] table-fixed text-left text-xs">
+                  <colgroup>
+                    <col className="w-40" />
+                    <col className="w-48" />
+                    <col className="w-64" />
+                    <col className="w-48" />
+                    <col className="w-72" />
+                  </colgroup>
                   <thead className="text-muted">
                     <tr>
-                      <th className="py-3 font-medium">时间</th>
-                      <th className="py-3 font-medium">场景</th>
-                      <th className="py-3 font-medium">Provider / 模型</th>
-                      <th className="py-3 font-medium">错误</th>
-                      <th className="py-3 font-medium">requestId</th>
+                      <th className="px-3 py-3 font-medium">时间</th>
+                      <th className="px-3 py-3 font-medium">场景</th>
+                      <th className="px-3 py-3 font-medium">Provider / 模型</th>
+                      <th className="px-3 py-3 font-medium">错误</th>
+                      <th className="px-3 py-3 font-medium">requestId</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data!.recentFailures.map((item) => (
                       <tr className="border-t border-border" key={item.id}>
-                        <td className="py-3 tabular-nums">
+                        <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                           {dateTime.format(item.startedAtMs)}
                         </td>
-                        <td className="py-3">{item.scenario}</td>
-                        <td className="py-3">
+                        <td
+                          className="truncate px-3 py-3"
+                          title={item.scenario}
+                        >
+                          {item.scenario}
+                        </td>
+                        <td className="truncate px-3 py-3">
                           {item.providerName} / {item.model}
                         </td>
-                        <td className="py-3">{item.errorCode ?? "未知"}</td>
-                        <td className="py-3 font-mono">{item.requestId}</td>
+                        <td
+                          className="truncate px-3 py-3"
+                          title={item.errorCode ?? "未知"}
+                        >
+                          {item.errorCode ?? "未知"}
+                        </td>
+                        <td
+                          className="truncate px-3 py-3 font-mono"
+                          title={item.requestId}
+                        >
+                          {item.requestId}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

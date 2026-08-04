@@ -92,86 +92,94 @@ export function FeedbackPage() {
           <option value="negative">不喜欢</option>
         </select>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <Table className="min-w-[58rem]">
-          <TableHeader>
+      <Table
+        className="min-w-[92rem] table-fixed"
+        containerClassName="admin-table-scroll"
+      >
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-40">时间</TableHead>
+            <TableHead className="w-40">用户</TableHead>
+            <TableHead className="w-40">朋友</TableHead>
+            <TableHead className="w-24">评分</TableHead>
+            <TableHead className="w-56">原因</TableHead>
+            <TableHead className="w-72">用户备注</TableHead>
+            <TableHead className="w-32">处理状态</TableHead>
+            <TableHead className="w-64">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {list.isPending ? (
             <TableRow>
-              <TableHead>时间</TableHead>
-              <TableHead>用户</TableHead>
-              <TableHead>朋友</TableHead>
-              <TableHead>评分</TableHead>
-              <TableHead>原因</TableHead>
-              <TableHead>用户备注</TableHead>
-              <TableHead>处理状态</TableHead>
-              <TableHead />
+              <TableCell className="py-12 text-center text-muted" colSpan={8}>
+                正在加载反馈
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.isPending ? (
-              <TableRow>
-                <TableCell className="py-12 text-center text-muted" colSpan={8}>
-                  正在加载反馈
+          ) : list.isError ? (
+            <TableRow>
+              <TableCell className="py-12 text-center text-danger" colSpan={8}>
+                反馈列表加载失败
+              </TableCell>
+            </TableRow>
+          ) : list.data.items.length === 0 ? (
+            <TableRow>
+              <TableCell className="py-12 text-center text-muted" colSpan={8}>
+                暂无反馈
+              </TableCell>
+            </TableRow>
+          ) : (
+            list.data.items.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="whitespace-nowrap tabular-nums">
+                  {time.format(item.submittedAtMs)}
+                </TableCell>
+                <TableCell className="truncate" title={item.userDisplayName}>
+                  {item.userDisplayName}
+                </TableCell>
+                <TableCell className="truncate" title={item.agentName}>
+                  {item.agentName}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {item.rating === "positive" ? "喜欢" : "不喜欢"}
+                </TableCell>
+                <TableCell className="break-words">
+                  {item.reason ?? "未填写"}
+                </TableCell>
+                <TableCell className="break-words">
+                  {item.note ?? "未填写"}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <Badge variant="secondary">
+                    {item.status === "pending" ? "待处理" : "已处理"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => setSelected(item.id)}
+                      size="sm"
+                      variant="secondary"
+                    >
+                      查看详情
+                    </Button>
+                    <Button
+                      disabled={
+                        updateStatus.isPending &&
+                        updateStatus.variables?.id === item.id
+                      }
+                      onClick={() => toggleStatus(item)}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      {item.status === "pending" ? "标记已处理" : "重新打开"}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : list.isError ? (
-              <TableRow>
-                <TableCell
-                  className="py-12 text-center text-danger"
-                  colSpan={8}
-                >
-                  反馈列表加载失败
-                </TableCell>
-              </TableRow>
-            ) : list.data.items.length === 0 ? (
-              <TableRow>
-                <TableCell className="py-12 text-center text-muted" colSpan={8}>
-                  暂无反馈
-                </TableCell>
-              </TableRow>
-            ) : (
-              list.data.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{time.format(item.submittedAtMs)}</TableCell>
-                  <TableCell>{item.userDisplayName}</TableCell>
-                  <TableCell>{item.agentName}</TableCell>
-                  <TableCell>
-                    {item.rating === "positive" ? "喜欢" : "不喜欢"}
-                  </TableCell>
-                  <TableCell>{item.reason ?? "未填写"}</TableCell>
-                  <TableCell>{item.note ?? "未填写"}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {item.status === "pending" ? "待处理" : "已处理"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setSelected(item.id)}
-                        size="sm"
-                        variant="secondary"
-                      >
-                        查看详情
-                      </Button>
-                      <Button
-                        disabled={
-                          updateStatus.isPending &&
-                          updateStatus.variables?.id === item.id
-                        }
-                        onClick={() => toggleStatus(item)}
-                        size="sm"
-                        variant="ghost"
-                      >
-                        {item.status === "pending" ? "标记已处理" : "重新打开"}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            ))
+          )}
+        </TableBody>
+      </Table>
       {selected ? (
         <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-lg overflow-y-auto border-l border-border bg-background p-6 shadow-xl">
           <div className="flex items-center">

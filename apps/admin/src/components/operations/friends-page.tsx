@@ -493,162 +493,183 @@ export function FriendsPage() {
         </Card>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
-          <div className="overflow-x-auto">
-            <Table className="min-w-[96rem]">
-              <TableHeader>
+          <Table
+            className="min-w-[116rem] table-fixed"
+            containerClassName="admin-table-scroll admin-table-scroll-framed"
+          >
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-56">朋友</TableHead>
+                <TableHead className="w-24">来源</TableHead>
+                <TableHead className="w-48">所属用户</TableHead>
+                <TableHead className="w-28">状态</TableHead>
+                <TableHead className="w-28">使用用户</TableHead>
+                <TableHead className="w-24">会话</TableHead>
+                <TableHead className="w-24">消息</TableHead>
+                <TableHead className="w-24">记忆</TableHead>
+                <TableHead className="w-24">群聊</TableHead>
+                <TableHead className="w-40">最近使用</TableHead>
+                <TableHead className="w-40">创建时间</TableHead>
+                <TableHead className="w-40">更新时间</TableHead>
+                <TableHead className="w-40 text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {agents.length === 0 ? (
                 <TableRow>
-                  <TableHead>朋友</TableHead>
-                  <TableHead>来源</TableHead>
-                  <TableHead>所属用户</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>使用用户</TableHead>
-                  <TableHead>会话</TableHead>
-                  <TableHead>消息</TableHead>
-                  <TableHead>记忆</TableHead>
-                  <TableHead>群聊</TableHead>
-                  <TableHead>最近使用</TableHead>
-                  <TableHead>创建时间</TableHead>
-                  <TableHead>更新时间</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+                  <TableCell
+                    className="py-10 text-center text-muted"
+                    colSpan={13}
+                  >
+                    没有符合条件的朋友
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {agents.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      className="py-10 text-center text-muted"
-                      colSpan={13}
-                    >
-                      没有符合条件的朋友
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  agents.map((item) => {
-                    const system = item.source === "system";
-                    const unused =
-                      item.conversationCount === 0 &&
-                      item.messageCount === 0 &&
-                      item.memoryCount === 0 &&
-                      item.groupCount === 0;
-                    const pending =
-                      (disableMutation.isPending &&
-                        disableMutation.variables === item.id) ||
-                      (enableMutation.isPending &&
-                        enableMutation.variables === item.id) ||
-                      (deleteMutation.isPending &&
-                        deleteMutation.variables === item.id);
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
-                          {item.name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {system ? "系统" : "用户"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {item.ownerDisplayName ?? "全局共享"}
-                        </TableCell>
-                        <TableCell>{STATUS_LABELS[item.status]}</TableCell>
-                        <TableCell>{item.userCount}</TableCell>
-                        <TableCell>{item.conversationCount}</TableCell>
-                        <TableCell>{item.messageCount}</TableCell>
-                        <TableCell>{item.memoryCount}</TableCell>
-                        <TableCell>{item.groupCount}</TableCell>
-                        <TableCell>
-                          {item.lastUsedAtMs
-                            ? time.format(item.lastUsedAtMs)
-                            : "尚未使用"}
-                        </TableCell>
-                        <TableCell>{time.format(item.createdAtMs)}</TableCell>
-                        <TableCell>{time.format(item.updatedAtMs)}</TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              aria-label={`查看${item.name}详情`}
-                              disabled={detailLoadingId === item.id}
-                              onClick={() => void openDetail(item.id)}
-                              size="icon"
-                              type="button"
-                              variant="ghost"
-                            >
-                              <Eye className="size-4" />
-                            </Button>
-                            {system ? (
-                              <>
+              ) : (
+                agents.map((item) => {
+                  const system = item.source === "system";
+                  const unused =
+                    item.conversationCount === 0 &&
+                    item.messageCount === 0 &&
+                    item.memoryCount === 0 &&
+                    item.groupCount === 0;
+                  const pending =
+                    (disableMutation.isPending &&
+                      disableMutation.variables === item.id) ||
+                    (enableMutation.isPending &&
+                      enableMutation.variables === item.id) ||
+                    (deleteMutation.isPending &&
+                      deleteMutation.variables === item.id);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell
+                        className="truncate font-medium"
+                        title={item.name}
+                      >
+                        {item.name}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant="outline">
+                          {system ? "系统" : "用户"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell
+                        className="truncate"
+                        title={item.ownerDisplayName ?? "全局共享"}
+                      >
+                        {item.ownerDisplayName ?? "全局共享"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {STATUS_LABELS[item.status]}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {item.userCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {item.conversationCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {item.messageCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {item.memoryCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {item.groupCount}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {item.lastUsedAtMs
+                          ? time.format(item.lastUsedAtMs)
+                          : "尚未使用"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {time.format(item.createdAtMs)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {time.format(item.updatedAtMs)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            aria-label={`查看${item.name}详情`}
+                            disabled={detailLoadingId === item.id}
+                            onClick={() => void openDetail(item.id)}
+                            size="icon"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+                          {system ? (
+                            <>
+                              <Button
+                                aria-label={`编辑${item.name}`}
+                                disabled={detailLoadingId === item.id}
+                                onClick={() => void openEdit(item.id)}
+                                size="icon"
+                                type="button"
+                                variant="ghost"
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              {item.status === "active" ? (
                                 <Button
-                                  aria-label={`编辑${item.name}`}
-                                  disabled={detailLoadingId === item.id}
-                                  onClick={() => void openEdit(item.id)}
+                                  aria-label={`停用${item.name}`}
+                                  disabled={pending}
+                                  onClick={() => {
+                                    if (
+                                      window.confirm(
+                                        `停用系统朋友“${item.name}”？已有会话仍可查看。`,
+                                      )
+                                    )
+                                      disableMutation.mutate(item.id);
+                                  }}
                                   size="icon"
                                   type="button"
                                   variant="ghost"
                                 >
-                                  <Pencil className="size-4" />
+                                  <Ban className="size-4" />
                                 </Button>
-                                {item.status === "active" ? (
-                                  <Button
-                                    aria-label={`停用${item.name}`}
-                                    disabled={pending}
-                                    onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          `停用系统朋友“${item.name}”？已有会话仍可查看。`,
-                                        )
+                              ) : (
+                                <Button
+                                  aria-label={`启用${item.name}`}
+                                  disabled={pending}
+                                  onClick={() => enableMutation.mutate(item.id)}
+                                  size="icon"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <RotateCcw className="size-4" />
+                                </Button>
+                              )}
+                              {unused ? (
+                                <Button
+                                  aria-label={`删除${item.name}`}
+                                  disabled={pending}
+                                  onClick={() => {
+                                    if (
+                                      window.confirm(
+                                        `删除未使用的系统朋友“${item.name}”？`,
                                       )
-                                        disableMutation.mutate(item.id);
-                                    }}
-                                    size="icon"
-                                    type="button"
-                                    variant="ghost"
-                                  >
-                                    <Ban className="size-4" />
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    aria-label={`启用${item.name}`}
-                                    disabled={pending}
-                                    onClick={() =>
-                                      enableMutation.mutate(item.id)
-                                    }
-                                    size="icon"
-                                    type="button"
-                                    variant="ghost"
-                                  >
-                                    <RotateCcw className="size-4" />
-                                  </Button>
-                                )}
-                                {unused ? (
-                                  <Button
-                                    aria-label={`删除${item.name}`}
-                                    disabled={pending}
-                                    onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          `删除未使用的系统朋友“${item.name}”？`,
-                                        )
-                                      )
-                                        deleteMutation.mutate(item.id);
-                                    }}
-                                    size="icon"
-                                    type="button"
-                                    variant="ghost"
-                                  >
-                                    <Trash2 className="size-4" />
-                                  </Button>
-                                ) : null}
-                              </>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                                    )
+                                      deleteMutation.mutate(item.id);
+                                  }}
+                                  size="icon"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              ) : null}
+                            </>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
           <footer className="flex items-center gap-3 border-t border-border px-4 py-3">
             <p className="text-xs text-muted tabular-nums">
               第 {page} / {Math.max(totalPages, 1)} 页

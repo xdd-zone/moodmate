@@ -343,6 +343,44 @@ a {
   padding: clamp(1.125rem, 2.2vw, 1.75rem);
 }
 
+.admin-table-scroll {
+  width: 100%;
+  min-width: 0;
+  max-height: min(70svh, 44rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  scrollbar-gutter: stable;
+}
+
+.admin-table-scroll-compact {
+  max-height: min(52svh, 32rem);
+}
+
+.admin-table-scroll-framed {
+  border: 0;
+  border-radius: 0;
+}
+
+.admin-table-scroll [data-slot="table-head"] {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  background: var(--color-surface);
+  box-shadow: inset 0 -1px var(--color-border);
+  white-space: nowrap;
+}
+
+.admin-table-scroll > table > thead > tr > th {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  background: var(--color-surface);
+  box-shadow: inset 0 -1px var(--color-border);
+  white-space: nowrap;
+}
+
 .admin-login-canvas {
   background: var(--theme-base-muted);
 }

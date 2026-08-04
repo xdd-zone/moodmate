@@ -2,10 +2,17 @@ import type { ComponentProps } from "react";
 
 import { cn } from "./lib/utils";
 
-function Table({ className, ...props }: ComponentProps<"table">) {
+type TableProps = ComponentProps<"table"> & {
+  containerClassName?: string;
+};
+
+function Table({ containerClassName, className, ...props }: TableProps) {
   return (
     <div
-      className="overflow-x-auto border-y border-border"
+      className={cn(
+        "overflow-x-auto border-y border-border",
+        containerClassName,
+      )}
       data-slot="table-container"
     >
       <table

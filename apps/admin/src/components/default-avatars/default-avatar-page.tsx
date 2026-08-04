@@ -260,8 +260,15 @@ export function DefaultAvatarPage() {
 
             <Card className="overflow-hidden">
               {history.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[44rem] border-collapse text-sm">
+                <div className="admin-table-scroll admin-table-scroll-framed">
+                  <table className="w-full min-w-[58rem] table-fixed border-collapse text-sm">
+                    <colgroup>
+                      <col className="w-24" />
+                      <col className="w-72" />
+                      <col className="w-48" />
+                      <col className="w-40" />
+                      <col className="w-40" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-border">
                         {["头像", "文件", "类型与大小", "上传时间", "操作"].map(
@@ -334,11 +341,11 @@ function DefaultAvatarVersionRow({
           {version.key}
         </p>
       </td>
-      <td className="px-3.5 py-3 text-xs text-muted">
+      <td className="whitespace-nowrap px-3.5 py-3 text-xs text-muted">
         <p>{version.contentType}</p>
         <p className="mt-1">{formatFileSize(version.sizeBytes)}</p>
       </td>
-      <td className="px-3.5 py-3 text-xs text-muted tabular-nums">
+      <td className="whitespace-nowrap px-3.5 py-3 text-xs text-muted tabular-nums">
         {formatTime(version.createdAtMs)}
       </td>
       <td className="px-3.5 py-3">
